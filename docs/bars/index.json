@@ -1,24 +1,24 @@
 {
- "updated": "2026-09-04T15:27:53Z",
+ "updated": "2026-09-04T23:57:41Z",
  "symbols": [
   {
    "symbol": "NQ",
-   "bars": 8888,
+   "bars": 9230,
    "from": "2026-08-27"
   },
   {
    "symbol": "ES",
-   "bars": 8887,
+   "bars": 9229,
    "from": "2026-08-27"
   },
   {
    "symbol": "YM",
-   "bars": 8604,
+   "bars": 8946,
    "from": "2026-08-27"
   },
   {
    "symbol": "RTY",
-   "bars": 8622,
+   "bars": 8964,
    "from": "2026-08-27"
   }
  ]
