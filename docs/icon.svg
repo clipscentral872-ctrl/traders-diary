@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img"
+     aria-label="Traders Diary">
+  <rect width="512" height="512" fill="#05070C"/>
+  <!-- The corner brackets are the same HUD frame the diary draws round every
+       card, so the icon on the home screen reads as the same thing. -->
+  <g stroke="#35E0F0" stroke-width="14" fill="none" stroke-linecap="square">
+    <path d="M56 128V56h72"/>
+    <path d="M456 128V56h-72"/>
+    <path d="M56 384v72h72"/>
+    <path d="M456 384v72h-72"/>
+  </g>
+  <!-- One losing candle, one winning candle: the whole point of the thing. -->
+  <g stroke-linecap="butt">
+    <line x1="196" y1="146" x2="196" y2="366" stroke="#C4485A" stroke-width="12"/>
+    <rect x="166" y="196" width="60" height="130" fill="#C4485A"/>
+    <line x1="316" y1="146" x2="316" y2="366" stroke="#2BE08A" stroke-width="12"/>
+    <rect x="286" y="186" width="60" height="130" fill="#2BE08A"/>
+  </g>
+</svg>

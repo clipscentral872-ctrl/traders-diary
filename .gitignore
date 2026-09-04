@@ -1,0 +1,16 @@
+# Anyone's actual trades. This repo is public; the diary keeps your record in
+# your own browser and it must never end up here.
+*trades.json
+*traders-diary-*.json
+docs/_testfiles/
+
+# The extracted page template is a build input, kept so the repo builds on its
+# own without the desktop project present.
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+.DS_Store
+Thumbs.db
