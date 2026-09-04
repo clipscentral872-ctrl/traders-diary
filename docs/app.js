@@ -445,6 +445,83 @@ tzSel.addEventListener("change", () => {
   say("Saved. Re-import a session for the New York clock check to use it.");
 });
 
+/* --------------------------------------------------------- installing */
+
+/* Getting this onto a home screen is the whole point, and on an iPhone it
+ * cannot be done for you: Safari has no install prompt and Apple allows no
+ * other route, so the only thing that works is naming the exact button. Every
+ * other browser can be asked directly, so it is.
+ *
+ * The banner takes itself away once the app is actually installed, which is
+ * what `display-mode: standalone` means. */
+const INSTALL_KEY = "tradersdiary.installed";
+const instbar = $("installbar"), steps = $("inststeps");
+const go = $("instgo"), no = $("instno");
+let prompt_ = null;
+
+const standalone = () => matchMedia("(display-mode: standalone)").matches
+  || navigator.standalone === true;
+
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent)
+  // An iPad on iPadOS 13+ reports itself as a Mac, and the touch points are
+  // the only thing that gives it away.
+  || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+function showInstall() {
+  if (standalone()) return;
+  try { if (localStorage.getItem(INSTALL_KEY) === "no") return; } catch { /* fine */ }
+
+  if (prompt_) {
+    steps.innerHTML = "One tap and it lives on your device: full screen, your "
+      + "record kept, and it still works with no signal.";
+    go.hidden = false;
+  } else if (isIOS()) {
+    steps.innerHTML = "In <b>Safari</b>, tap the <b>share button</b> at the "
+      + "bottom of the screen, scroll down, and choose "
+      + "<b>Add to Home Screen</b>. There is no download: that is how an app "
+      + "gets onto an iPhone from outside the App Store.";
+  } else if (/Macintosh/.test(navigator.userAgent)) {
+    steps.innerHTML = "In <b>Safari</b>, open the <b>share menu</b> and choose "
+      + "<b>Add to Dock</b>. In <b>Chrome</b>, click the install icon at the "
+      + "right of the address bar.";
+  } else {
+    steps.innerHTML = "In <b>Chrome</b> or <b>Edge</b>, open the browser menu "
+      + "and choose <b>Install</b>, or click the install icon in the address bar.";
+  }
+  instbar.hidden = false;
+}
+
+addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  prompt_ = e;
+  showInstall();
+});
+
+go.addEventListener("click", async () => {
+  if (!prompt_) return;
+  go.disabled = true;
+  try {
+    prompt_.prompt();
+    const {outcome} = await prompt_.userChoice;
+    if (outcome === "accepted") instbar.hidden = true;
+  } catch { /* the prompt can only be used once */ }
+  prompt_ = null;
+  go.disabled = false;
+  go.hidden = true;
+});
+
+no.addEventListener("click", () => {
+  instbar.hidden = true;
+  try { localStorage.setItem(INSTALL_KEY, "no"); } catch { /* fine */ }
+});
+
+addEventListener("appinstalled", () => {
+  instbar.hidden = true;
+  try { localStorage.setItem(INSTALL_KEY, "yes"); } catch { /* fine */ }
+});
+
+showInstall();
+
 /* ----------------------------------------------------------------- go */
 
 if (STATE.broken)

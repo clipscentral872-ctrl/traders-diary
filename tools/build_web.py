@@ -56,6 +56,23 @@ HEAD_TAGS = """<meta charset="utf-8">
 REPLAY_SECTION = re.compile(
     r'<section>\s*<h2>Bar Replay</h2>.*?</section>', re.S)
 
+# The install step is the whole difference between a bookmark and an app, and
+# on an iPhone it cannot be automated: Safari has no install prompt, so the
+# only route is telling someone which button to press. That makes it the first
+# thing on the page rather than a note near the bottom.
+INSTALL = """<section id="installbar" hidden>
+  <div class="card hud install">
+    <div class="insticon" aria-hidden="true"></div>
+    <div class="insttext">
+      <p class="instbig">Put this on your home screen</p>
+      <p class="instsub" id="inststeps"></p>
+    </div>
+    <button class="bigbtn" id="instgo" hidden>Install</button>
+    <button class="instx" id="instno" aria-label="Dismiss">Not now</button>
+  </div>
+</section>
+"""
+
 PRIVACY = """<section>
   <h2>Where your trades live</h2>
   <p class="lead">Nowhere but this device. The files you drop are read in the
@@ -101,6 +118,37 @@ SETTINGS = """<section>
 # rather than in the shared template because the desktop project has neither
 # these controls nor a phone to run on.
 EXTRA_CSS = """
+.install{
+  display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+  padding:20px 22px; margin-bottom:34px;
+}
+.insticon{
+  flex:none; width:38px; height:38px; border:2px solid var(--accent);
+  border-radius:9px; position:relative; box-shadow:0 0 18px var(--accent-dim);
+}
+.insticon::before{
+  content:""; position:absolute; left:50%; top:9px; width:2px; height:15px;
+  background:var(--accent); transform:translateX(-50%);
+}
+.insticon::after{
+  content:""; position:absolute; left:50%; top:8px; width:9px; height:9px;
+  border-left:2px solid var(--accent); border-top:2px solid var(--accent);
+  transform:translateX(-50%) rotate(45deg);
+}
+.insttext{flex:1 1 240px; min-width:0}
+.instbig{
+  font-family:"Orbitron",sans-serif; font-weight:800; font-size:14px;
+  letter-spacing:.07em; text-transform:uppercase; margin:0 0 5px;
+}
+.instsub{margin:0; color:var(--muted); font-size:13.5px; line-height:1.6}
+.instsub b{color:var(--text)}
+.instx{
+  background:none; border:none; color:var(--faint); cursor:pointer;
+  font-family:"Chakra Petch",sans-serif; font-size:12px; padding:12px;
+  text-transform:uppercase; letter-spacing:.08em; min-height:44px;
+}
+.instx:hover{color:var(--muted)}
+.instx:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .toolrow{display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 12px}
 .bigbtn.ghost{
   background:transparent; border-color:var(--line); color:var(--muted);
@@ -125,6 +173,8 @@ EXTRA_CSS = """
 @media (max-width:640px){
   .wrap{padding-left:16px; padding-right:16px}
   h1{font-size:32px; letter-spacing:.04em}
+  .install{gap:14px; padding:18px}
+  .install .bigbtn{width:100%; text-align:center}
   .toolrow{flex-direction:column}
   .toolrow .bigbtn{width:100%; text-align:center; padding:15px 18px}
   .drop{padding:26px 14px}
@@ -162,6 +212,12 @@ def main():
                                   '<div id="srcpanes"></div>')
     src = src.replace("__PAT__", '<div id="patwrap"></div>')
     src = src.replace("__STAND__", "")
+
+    # Directly under the header, above everything else on the page.
+    marker = "</header>\n"
+    if marker not in src:
+        raise SystemExit("the header moved; check the template")
+    src = src.replace(marker, marker + INSTALL, 1)
     src = src.replace("__LEARN__", PRIVACY + SETTINGS)
 
     src, n = REPLAY_SECTION.subn("", src)

@@ -375,6 +375,37 @@ footer{
   color:var(--faint); font-size:12px; max-width:70ch; line-height:1.7;
 }
 
+.install{
+  display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+  padding:20px 22px; margin-bottom:34px;
+}
+.insticon{
+  flex:none; width:38px; height:38px; border:2px solid var(--accent);
+  border-radius:9px; position:relative; box-shadow:0 0 18px var(--accent-dim);
+}
+.insticon::before{
+  content:""; position:absolute; left:50%; top:9px; width:2px; height:15px;
+  background:var(--accent); transform:translateX(-50%);
+}
+.insticon::after{
+  content:""; position:absolute; left:50%; top:8px; width:9px; height:9px;
+  border-left:2px solid var(--accent); border-top:2px solid var(--accent);
+  transform:translateX(-50%) rotate(45deg);
+}
+.insttext{flex:1 1 240px; min-width:0}
+.instbig{
+  font-family:"Orbitron",sans-serif; font-weight:800; font-size:14px;
+  letter-spacing:.07em; text-transform:uppercase; margin:0 0 5px;
+}
+.instsub{margin:0; color:var(--muted); font-size:13.5px; line-height:1.6}
+.instsub b{color:var(--text)}
+.instx{
+  background:none; border:none; color:var(--faint); cursor:pointer;
+  font-family:"Chakra Petch",sans-serif; font-size:12px; padding:12px;
+  text-transform:uppercase; letter-spacing:.08em; min-height:44px;
+}
+.instx:hover{color:var(--muted)}
+.instx:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .toolrow{display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 12px}
 .bigbtn.ghost{
   background:transparent; border-color:var(--line); color:var(--muted);
@@ -399,6 +430,8 @@ footer{
 @media (max-width:640px){
   .wrap{padding-left:16px; padding-right:16px}
   h1{font-size:32px; letter-spacing:.04em}
+  .install{gap:14px; padding:18px}
+  .install .bigbtn{width:100%; text-align:center}
   .toolrow{flex-direction:column}
   .toolrow .bigbtn{width:100%; text-align:center; padding:15px 18px}
   .drop{padding:26px 14px}
@@ -423,6 +456,17 @@ footer{
   <p class="sub"><span class="num"><span id="ntrades">0</span></span> Trades &nbsp;/&nbsp; TradingView Paper Account</p>
   <div class="sources"><div class="srcrow" id="srcrow"></div><div id="srcpanes"></div></div>
 </header>
+<section id="installbar" hidden>
+  <div class="card hud install">
+    <div class="insticon" aria-hidden="true"></div>
+    <div class="insttext">
+      <p class="instbig">Put this on your home screen</p>
+      <p class="instsub" id="inststeps"></p>
+    </div>
+    <button class="bigbtn" id="instgo" hidden>Install</button>
+    <button class="instx" id="instno" aria-label="Dismiss">Not now</button>
+  </div>
+</section>
 
 <section id="importer">
   <h2>Import a session</h2>
@@ -1356,6 +1400,83 @@ tzSel.addEventListener("change", () => {
   E.setLocalOffset(parseFloat(tzSel.value));
   say("Saved. Re-import a session for the New York clock check to use it.");
 });
+
+/* --------------------------------------------------------- installing */
+
+/* Getting this onto a home screen is the whole point, and on an iPhone it
+ * cannot be done for you: Safari has no install prompt and Apple allows no
+ * other route, so the only thing that works is naming the exact button. Every
+ * other browser can be asked directly, so it is.
+ *
+ * The banner takes itself away once the app is actually installed, which is
+ * what `display-mode: standalone` means. */
+const INSTALL_KEY = "tradersdiary.installed";
+const instbar = $("installbar"), steps = $("inststeps");
+const go = $("instgo"), no = $("instno");
+let prompt_ = null;
+
+const standalone = () => matchMedia("(display-mode: standalone)").matches
+  || navigator.standalone === true;
+
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent)
+  // An iPad on iPadOS 13+ reports itself as a Mac, and the touch points are
+  // the only thing that gives it away.
+  || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+function showInstall() {
+  if (standalone()) return;
+  try { if (localStorage.getItem(INSTALL_KEY) === "no") return; } catch { /* fine */ }
+
+  if (prompt_) {
+    steps.innerHTML = "One tap and it lives on your device: full screen, your "
+      + "record kept, and it still works with no signal.";
+    go.hidden = false;
+  } else if (isIOS()) {
+    steps.innerHTML = "In <b>Safari</b>, tap the <b>share button</b> at the "
+      + "bottom of the screen, scroll down, and choose "
+      + "<b>Add to Home Screen</b>. There is no download: that is how an app "
+      + "gets onto an iPhone from outside the App Store.";
+  } else if (/Macintosh/.test(navigator.userAgent)) {
+    steps.innerHTML = "In <b>Safari</b>, open the <b>share menu</b> and choose "
+      + "<b>Add to Dock</b>. In <b>Chrome</b>, click the install icon at the "
+      + "right of the address bar.";
+  } else {
+    steps.innerHTML = "In <b>Chrome</b> or <b>Edge</b>, open the browser menu "
+      + "and choose <b>Install</b>, or click the install icon in the address bar.";
+  }
+  instbar.hidden = false;
+}
+
+addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  prompt_ = e;
+  showInstall();
+});
+
+go.addEventListener("click", async () => {
+  if (!prompt_) return;
+  go.disabled = true;
+  try {
+    prompt_.prompt();
+    const {outcome} = await prompt_.userChoice;
+    if (outcome === "accepted") instbar.hidden = true;
+  } catch { /* the prompt can only be used once */ }
+  prompt_ = null;
+  go.disabled = false;
+  go.hidden = true;
+});
+
+no.addEventListener("click", () => {
+  instbar.hidden = true;
+  try { localStorage.setItem(INSTALL_KEY, "no"); } catch { /* fine */ }
+});
+
+addEventListener("appinstalled", () => {
+  instbar.hidden = true;
+  try { localStorage.setItem(INSTALL_KEY, "yes"); } catch { /* fine */ }
+});
+
+showInstall();
 
 /* ----------------------------------------------------------------- go */
 
