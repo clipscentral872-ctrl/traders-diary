@@ -722,6 +722,7 @@ function openSetPanel() {
   $("ack").closest("label").hidden = PASSCODE !== null;
   $("ack").checked = PASSCODE !== null;
   $("pin1").value = $("pin2").value = "";
+  $("strength").hidden = true;
   setMsg("");
   $("setpanel").hidden = false;
   $("pin1").focus();
@@ -735,6 +736,50 @@ $("setlock").addEventListener("click", () => {
 
 $("setcancel").addEventListener("click", () => { $("setpanel").hidden = true; });
 $("setbackup").addEventListener("click", () => $("save").click());
+
+/* How long this passcode would actually stand up.
+ *
+ * Not a scolding meter. The number that matters is how many guesses there
+ * are, because someone who copies the encrypted record can try them offline
+ * as fast as their hardware allows, with nothing to stop them.
+ *
+ * The stretching costs a phone about a quarter of a second per guess, which
+ * is why a four-digit PIN is fine against someone tapping your app icon and
+ * useless against someone who takes a copy away with them. Length is the only
+ * thing that changes that: every extra character multiplies the work.
+ */
+function strengthOf(pin) {
+  if (!pin) return null;
+  const digits = /^[0-9]+$/.test(pin);
+  const sets = (/[a-z]/.test(pin) ? 26 : 0) + (/[A-Z]/.test(pin) ? 26 : 0)
+             + (/[0-9]/.test(pin) ? 10 : 0) + (/[^A-Za-z0-9]/.test(pin) ? 32 : 0);
+  const combos = Math.pow(sets || 10, pin.length);
+
+  if (digits && pin.length <= 6) {
+    const n = Math.pow(10, pin.length).toLocaleString("en-US");
+    return {level: "weak", text: `${pin.length} digits is <b>${n} `
+      + `combinations</b>. That stops someone picking up your phone and tapping `
+      + `the icon, which is the likely case. It does not stop anyone who copies `
+      + `the locked record and works through every number offline. Adding a few `
+      + `letters or words changes that completely.`};
+  }
+  if (combos < 1e14) {
+    return {level: "fair", text: "Short enough to be worth guessing at. A "
+      + "second word, or a few more characters, is worth more here than "
+      + "swapping letters for symbols."};
+  }
+  return {level: "good", text: "Long enough that guessing it is not the way "
+    + "in. Make sure you will remember it: there is no reset."};
+}
+
+$("pin1").addEventListener("input", () => {
+  const s = strengthOf($("pin1").value);
+  const el = $("strength");
+  el.hidden = !s;
+  if (!s) return;
+  el.className = "strength " + s.level;
+  el.innerHTML = s.text;
+});
 
 $("setform").addEventListener("submit", async e => {
   e.preventDefault();

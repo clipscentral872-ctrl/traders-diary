@@ -127,6 +127,7 @@ PRIVACY = """<section>
       <label class="rpl" for="pin1">Passcode
         <input type="password" id="pin1" autocomplete="new-password"
                minlength="4" required></label>
+      <p class="strength" id="strength" hidden></p>
       <label class="rpl" for="pin2">Type it again
         <input type="password" id="pin2" autocomplete="new-password"
                minlength="4" required></label>
@@ -393,6 +394,14 @@ EXTRA_CSS = """
 #setform input[type=password]:focus-visible{
   outline:2px solid var(--accent); outline-offset:2px;
 }
+.strength{
+  margin:-4px 0 0; font-size:12.5px; line-height:1.6; color:var(--muted);
+  border-left:2px solid var(--line); padding-left:11px;
+}
+.strength.weak{border-left-color:var(--loss)}
+.strength.fair{border-left-color:#E8A33D}
+.strength.good{border-left-color:var(--win)}
+.strength b{color:var(--text)}
 .ack{
   display:flex; gap:11px; align-items:flex-start; color:var(--muted);
   font-size:13px; line-height:1.6; cursor:pointer;
