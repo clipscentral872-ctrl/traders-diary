@@ -514,6 +514,15 @@ footer{
 .mynote textarea:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .mysaved{color:var(--faint); font-size:11.5px; margin:7px 0 0; min-height:16px}
 
+#updbar{
+  position:fixed; left:16px; right:16px; bottom:16px; z-index:50;
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  background:var(--lift); border:1px solid var(--accent); padding:14px 18px;
+  box-shadow:0 10px 40px rgba(0,0,0,.65), 0 0 30px var(--accent-dim);
+}
+#updbar span{flex:1 1 160px; font-size:14px}
+@media (max-width:640px){ #updbar{flex-direction:column; align-items:stretch} }
+
 .install{
   display:flex; align-items:center; gap:18px; flex-wrap:wrap;
   padding:20px 22px; margin-bottom:34px;
@@ -2035,8 +2044,54 @@ RP.init(practice => {
 
 goTab(location.hash.slice(1) || "diary", false);
 
-if ("serviceWorker" in navigator)
-  addEventListener("load", () => navigator.serviceWorker.register("sw.js")
-    .catch(() => { /* offline support is a bonus, not a requirement */ }));
+/* --------------------------------------------------------- new versions */
+
+/* The shell is served from cache so the app works with no signal, which means
+   a new version would otherwise never arrive: the cached page would be served
+   forever. So an update is noticed and offered, rather than either forced on
+   you mid-sentence or hidden from you completely. */
+function offerUpdate(reg) {
+  if (document.getElementById("updbar")) return;
+  const el = document.createElement("div");
+  el.id = "updbar";
+  el.innerHTML = '<span>A new version is ready.</span>'
+    + '<button class="bigbtn" id="updgo">Reload</button>'
+    + '<button class="instx" id="updno">Later</button>';
+  document.body.appendChild(el);
+  document.getElementById("updgo").addEventListener("click", () => {
+    // Ask the waiting worker to take over, then reload once it has.
+    if (reg.waiting) reg.waiting.postMessage("skip-waiting");
+    setTimeout(() => location.reload(), 400);
+  });
+  document.getElementById("updno").addEventListener("click", () => el.remove());
+}
+
+if ("serviceWorker" in navigator) {
+  addEventListener("load", async () => {
+    let reg;
+    try { reg = await navigator.serviceWorker.register("sw.js"); }
+    catch { return; }               // offline support is a bonus, not a need
+
+    // Already waiting when the page opened.
+    if (reg.waiting && navigator.serviceWorker.controller) offerUpdate(reg);
+
+    reg.addEventListener("updatefound", () => {
+      const sw = reg.installing;
+      if (!sw) return;
+      sw.addEventListener("statechange", () => {
+        // A worker that reaches "installed" with no controller is the very
+        // first install, which is not an update and must not say it is.
+        if (sw.state === "installed" && navigator.serviceWorker.controller)
+          offerUpdate(reg);
+      });
+    });
+
+    // A phone keeps the app alive for days, so a check on every foreground is
+    // the difference between updating this week and updating next month.
+    addEventListener("visibilitychange", () => {
+      if (!document.hidden) reg.update().catch(() => { /* offline */ });
+    });
+  });
+}
 
 </script>

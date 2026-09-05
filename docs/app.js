@@ -736,6 +736,52 @@ RP.init(practice => {
 
 goTab(location.hash.slice(1) || "diary", false);
 
-if ("serviceWorker" in navigator)
-  addEventListener("load", () => navigator.serviceWorker.register("sw.js")
-    .catch(() => { /* offline support is a bonus, not a requirement */ }));
+/* --------------------------------------------------------- new versions */
+
+/* The shell is served from cache so the app works with no signal, which means
+   a new version would otherwise never arrive: the cached page would be served
+   forever. So an update is noticed and offered, rather than either forced on
+   you mid-sentence or hidden from you completely. */
+function offerUpdate(reg) {
+  if (document.getElementById("updbar")) return;
+  const el = document.createElement("div");
+  el.id = "updbar";
+  el.innerHTML = '<span>A new version is ready.</span>'
+    + '<button class="bigbtn" id="updgo">Reload</button>'
+    + '<button class="instx" id="updno">Later</button>';
+  document.body.appendChild(el);
+  document.getElementById("updgo").addEventListener("click", () => {
+    // Ask the waiting worker to take over, then reload once it has.
+    if (reg.waiting) reg.waiting.postMessage("skip-waiting");
+    setTimeout(() => location.reload(), 400);
+  });
+  document.getElementById("updno").addEventListener("click", () => el.remove());
+}
+
+if ("serviceWorker" in navigator) {
+  addEventListener("load", async () => {
+    let reg;
+    try { reg = await navigator.serviceWorker.register("sw.js"); }
+    catch { return; }               // offline support is a bonus, not a need
+
+    // Already waiting when the page opened.
+    if (reg.waiting && navigator.serviceWorker.controller) offerUpdate(reg);
+
+    reg.addEventListener("updatefound", () => {
+      const sw = reg.installing;
+      if (!sw) return;
+      sw.addEventListener("statechange", () => {
+        // A worker that reaches "installed" with no controller is the very
+        // first install, which is not an update and must not say it is.
+        if (sw.state === "installed" && navigator.serviceWorker.controller)
+          offerUpdate(reg);
+      });
+    });
+
+    // A phone keeps the app alive for days, so a check on every foreground is
+    // the difference between updating this week and updating next month.
+    addEventListener("visibilitychange", () => {
+      if (!document.hidden) reg.update().catch(() => { /* offline */ });
+    });
+  });
+}

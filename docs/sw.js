@@ -13,12 +13,15 @@
  *   The bars are network-first, because they are republished every day and a
  *   stale copy silently means missing candles on your newest trades.
  */
-const VERSION = "v1";
+// Stamped by tools/build_web.py from the content of the files below. A
+// fixed version meant a cache-first shell served the old page forever:
+// once installed, no update could reach anyone.
+const VERSION = "2ba9d4c901f3";
 const SHELL = "diary-shell-" + VERSION;
 const DATA = "diary-bars-" + VERSION;
 
 const FILES = [
-  "./", "./index.html", "./engine.js",
+  "./", "./index.html", "./engine.js", "./replay.js", "./system.js",
   "./manifest.webmanifest", "./icon.svg",
   "./icon-180.png", "./icon-192.png", "./icon-512.png",
 ];
@@ -30,6 +33,10 @@ self.addEventListener("install", e => {
     await Promise.all(FILES.map(f => c.add(f).catch(() => {})));
     self.skipWaiting();
   }));
+});
+
+self.addEventListener("message", e => {
+  if (e.data === "skip-waiting") self.skipWaiting();
 });
 
 self.addEventListener("activate", e => {

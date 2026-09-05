@@ -267,6 +267,15 @@ EXTRA_CSS = """
 .mynote textarea:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .mysaved{color:var(--faint); font-size:11.5px; margin:7px 0 0; min-height:16px}
 
+#updbar{
+  position:fixed; left:16px; right:16px; bottom:16px; z-index:50;
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  background:var(--lift); border:1px solid var(--accent); padding:14px 18px;
+  box-shadow:0 10px 40px rgba(0,0,0,.65), 0 0 30px var(--accent-dim);
+}
+#updbar span{flex:1 1 160px; font-size:14px}
+@media (max-width:640px){ #updbar{flex-direction:column; align-items:stretch} }
+
 .install{
   display:flex; align-items:center; gap:18px; flex-wrap:wrap;
   padding:20px 22px; margin-bottom:34px;
@@ -440,6 +449,33 @@ def main():
     src = HEAD_TAGS + src
     io.open(OUT, "w", encoding="utf-8").write(src)
     print(f"{len(src):,} chars -> {os.path.abspath(OUT)}")
+    stamp_worker(src)
+
+
+def stamp_worker(page):
+    """Give the service worker a version that changes when the app does.
+
+    A fixed version with a cache-first shell is a trap: the first visit caches
+    the page and every visit after that is served from cache, so no update ever
+    arrives. The version is the content, so a build that changes nothing
+    changes nothing here either.
+    """
+    import hashlib
+    parts = [page]
+    for name in ("engine.js", "replay.js", "system.js"):
+        f = os.path.join(DOCS, name)
+        if os.path.exists(f):
+            parts.append(io.open(f, encoding="utf-8").read())
+    build = hashlib.sha256("".join(parts).encode("utf-8")).hexdigest()[:12]
+
+    p = os.path.join(DOCS, "sw.js")
+    sw = io.open(p, encoding="utf-8").read()
+    new = re.sub(r'const VERSION = "[^"]*";',
+                 f'const VERSION = "{build}";', sw, count=1)
+    if new == sw and f'"{build}"' not in sw:
+        raise SystemExit("could not stamp sw.js; the VERSION line moved")
+    io.open(p, "w", encoding="utf-8").write(new)
+    print(f"service worker version {build}")
 
 
 if __name__ == "__main__":
