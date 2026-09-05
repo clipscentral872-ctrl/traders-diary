@@ -466,10 +466,13 @@ def stamp_worker(page):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())
-    build = hashlib.sha256("".join(parts).encode("utf-8")).hexdigest()[:12]
 
     p = os.path.join(DOCS, "sw.js")
     sw = io.open(p, encoding="utf-8").read()
+    # The worker's own rules are part of the app. Hashing it with its version
+    # line blanked keeps this from chasing its own tail on every build.
+    parts.append(re.sub(r'const VERSION = "[^"]*";', "", sw))
+    build = hashlib.sha256("".join(parts).encode("utf-8")).hexdigest()[:12]
     new = re.sub(r'const VERSION = "[^"]*";',
                  f'const VERSION = "{build}";', sw, count=1)
     if new == sw and f'"{build}"' not in sw:
