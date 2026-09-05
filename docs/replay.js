@@ -7,6 +7,7 @@
  * optimistically teaches a strategy that does not exist.
  */
 import * as E from "./engine.js";
+import {levelsAt, FAMILY_COLOUR} from "./levels.js";
 
 const $ = id => document.getElementById(id);
 const PRACTICE_KEY = "tradersdiary.replay";
@@ -42,7 +43,7 @@ async function load(sym, tf) {
 
 const S = {
   sym: "NQ", tf: "5m", bars: [], i: 0, mode: "browse",
-  pos: null, done: [], timer: null,
+  pos: null, done: [], timer: null, levels: true,
 };
 
 const money = v => (v < 0 ? "-" : "+") + "$"
@@ -130,6 +131,8 @@ function draw() {
   const p = S.pos;
   if (p) { lo = Math.min(lo, p.stop, p.target); up = Math.max(up, p.stop, p.target); }
   const pad = (up - lo) * 0.08 || 1;
+  // Levels are not allowed to stretch the scale. A previous-day low far below
+  // the screen would squash the candles into a line to make room for it.
   lo -= pad; up += pad;
   const Y = v => T + h - (v - lo) / (up - lo) * h;
   const cw = w / view.length;
@@ -139,6 +142,28 @@ function draw() {
   for (let g = 0; g <= 4; g++) {
     const yy = Math.round(T + h * g / 4) + 0.5;
     x.beginPath(); x.moveTo(L, yy); x.lineTo(L + w, yy); x.stroke();
+  }
+
+  // Session levels sit behind everything, because they are context rather
+  // than the trade. Only sessions that have closed by the playhead appear.
+  let marks = [];
+  if (S.levels) {
+    marks = levelsAt(S.bars, S.bars[S.i] ? S.bars[S.i].ms : null)
+      .filter(m => m.price >= lo && m.price <= up);
+    x.font = '10px "JetBrains Mono", monospace';
+    x.textBaseline = "middle";
+    for (const m of marks) {
+      const y = Math.round(Y(m.price)) + 0.5;
+      x.strokeStyle = FAMILY_COLOUR[m.family] || css("--faint");
+      x.globalAlpha = 0.5;
+      x.setLineDash([2, 4]);
+      x.beginPath(); x.moveTo(L, y); x.lineTo(L + w, y); x.stroke();
+      x.setLineDash([]);
+      x.globalAlpha = 0.85;
+      x.fillStyle = FAMILY_COLOUR[m.family] || css("--faint");
+      x.fillText(m.label, L + 4, y - 7);
+      x.globalAlpha = 1;
+    }
   }
 
   if (p) {
@@ -201,6 +226,9 @@ function render() {
       + `<span class="rv">${S.mode === "browse"
           ? "browsing: pick where to start"
           : `bar ${S.i + 1} of ${S.bars.length}`}</span>`
+      + (S.levels && S.mode === "replay"
+          ? `<span class="rv">${levelsAt(S.bars, b.ms).length} session levels</span>`
+          : "")
     : "";
   $("rpctl").hidden = S.mode !== "replay";
 
@@ -334,6 +362,11 @@ function bindOnce() {
     $("rplay").textContent = "Stop";
   });
   $("rback").addEventListener("click", reset);
+  $("rlevels").addEventListener("click", () => {
+    S.levels = !S.levels;
+    $("rlevels").setAttribute("aria-pressed", String(S.levels));
+    draw();
+  });
   $("rbuy").addEventListener("click", () => open_("Long"));
   $("rsell").addEventListener("click", () => open_("Short"));
   $("rflat").addEventListener("click", () => {
