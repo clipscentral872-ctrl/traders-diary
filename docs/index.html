@@ -2050,20 +2050,59 @@ goTab(location.hash.slice(1) || "diary", false);
    a new version would otherwise never arrive: the cached page would be served
    forever. So an update is noticed and offered, rather than either forced on
    you mid-sentence or hidden from you completely. */
+function apply(reg) {
+  // Ask the waiting worker to take over, then reload once it has.
+  if (reg.waiting) reg.waiting.postMessage("skip-waiting");
+  setTimeout(() => location.reload(), 400);
+}
+
+/* Whether it is safe to update without asking.
+ *
+ * Updating is a reload, and a reload throws away anything not written down.
+ * Almost everything here is saved the moment it happens, so almost always it
+ * is safe. The exceptions are a note being typed, a replay position still
+ * open, and an import mid-flight. */
+function busy() {
+  const el = document.activeElement;
+  if (el && /^(TEXTAREA|INPUT|SELECT)$/.test(el.tagName)) return "typing";
+  const box = $("mynotebox");
+  if (box && !box.disabled) {
+    const t = window.TRADES.find(x =>
+      x.symbol + "|" + x.open_t === box.dataset.key);
+    if (box.value.trim() !== ((t && t.mine) || "").trim()) return "an unsaved note";
+  }
+  if (RP.inTrade()) return "a replay position still open";
+  if (document.getElementById("drop").classList.contains("busy")) return "an import";
+  return null;
+}
+
 function offerUpdate(reg) {
   if (document.getElementById("updbar")) return;
+
+  // Auto-update is the whole point of it being an app: nobody should have to
+  // think about versions. It only holds back when a reload would lose work.
+  const held = busy();
+  if (!held) { apply(reg); return; }
+
   const el = document.createElement("div");
   el.id = "updbar";
-  el.innerHTML = '<span>A new version is ready.</span>'
-    + '<button class="bigbtn" id="updgo">Reload</button>'
+  el.innerHTML = `<span>A new version is ready. It will install by itself once `
+    + `you are done, because right now there is ${held}.</span>`
+    + '<button class="bigbtn" id="updgo">Update now</button>'
     + '<button class="instx" id="updno">Later</button>';
   document.body.appendChild(el);
-  document.getElementById("updgo").addEventListener("click", () => {
-    // Ask the waiting worker to take over, then reload once it has.
-    if (reg.waiting) reg.waiting.postMessage("skip-waiting");
-    setTimeout(() => location.reload(), 400);
+  document.getElementById("updgo").addEventListener("click", () => apply(reg));
+  let dismissed = false;
+  document.getElementById("updno").addEventListener("click", () => {
+    dismissed = true;
+    el.remove();
   });
-  document.getElementById("updno").addEventListener("click", () => el.remove());
+
+  // Keep checking, and take the first quiet moment.
+  const t = setInterval(() => {
+    if (dismissed || !document.body.contains(el)) { clearInterval(t); return; }
+    if (!busy()) { clearInterval(t); apply(reg); }
+  }, 4000);
 }
 
 if ("serviceWorker" in navigator) {

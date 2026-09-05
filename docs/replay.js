@@ -405,3 +405,8 @@ export function init(onSave) {
 }
 
 export const redraw = () => { if (S.bars.length) draw(); };
+
+// An update is a reload, and a reload would throw away an open position
+// mid-session. The app asks before doing that.
+export const inTrade = () => !!S.pos;
+
