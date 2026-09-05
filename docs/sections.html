@@ -1,3 +1,20 @@
+<div id="lockgate" hidden>
+  <div class="lockcard hud">
+    <div class="lockmark" aria-hidden="true"></div>
+    <h2>Locked</h2>
+    <p class="lead">This diary is encrypted. Enter your passcode to open it.</p>
+    <form id="lockform" autocomplete="off">
+      <input type="password" id="lockpin" placeholder="Passcode"
+             autocomplete="current-password" enterkeyhint="go" required>
+      <button class="bigbtn" type="submit" id="lockgo">Unlock</button>
+    </form>
+    <p class="lockmsg" id="lockmsg" hidden></p>
+    <p class="lead lockhelp">There is no reset and no way round this. If the
+    passcode is gone the record is gone, and the only way back is a backup
+    file. Nobody holds a spare key, including whoever made this.</p>
+  </div>
+</div>
+
 <div class="tabpane" data-tab="replay" hidden>
 
 <section>

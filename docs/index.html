@@ -554,6 +554,34 @@ footer{
 }
 .instx:hover{color:var(--muted)}
 .instx:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+#lockgate{
+  position:fixed; inset:0; z-index:60; background:var(--ground);
+  display:flex; align-items:center; justify-content:center; padding:22px;
+}
+.lockcard{
+  background:var(--raised); border:1px solid var(--line); padding:34px 30px;
+  max-width:420px; width:100%; text-align:center;
+}
+.lockcard h2{margin:0 0 10px}
+.lockcard h2::before{display:none}
+.lockmark{
+  width:34px; height:26px; margin:0 auto 18px; border:2px solid var(--accent);
+  border-radius:4px; position:relative; box-shadow:0 0 18px var(--accent-dim);
+}
+.lockmark::before{
+  content:""; position:absolute; left:50%; top:-15px; width:18px; height:16px;
+  border:2px solid var(--accent); border-bottom:none;
+  border-radius:9px 9px 0 0; transform:translateX(-50%);
+}
+#lockform{display:flex; flex-direction:column; gap:10px; margin:20px 0 4px}
+#lockpin{
+  background:var(--lift); border:1px solid var(--line); color:var(--text);
+  font-family:"JetBrains Mono",monospace; font-size:17px; letter-spacing:.2em;
+  padding:14px; text-align:center; min-height:50px;
+}
+#lockpin:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.lockmsg{color:var(--loss); font-size:13.5px; margin:12px 0 0}
+.lockhelp{font-size:12.5px; color:var(--faint); margin-top:20px}
 .toolrow{display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 12px}
 .bigbtn.ghost{
   background:transparent; border-color:var(--line); color:var(--muted);
@@ -717,6 +745,24 @@ footer{
 </section>
 
 <section>
+  <h2>Lock it with a passcode</h2>
+  <p class="lead">A passcode does not just hide the diary behind a screen, it
+  <b>encrypts</b> the record. What is left in this browser afterwards is a blob
+  that means nothing without the passcode, so someone holding your unlocked
+  phone gets nothing out of it.</p>
+  <p class="lead">The cost of that is real and there is no way around it:
+  <b>there is no reset.</b> No account, no recovery email, nobody with a spare
+  key. Forget the passcode and the record is gone. Save a backup file first,
+  and keep it somewhere you trust, because the backup stays unencrypted on
+  purpose so that it is a way back in rather than a second thing to lose.</p>
+  <div class="toolrow" id="lockrow">
+    <button class="bigbtn" id="setlock">Set a passcode</button>
+    <button class="bigbtn ghost" id="unsetlock" hidden>Remove the passcode</button>
+  </div>
+  <p class="lead" id="lockstate"></p>
+</section>
+
+<section>
   <h2>Keep it on your phone</h2>
   <p class="lead">This works as an app rather than a bookmark. On an iPhone,
   open it in Safari, tap the share button and choose <b>Add to Home Screen</b>.
@@ -774,6 +820,23 @@ footer{
 </section>
 
 </div>
+<div id="lockgate" hidden>
+  <div class="lockcard hud">
+    <div class="lockmark" aria-hidden="true"></div>
+    <h2>Locked</h2>
+    <p class="lead">This diary is encrypted. Enter your passcode to open it.</p>
+    <form id="lockform" autocomplete="off">
+      <input type="password" id="lockpin" placeholder="Passcode"
+             autocomplete="current-password" enterkeyhint="go" required>
+      <button class="bigbtn" type="submit" id="lockgo">Unlock</button>
+    </form>
+    <p class="lockmsg" id="lockmsg" hidden></p>
+    <p class="lead lockhelp">There is no reset and no way round this. If the
+    passcode is gone the record is gone, and the only way back is a backup
+    file. Nobody holds a spare key, including whoever made this.</p>
+  </div>
+</div>
+
 <div class="tabpane" data-tab="replay" hidden>
 
 <section>
@@ -1162,7 +1225,7 @@ function details(){
     val("stop", t.stop!=null ? px(t.stop)+"<small>"+t.risk_pts+" pts</small>" : "&mdash;", "loss"),
     val("target", t.target!=null ? px(t.target) +
         (t.planned_rr!=null?"<small>"+t.planned_rr.toFixed(2)+"R</small>":"") : "&mdash;", "win"),
-    val("exit", px(t.exit)+"<small>"+t.exit_type.toLowerCase()+"</small>",
+    val("exit", px(t.exit)+"<small>"+(t.exit_type||"").toLowerCase()+"</small>",
         t.got_r>=0?"win":"loss"),
     val("in", t.open_t.slice(11,16)),
     val("out", t.close_t.slice(11,16)+"<small>"+t.held_min+" min</small>"),
@@ -1322,6 +1385,7 @@ pickSource(firstSrc ? firstSrc.dataset.src : "live");
 import * as E from "./engine.js";
 import * as RP from "./replay.js";
 import * as SYS from "./system.js";
+import * as LOCK from "./lock.js";
 
 const $ = id => document.getElementById(id);
 const KEY = "tradersdiary.v1";
@@ -1329,10 +1393,15 @@ const TZ_KEY = "tradersdiary.tz";
 
 /* ------------------------------------------------------------- storage */
 
+// Held only in memory, only while the app is open, and never written down.
+// Closing the tab forgets it, which is the whole point of it being a lock.
+let PASSCODE = null;
+
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return {trades: [], start: null};
+    if (LOCK.isLocked(raw)) return {trades: [], start: null, sealed: true};
     const o = JSON.parse(raw);
     return {trades: o.trades || [], start: o.start ?? null};
   } catch {
@@ -1342,14 +1411,27 @@ function load() {
   }
 }
 
+const CANT_STORE =
+  "This browser would not store the record, most likely because it is full or "
+  + "because private browsing blocks storage. Your trades are on screen but "
+  + "will be gone when you close the tab. Save a backup file.";
+
 function save(trades, start) {
+  const body = {trades, start, saved: Date.now()};
   try {
-    localStorage.setItem(KEY, JSON.stringify({trades, start, saved: Date.now()}));
+    if (PASSCODE === null) {
+      localStorage.setItem(KEY, JSON.stringify(body));
+      return null;
+    }
+    // Locked. Encrypt first, and only overwrite once that has succeeded, so a
+    // failure here can never replace a good record with a broken one.
+    LOCK.lock(body, PASSCODE)
+      .then(env => localStorage.setItem(KEY, JSON.stringify(env)))
+      .catch(() => say("The record could not be locked, so it was not saved. "
+                     + "Save a backup file now.", true));
     return null;
   } catch (e) {
-    return "This browser would not store the record, most likely because it is "
-         + "full or because private browsing blocks storage. Your trades are on "
-         + "screen but will be gone when you close the tab. Save a backup file.";
+    return CANT_STORE;
   }
 }
 
@@ -1931,6 +2013,123 @@ if (noteBox) {
   });
 }
 
+/** Trades imported before the bars were published can still get their chart. */
+function fillCandles() {
+  let filled = 0;
+  for (const t of window.TRADES)
+    if (E.attachBars(t, BARS[E.FEED[t.symbol]], tzOffset())) {
+      E.analyseExcursion(t);
+      filled++;
+    }
+  if (filled) {
+    save(window.TRADES, window.START);
+    renderPanels();
+  }
+}
+
+/* ---------------------------------------------------------- the lock */
+
+/* A passcode encrypts the record rather than hiding it behind a screen, so
+ * the honest warnings matter more than the buttons: there is no reset, and
+ * the backup file is the only way back. */
+
+const gate = $("lockgate");
+
+function showGate(msg) {
+  gate.hidden = false;
+  $("lockmsg").hidden = !msg;
+  $("lockmsg").textContent = msg || "";
+  $("lockpin").value = "";
+  $("lockpin").focus();
+}
+
+$("lockform").addEventListener("submit", async e => {
+  e.preventDefault();
+  const pin = $("lockpin").value;
+  if (!pin) return;
+  const btn = $("lockgo");
+  btn.disabled = true;
+  btn.textContent = "Unlocking...";
+  try {
+    const env = JSON.parse(localStorage.getItem(KEY));
+    const body = await LOCK.unlock(env, pin);
+    PASSCODE = pin;
+    window.TRADES = body.trades || [];
+    window.START = body.start ?? null;
+    gate.hidden = true;
+    renderPanels();
+    storeLine();
+    lockState();
+    loadBars(feedsFor(window.TRADES)).then(fillCandles);
+  } catch {
+    // AES-GCM authenticates, so a wrong passcode fails outright. There is
+    // nothing here that leaks whether it was nearly right.
+    showGate("That passcode does not open this diary.");
+  }
+  btn.disabled = false;
+  btn.textContent = "Unlock";
+});
+
+function lockState() {
+  const on = PASSCODE !== null;
+  $("setlock").textContent = on ? "Change the passcode" : "Set a passcode";
+  $("unsetlock").hidden = !on;
+  $("lockstate").textContent = on
+    ? "Locked. The record in this browser is encrypted, and the passcode is "
+      + "forgotten the moment you close the app."
+    : LOCK.available()
+      ? "Not locked. The record is readable by anyone who can open this browser."
+      : "This browser cannot encrypt, so the passcode option is not available "
+        + "here. It needs a secure connection.";
+  $("setlock").disabled = !LOCK.available();
+}
+
+$("setlock").addEventListener("click", async () => {
+  if (!LOCK.available()) return;
+  if (!window.TRADES.length && PASSCODE === null
+      && !confirm("There is nothing stored yet. Set a passcode anyway?")) return;
+
+  if (PASSCODE === null && !confirm(
+      "Before you do this: there is NO reset and NO recovery. Forget the "
+      + "passcode and the record is gone for good.\n\nSave a backup file "
+      + "first if you have not. Continue?")) return;
+
+  const pin = prompt(PASSCODE === null
+    ? "Choose a passcode. Longer is much stronger than clever."
+    : "Choose the new passcode.");
+  if (pin === null) return;
+  if (pin.length < 4) { say("A passcode needs at least four characters.", true); return; }
+  const again = prompt("Type it again, to be sure.");
+  if (again === null) return;
+  if (again !== pin) { say("Those did not match, so nothing changed.", true); return; }
+
+  PASSCODE = pin;
+  try {
+    const env = await LOCK.lock(
+      {trades: window.TRADES, start: window.START, saved: Date.now()}, pin);
+    localStorage.setItem(KEY, JSON.stringify(env));
+    lockState();
+    storeLine();
+    say("Locked. From now on this diary asks for that passcode when it opens, "
+      + "on this device. Your backup file is still unencrypted, so keep it "
+      + "somewhere you trust.");
+  } catch (e) {
+    PASSCODE = null;
+    say("The record could not be locked, so nothing changed.", true);
+  }
+});
+
+$("unsetlock").addEventListener("click", () => {
+  if (PASSCODE === null) return;
+  if (!confirm("Remove the passcode? The record goes back to being readable "
+             + "by anyone who can open this browser.")) return;
+  PASSCODE = null;
+  const warn = save(window.TRADES, window.START);
+  lockState();
+  storeLine();
+  say(warn || "Passcode removed.");
+});
+
 /* --------------------------------------------------------- installing */
 
 /* Getting this onto a home screen is the whole point, and on an iPhone it
@@ -2017,19 +2216,13 @@ if (STATE.broken)
 E.setLocalOffset(tzOffset());
 renderPanels();
 storeLine();
-loadBars(feedsFor(window.TRADES)).then(() => {
-  // Trades imported before the bars were published can still get their chart.
-  let filled = 0;
-  for (const t of window.TRADES)
-    if (E.attachBars(t, BARS[E.FEED[t.symbol]], tzOffset())) {
-      E.analyseExcursion(t);
-      filled++;
-    }
-  if (filled) {
-    save(window.TRADES, window.START);
-    renderPanels();
-  }
-});
+lockState();
+// A sealed store means the record is there but encrypted. Ask before drawing
+// anything, so an empty diary is never mistaken for a lost one.
+if (STATE.sealed) showGate("");
+// A sealed store has nothing loaded yet, so there is nothing to draw candles
+// on. This runs again after unlocking instead.
+if (!STATE.sealed) loadBars(feedsFor(window.TRADES)).then(fillCandles);
 
 RP.setClock(tzOffset);
 RP.init(practice => {

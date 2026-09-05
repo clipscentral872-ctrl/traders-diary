@@ -100,6 +100,24 @@ PRIVACY = """<section>
 </section>
 
 <section>
+  <h2>Lock it with a passcode</h2>
+  <p class="lead">A passcode does not just hide the diary behind a screen, it
+  <b>encrypts</b> the record. What is left in this browser afterwards is a blob
+  that means nothing without the passcode, so someone holding your unlocked
+  phone gets nothing out of it.</p>
+  <p class="lead">The cost of that is real and there is no way around it:
+  <b>there is no reset.</b> No account, no recovery email, nobody with a spare
+  key. Forget the passcode and the record is gone. Save a backup file first,
+  and keep it somewhere you trust, because the backup stays unencrypted on
+  purpose so that it is a way back in rather than a second thing to lose.</p>
+  <div class="toolrow" id="lockrow">
+    <button class="bigbtn" id="setlock">Set a passcode</button>
+    <button class="bigbtn ghost" id="unsetlock" hidden>Remove the passcode</button>
+  </div>
+  <p class="lead" id="lockstate"></p>
+</section>
+
+<section>
   <h2>Keep it on your phone</h2>
   <p class="lead">This works as an app rather than a bookmark. On an iPhone,
   open it in Safari, tap the share button and choose <b>Add to Home Screen</b>.
@@ -307,6 +325,34 @@ EXTRA_CSS = """
 }
 .instx:hover{color:var(--muted)}
 .instx:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+#lockgate{
+  position:fixed; inset:0; z-index:60; background:var(--ground);
+  display:flex; align-items:center; justify-content:center; padding:22px;
+}
+.lockcard{
+  background:var(--raised); border:1px solid var(--line); padding:34px 30px;
+  max-width:420px; width:100%; text-align:center;
+}
+.lockcard h2{margin:0 0 10px}
+.lockcard h2::before{display:none}
+.lockmark{
+  width:34px; height:26px; margin:0 auto 18px; border:2px solid var(--accent);
+  border-radius:4px; position:relative; box-shadow:0 0 18px var(--accent-dim);
+}
+.lockmark::before{
+  content:""; position:absolute; left:50%; top:-15px; width:18px; height:16px;
+  border:2px solid var(--accent); border-bottom:none;
+  border-radius:9px 9px 0 0; transform:translateX(-50%);
+}
+#lockform{display:flex; flex-direction:column; gap:10px; margin:20px 0 4px}
+#lockpin{
+  background:var(--lift); border:1px solid var(--line); color:var(--text);
+  font-family:"JetBrains Mono",monospace; font-size:17px; letter-spacing:.2em;
+  padding:14px; text-align:center; min-height:50px;
+}
+#lockpin:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.lockmsg{color:var(--loss); font-size:13.5px; margin:12px 0 0}
+.lockhelp{font-size:12.5px; color:var(--faint); margin-top:20px}
 .toolrow{display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 12px}
 .bigbtn.ghost{
   background:transparent; border-color:var(--line); color:var(--muted);
@@ -462,7 +508,8 @@ def stamp_worker(page):
     """
     import hashlib
     parts = [page]
-    for name in ("engine.js", "replay.js", "system.js", "levels.js"):
+    for name in ("engine.js", "replay.js", "system.js", "levels.js",
+             "lock.js"):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())
