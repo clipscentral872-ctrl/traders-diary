@@ -16,7 +16,7 @@
 // Stamped by tools/build_web.py from the content of the files below. A
 // fixed version meant a cache-first shell served the old page forever:
 // once installed, no update could reach anyone.
-const VERSION = "c4d28d4dd266";
+const VERSION = "93c3a7b0b621";
 const SHELL = "diary-shell-" + VERSION;
 const DATA = "diary-bars-" + VERSION;
 
@@ -72,12 +72,27 @@ self.addEventListener("fetch", e => {
     return;
   }
 
+  // Network first, cache as the fallback.
+  //
+  // Cache-first looks right for a shell and is a trap when the files are
+  // published through a CDN: the worker installs the moment the new sw.js
+  // arrives, which can be before index.html has propagated, and it then
+  // caches the OLD page under the NEW version's name. That mixture is sticky,
+  // because nothing will change the cache name again until the next build.
+  // It happened, and the page it produced ran a new worker over an old page.
+  //
+  // The shell is under 150 KB, so preferring the network costs little and is
+  // worth the guarantee. Offline still works: the cache answers whenever the
+  // network cannot, and everything was precached on install.
   e.respondWith((async () => {
-    const hit = await caches.match(req, {ignoreSearch: true});
-    const net = fetch(req).then(res => {
+    try {
+      const res = await fetch(req);
       if (res.ok) caches.open(SHELL).then(c => c.put(req, res.clone()));
       return res;
-    }).catch(() => hit);
-    return hit || net;
+    } catch {
+      const hit = await caches.match(req, {ignoreSearch: true});
+      if (hit) return hit;
+      throw new Error("offline and not cached");
+    }
   })());
 });

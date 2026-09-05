@@ -113,8 +113,12 @@ export function levelsAt(bars, atMs) {
     if (seen.has(r.key) || !closed(r)) continue;
     if (!Number.isFinite(r.h) || !Number.isFinite(r.l)) continue;
     seen.add(r.key);
-    out.push({family: r.key, label: r.label + " High", price: r.h, day: r.day},
-             {family: r.key, label: r.label + " Low", price: r.l, day: r.day});
+    // During the New York session the most recent CLOSED New York range is
+    // yesterday's. Labelling that "New York High" reads as today's and is the
+    // one way this could mislead, so a level from an earlier day says so.
+    const name = r.day < now.date ? "Prev " + r.label : r.label;
+    out.push({family: r.key, label: name + " High", price: r.h, day: r.day},
+             {family: r.key, label: name + " Low", price: r.l, day: r.day});
   }
 
   const prevDays = [...days.keys()].filter(d => d < now.date).sort();

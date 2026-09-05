@@ -79,5 +79,20 @@ const future = levelsAt(bars, at(3, 4, 0).ms);
 check("the New York range is not leaked early",
   future.some(l => l.label.startsWith("New York")), false);
 
+console.log("\na closed session from an earlier day says so");
+// Two full days, read from inside the second day's New York session, when the
+// most recent CLOSED New York range is the previous day's. Calling that
+// "New York High" reads as today's, which is the one way this could mislead.
+const twoDays = [
+  at(2, 10, 0, 200, 190), at(2, 15, 0, 210, 180),   // 2nd, New York
+  at(3, 4, 0, 120, 110),                            // 3rd, London
+  at(3, 11, 0, 140, 130),                           // 3rd, New York, still open
+];
+ls = levelsAt(twoDays, at(3, 11, 0).ms);
+check("yesterday's range is labelled Prev", find(ls, "Prev New York High"), 210);
+check("and is not passed off as today's", find(ls, "New York High"), null);
+check("today's low is not leaked either", find(ls, "New York Low"), null);
+check("london closed today needs no Prev", find(ls, "London High"), 120);
+
 console.log(failed ? `\n${failed} check(s) failed` : "\nall checks passed");
 process.exit(failed ? 1 : 0);
