@@ -115,6 +115,32 @@ PRIVACY = """<section>
     <button class="bigbtn ghost" id="unsetlock" hidden>Remove the passcode</button>
   </div>
   <p class="lead" id="lockstate"></p>
+
+  <!-- A real form rather than the browser's popups. A home-screen app on an
+       iPhone can swallow prompt() entirely, and a passcode you tap Set on and
+       nothing happens is worse than no passcode at all. -->
+  <div class="setcard hud" id="setpanel" hidden>
+    <h3 id="settitle">Set a passcode</h3>
+    <p class="lead">Longer beats clever. A short phrase you will not forget is
+    stronger than a word with symbols in it.</p>
+    <form id="setform" autocomplete="off">
+      <label class="rpl" for="pin1">Passcode
+        <input type="password" id="pin1" autocomplete="new-password"
+               minlength="4" required></label>
+      <label class="rpl" for="pin2">Type it again
+        <input type="password" id="pin2" autocomplete="new-password"
+               minlength="4" required></label>
+      <label class="ack"><input type="checkbox" id="ack">
+        I understand there is <b>no reset</b>. If I forget this, the record on
+        this device is gone and only a backup file can bring it back.</label>
+      <div class="toolrow">
+        <button class="bigbtn" type="submit" id="setgo">Lock it</button>
+        <button class="bigbtn ghost" type="button" id="setbackup">Save a backup first</button>
+        <button class="bigbtn ghost" type="button" id="setcancel">Cancel</button>
+      </div>
+    </form>
+    <p class="lockmsg" id="setmsg" hidden></p>
+  </div>
 </section>
 
 <section>
@@ -353,6 +379,26 @@ EXTRA_CSS = """
 #lockpin:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .lockmsg{color:var(--loss); font-size:13.5px; margin:12px 0 0}
 .lockhelp{font-size:12.5px; color:var(--faint); margin-top:20px}
+.setcard{
+  background:var(--raised); border:1px solid var(--line);
+  padding:22px; margin-top:16px;
+}
+.setcard h3{margin:0 0 8px}
+#setform{display:flex; flex-direction:column; gap:14px; margin-top:16px}
+#setform input[type=password]{
+  background:var(--lift); border:1px solid var(--line); color:var(--text);
+  font-family:"JetBrains Mono",monospace; font-size:16px; letter-spacing:.14em;
+  padding:13px; min-height:48px;
+}
+#setform input[type=password]:focus-visible{
+  outline:2px solid var(--accent); outline-offset:2px;
+}
+.ack{
+  display:flex; gap:11px; align-items:flex-start; color:var(--muted);
+  font-size:13px; line-height:1.6; cursor:pointer;
+}
+.ack input{width:20px; height:20px; margin:2px 0 0; flex:none; accent-color:var(--accent)}
+.ack b{color:var(--loss)}
 .toolrow{display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 12px}
 .bigbtn.ghost{
   background:transparent; border-color:var(--line); color:var(--muted);

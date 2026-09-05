@@ -707,43 +707,72 @@ function lockState() {
   $("setlock").disabled = !LOCK.available();
 }
 
-$("setlock").addEventListener("click", async () => {
+function setMsg(text, bad) {
+  const el = $("setmsg");
+  el.textContent = text || "";
+  el.classList.toggle("bad", !!bad);
+  el.hidden = !text;
+}
+
+function openSetPanel() {
+  $("settitle").textContent = PASSCODE === null
+    ? "Set a passcode" : "Change the passcode";
+  // The acknowledgement is about losing the record, which only bites the
+  // first time. Changing a passcode you already have is not that.
+  $("ack").closest("label").hidden = PASSCODE !== null;
+  $("ack").checked = PASSCODE !== null;
+  $("pin1").value = $("pin2").value = "";
+  setMsg("");
+  $("setpanel").hidden = false;
+  $("pin1").focus();
+}
+
+$("setlock").addEventListener("click", () => {
   if (!LOCK.available()) return;
-  if (!window.TRADES.length && PASSCODE === null
-      && !confirm("There is nothing stored yet. Set a passcode anyway?")) return;
+  if ($("setpanel").hidden) openSetPanel();
+  else $("setpanel").hidden = true;
+});
 
-  if (PASSCODE === null && !confirm(
-      "Before you do this: there is NO reset and NO recovery. Forget the "
-      + "passcode and the record is gone for good.\n\nSave a backup file "
-      + "first if you have not. Continue?")) return;
+$("setcancel").addEventListener("click", () => { $("setpanel").hidden = true; });
+$("setbackup").addEventListener("click", () => $("save").click());
 
-  const pin = prompt(PASSCODE === null
-    ? "Choose a passcode. Longer is much stronger than clever."
-    : "Choose the new passcode.");
-  if (pin === null) return;
-  if (pin.length < 4) { say("A passcode needs at least four characters.", true); return; }
-  const again = prompt("Type it again, to be sure.");
-  if (again === null) return;
-  if (again !== pin) { say("Those did not match, so nothing changed.", true); return; }
+$("setform").addEventListener("submit", async e => {
+  e.preventDefault();
+  const pin = $("pin1").value, again = $("pin2").value;
+  if (pin.length < 4) { setMsg("A passcode needs at least four characters.", true); return; }
+  if (pin !== again) { setMsg("Those two do not match.", true); return; }
+  if (!$("ack").checked) {
+    setMsg("Tick the box first. This one really cannot be undone.", true);
+    return;
+  }
 
-  PASSCODE = pin;
+  const btn = $("setgo");
+  btn.disabled = true;
+  btn.textContent = "Locking...";
   try {
     const env = await LOCK.lock(
       {trades: window.TRADES, start: window.START, saved: Date.now()}, pin);
     localStorage.setItem(KEY, JSON.stringify(env));
+    PASSCODE = pin;
+    $("setpanel").hidden = true;
     lockState();
     storeLine();
-    say("Locked. From now on this diary asks for that passcode when it opens, "
-      + "on this device. Your backup file is still unencrypted, so keep it "
-      + "somewhere you trust.");
-  } catch (e) {
-    PASSCODE = null;
-    say("The record could not be locked, so nothing changed.", true);
+    say("Locked. This diary now asks for that passcode when it opens on this "
+      + "device. Your backup file is still unencrypted, so keep it somewhere "
+      + "you trust. Setting it here does not lock your other devices: do the "
+      + "same on each one.");
+  } catch (err) {
+    // Nothing was written, so nothing was lost.
+    setMsg("The record could not be locked, so nothing changed.", true);
   }
+  btn.disabled = false;
+  btn.textContent = "Lock it";
 });
 
 $("unsetlock").addEventListener("click", () => {
   if (PASSCODE === null) return;
+  // Losing a lock is recoverable in a way that losing a record is not, so a
+  // single confirmation is the right weight here.
   if (!confirm("Remove the passcode? The record goes back to being readable "
              + "by anyone who can open this browser.")) return;
   PASSCODE = null;
