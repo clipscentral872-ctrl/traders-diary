@@ -29,10 +29,13 @@ const FILES = [
 self.addEventListener("install", e => {
   // One missing file must not fail the whole install and leave the app with
   // no offline support at all, so they are added one at a time.
-  e.waitUntil(caches.open(SHELL).then(async c => {
-    await Promise.all(FILES.map(f => c.add(f).catch(() => {})));
-    self.skipWaiting();
-  }));
+  // Deliberately no skipWaiting here. Taking over immediately swaps the files
+  // under a page that is already running on the old ones, which is how a
+  // half-updated app ends up throwing. A new worker waits until the page says
+  // it is ready, which it does when you press Reload. The very first install
+  // has no worker to replace, so it activates at once regardless.
+  e.waitUntil(caches.open(SHELL).then(c =>
+    Promise.all(FILES.map(f => c.add(f).catch(() => {})))));
 });
 
 self.addEventListener("message", e => {
