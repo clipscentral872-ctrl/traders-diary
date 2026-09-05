@@ -6,6 +6,8 @@
  * no signal and no account.
  */
 import * as E from "./engine.js";
+import * as RP from "./replay.js";
+import * as SYS from "./system.js";
 
 const $ = id => document.getElementById(id);
 const KEY = "tradersdiary.v1";
@@ -161,6 +163,7 @@ function renderPanels() {
   }).join("");
 
   renderStanding();
+  renderLearn();
   const first = document.querySelector('.src[data-src="live"]')
              || document.querySelector(".src");
   window.pickSource(first ? first.dataset.src : "live");
@@ -445,6 +448,175 @@ tzSel.addEventListener("change", () => {
   say("Saved. Re-import a session for the New York clock check to use it.");
 });
 
+/* --------------------------------------------------------------- learn */
+
+/* The lessons are ranked by what these mistakes actually cost, in money, in
+   this record. A generic list of trading mistakes is worth nothing; the one
+   you keep paying for is worth reading. */
+const LESSON = {
+  "trailed early": ["Tightening the stop before your own rule says to",
+    "Your rule holds the stop until price has run about twice what you risked. "
+    + "Moving it in earlier turns a trade you were right about into a small loss, "
+    + "and it is the single most common thing in this record."],
+  "stopped into the news": ["Leaving a stop where a data release can reach it",
+    "US data lands at 08:30 and 10:00 New York, and the Fed at 14:00. In the "
+    + "minute before, the market reaches for resting stops. A stop just past the "
+    + "last few highs or lows is the easiest one to take."],
+  "cut short": ["Coming out before the target price then reached anyway",
+    "The read was right and the exit was early. Worth separating from the times "
+    + "leaving early saved you, which the diary marks differently."],
+  "closed early": ["Closing by hand well short of the target",
+    "Banking a winner is fine. Doing it at a third of the planned move, every "
+    + "time, means the target was never the trade you were actually managing."],
+  "right, stopped early": ["Right direction, stop inside the noise",
+    "Price went your way after stopping you out. The read was not the problem; "
+    + "the stop was closer than the market's normal wobble."],
+  "slipped": ["Stops filling worse than they were set",
+    "A stop is a market order. Once touched it takes whatever price is there, "
+    + "so the loss comes out bigger than the one you chose. Size for that."],
+  "stop wrong side": ["A stop moved past the entry",
+    "Placed the wrong side of the market it is already triggered, so it fills "
+    + "the instant it lands."],
+  "target far out": ["Targets set beyond what the trade was managed for",
+    "A target far enough away that you were never going to hold for it makes "
+    + "every exit look premature and every R figure meaningless."],
+  "no R": ["Trades with no stop on record",
+    "R is defined by the risk you take. No stop means no R, and no position "
+    + "size that could have been worked out in advance."],
+  "stopped fast": ["Stopped inside a minute",
+    "Entering where the stop is one wobble away. Usually a sign of entering "
+    + "before the setup finished rather than of a bad read."],
+};
+
+function renderLearn() {
+  const mine = window.TRADES.filter(t => (t.source || "live") === "live");
+  const cost = new Map();
+  for (const t of mine)
+    for (const f of (t.flags || [])) {
+      const c = cost.get(f) || {n: 0, lost: 0};
+      c.n++;
+      if (t.pnl < 0) c.lost += -t.pnl;
+      cost.set(f, c);
+    }
+
+  const ranked = [...cost.entries()]
+    .filter(([f]) => LESSON[f])
+    .sort((a, b) => (b[1].lost - a[1].lost) || (b[1].n - a[1].n))
+    .slice(0, 6);
+
+  $("lessons").innerHTML = mine.length
+    ? (ranked.map(([f, c]) => {
+        const [title, body] = LESSON[f];
+        const bill = c.lost
+          ? ` It appears on losses totalling ${dollars(-c.lost)}.`
+          : " It has not cost you money yet.";
+        return `<li><span class="ln">${c.n}</span><span class="lt">`
+          + `<b>${esc(title)}</b><span>${esc(body + bill)}</span></span></li>`;
+      }).join("")
+      || '<li><span class="ln">0</span><span class="lt"><b>Nothing flagged yet'
+         + '</b><span>Import a few more sessions and the pattern shows up '
+         + 'here.</span></span></li>')
+    : '<li><span class="ln">&mdash;</span><span class="lt"><b>Nothing imported '
+      + 'yet</b><span>This list is built from your own trades, so it fills in '
+      + 'once the Diary has some.</span></span></li>';
+
+  const rows = [];
+  const row = (state, label, detail) => rows.push(
+    `<li class="stand ${state}"><span class="sl2">${esc(label)}</span>`
+    + `<span class="sd">${detail}</span></li>`);
+
+  row("no", "The strategy is not proven",
+    "It fails walk-forward because the folds are too thin, and fails the "
+    + "second-source check because no independent futures feed is free. One "
+    + "configuration ever showed support, at about $500 a month on $50,000. "
+    + "Everything else tested came out negative or indistinguishable from zero.");
+  row("no", "Two filters were built, tested and rejected",
+    "An exhaustion rule and a news blackout. Both sounded right. Measured "
+    + "properly, the trades each one refused made more than the trades it kept, "
+    + "so neither was kept. A filter that is not measured is a superstition.");
+  row("warn", "This page can only tell you what you did",
+    "It has no opinion on whether your strategy works, and a run of green "
+    + "numbers over a handful of trades is not evidence. Do not size up because "
+    + "a page looks encouraging.");
+
+  const n = window.TRADES.filter(t => (t.source || "live") === "live").length;
+  if (n)
+    row(n >= 100 ? "ok" : "warn", `You have ${n} live trade${n === 1 ? "" : "s"}`,
+      n >= 100
+        ? "Enough to read an expectancy from, though one month is one market regime."
+        : `About 100 are needed before a win rate means anything. At ${n}, this `
+          + `describes what happened rather than what tends to happen.`);
+  $("proof").innerHTML = rows.join("");
+}
+
+/* ---------------------------------------------------------------- tabs */
+
+/* Four tabs, one app. The tab is kept in the URL hash so the back button
+   works and so a tab can be linked to, which matters once this is on a home
+   screen and reopening should land where it was left. */
+const TABNAMES = ["diary", "replay", "system", "learn"];
+
+function goTab(name, push) {
+  if (!TABNAMES.includes(name)) name = "diary";
+  document.querySelectorAll(".tabpane").forEach(p => {
+    p.hidden = p.dataset.tab !== name;
+  });
+  document.querySelectorAll(".tb").forEach(b => {
+    b.setAttribute("aria-selected", String(b.dataset.go === name));
+  });
+  if (push && location.hash.slice(1) !== name) location.hash = name;
+  scrollTo({top: 0, behavior: "instant"});
+
+  // A canvas sized while its pane was hidden has no width, so both charts are
+  // redrawn on the way in rather than on the way out.
+  if (name === "diary") { try { window.drawEq(); window.draw(); } catch { /* nothing loaded */ } }
+  if (name === "replay") RP.redraw();
+  if (name === "system") SYS.show();
+}
+
+document.querySelector(".tabs2").addEventListener("click", e => {
+  const b = e.target.closest(".tb");
+  if (b) goTab(b.dataset.go, true);
+});
+addEventListener("hashchange", () => goTab(location.hash.slice(1), false));
+
+/* --------------------------------------------------------- your own note */
+
+/* "What was I thinking" is the one thing a journal cannot work out for you,
+   and it is the thing worth most a month later. Kept against the trade rather
+   than in a separate file, so a backup carries it too. */
+const noteBox = $("mynotebox"), noteSaved = $("mynotesaved");
+let noteTimer = null;
+
+function keyOf(t) { return t.symbol + "|" + t.open_t; }
+
+window.showMyNote = function (t) {
+  if (!noteBox) return;
+  noteBox.value = t && t.mine ? t.mine : "";
+  noteBox.dataset.key = t ? keyOf(t) : "";
+  noteBox.disabled = !t;
+  noteSaved.textContent = "";
+};
+
+if (noteBox) {
+  noteBox.addEventListener("input", () => {
+    clearTimeout(noteTimer);
+    noteSaved.textContent = "typing...";
+    // Saving on every keystroke rewrites the whole store each time, which on a
+    // phone with a few hundred trades is felt. A short pause is enough.
+    noteTimer = setTimeout(() => {
+      const t = window.TRADES.find(x => keyOf(x) === noteBox.dataset.key);
+      if (!t) return;
+      const v = noteBox.value.trim();
+      if (v) t.mine = v; else delete t.mine;
+      const warn = save(window.TRADES, window.START);
+      noteSaved.textContent = warn
+        ? "Could not save: this browser is blocking storage."
+        : "Saved to this device.";
+    }, 600);
+  });
+}
+
 /* --------------------------------------------------------- installing */
 
 /* Getting this onto a home screen is the whole point, and on an iPhone it
@@ -544,6 +716,25 @@ loadBars(feedsFor(window.TRADES)).then(() => {
     renderPanels();
   }
 });
+
+RP.setClock(tzOffset);
+RP.init(practice => {
+  const byKey = new Map(window.TRADES.map(t => [t.source + "|" + t.symbol + "|" + t.open_t, t]));
+  let added = 0;
+  for (const t of practice) {
+    const k = "replay|" + t.symbol + "|" + t.open_t;
+    if (byKey.has(k)) continue;
+    byKey.set(k, t);
+    added++;
+  }
+  window.TRADES = [...byKey.values()].sort((a, b) => (a.open_t < b.open_t ? -1 : 1));
+  save(window.TRADES, window.START);
+  renderPanels();
+  storeLine();
+  return added;
+});
+
+goTab(location.hash.slice(1) || "diary", false);
 
 if ("serviceWorker" in navigator)
   addEventListener("load", () => navigator.serviceWorker.register("sw.js")

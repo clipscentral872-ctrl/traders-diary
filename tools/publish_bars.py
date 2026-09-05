@@ -31,6 +31,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "docs", "bars")
 
 SYMBOLS = {"NQ": "NQ=F", "ES": "ES=F", "YM": "YM=F", "RTY": "RTY=F"}
+
+# What Yahoo will give away, per timeframe. One minute is the sharp end and it
+# only reaches back a week, which is why this has to run daily. The higher
+# timeframes reach far enough back for replay to have somewhere to go.
+TIMEFRAMES = [("1m", "8d", 60), ("5m", "60d", 300), ("1h", "730d", 3600)]
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
@@ -44,10 +49,9 @@ def yahoo(symbol, rng="8d", interval="1m"):
         return json.load(r)["chart"]["result"][0]
 
 
-def pack(res):
+def pack(res, step):
     ts = res["timestamp"]
     q = res["indicators"]["quote"][0]
-    step = 60
     t0 = ts[0]
     # Lay every bar onto the fixed grid. Yahoo skips closed minutes, so
     # position alone would drift by hours across a weekend without this.
@@ -68,31 +72,36 @@ def pack(res):
 def main():
     os.makedirs(OUT, exist_ok=True)
     index = {"updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-             "symbols": []}
-    failed = []
+             "series": []}
+    failed = wanted = 0
     for name, feed in SYMBOLS.items():
-        path = os.path.join(OUT, f"{name}_1m.json")
-        try:
-            packed, kept, n = pack(yahoo(feed))
-        except Exception as e:
-            # A feed that is down for one run must not wipe yesterday's file,
-            # which is still perfectly good for everything but today.
-            print(f"  {name:<4} FAILED ({type(e).__name__}), keeping what is there")
-            failed.append(name)
-            continue
-        packed["symbol"] = name
-        io.open(path, "w", encoding="utf-8").write(
-            json.dumps(packed, separators=(",", ":")))
-        kb = os.path.getsize(path) / 1024
-        first = time.strftime("%Y-%m-%d", time.gmtime(packed["t0"]))
-        print(f"  {name:<4} {kept:>6,} bars over {n:,} minutes from {first}"
-              f"   {kb:,.0f} KB")
-        index["symbols"].append({"symbol": name, "bars": kept, "from": first})
+        for tf, rng, step in TIMEFRAMES:
+            wanted += 1
+            path = os.path.join(OUT, f"{name}_{tf}.json")
+            try:
+                packed, kept, n = pack(yahoo(feed, rng, tf), step)
+            except Exception as e:
+                # A feed down for one run must not wipe yesterday's file, which
+                # is still perfectly good for everything but today.
+                print(f"  {name:<4} {tf:<3} FAILED ({type(e).__name__}), "
+                      f"keeping what is there")
+                failed += 1
+                continue
+            packed["symbol"] = name
+            packed["tf"] = tf
+            io.open(path, "w", encoding="utf-8").write(
+                json.dumps(packed, separators=(",", ":")))
+            kb = os.path.getsize(path) / 1024
+            first = time.strftime("%Y-%m-%d", time.gmtime(packed["t0"]))
+            print(f"  {name:<4} {tf:<3} {kept:>6,} bars from {first}"
+                  f"   {kb:>6,.0f} KB")
+            index["series"].append({"symbol": name, "tf": tf, "bars": kept,
+                                    "from": first})
 
     io.open(os.path.join(OUT, "index.json"), "w", encoding="utf-8").write(
         json.dumps(index, indent=1))
 
-    if len(failed) == len(SYMBOLS):
+    if failed == wanted:
         raise SystemExit("every feed failed, so nothing was published")
     print(f"\n  published to {os.path.abspath(OUT)}")
 

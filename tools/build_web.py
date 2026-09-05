@@ -50,11 +50,21 @@ HEAD_TAGS = """<meta charset="utf-8">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 """
 
-# The bar replay lives in the desktop project, which has a market data store
-# behind it. Promising it here and linking to a page that does not exist is
-# worse than not offering it.
+# The desktop template links to a separate replay page. Here the replay is a
+# tab in the same app, so that section is cut and rebuilt in sections.html.
 REPLAY_SECTION = re.compile(
     r'<section>\s*<h2>Bar Replay</h2>.*?</section>', re.S)
+
+# One app, four tabs. The diary is the reason to open it, so it comes first
+# and it is what a fresh install lands on.
+TABS = [("diary", "Diary"), ("replay", "Replay"),
+        ("system", "System"), ("learn", "Learn")]
+
+NAV = ('<nav class="tabs2" role="tablist" aria-label="Sections">'
+       + "".join(f'<button class="tb" role="tab" data-go="{k}" '
+                 f'aria-selected="{"true" if k == "diary" else "false"}">'
+                 f'{label}</button>' for k, label in TABS)
+       + "</nav>\n")
 
 # The install step is the whole difference between a bookmark and an app, and
 # on an iPhone it cannot be automated: Safari has no install prompt, so the
@@ -118,6 +128,145 @@ SETTINGS = """<section>
 # rather than in the shared template because the desktop project has neither
 # these controls nor a phone to run on.
 EXTRA_CSS = """
+/* tab navigation */
+.tabs2{
+  display:flex; gap:6px; margin:0 0 30px; overflow-x:auto;
+  border-bottom:1px solid var(--line); padding-bottom:0;
+  scrollbar-width:none;
+}
+.tabs2::-webkit-scrollbar{display:none}
+.tb{
+  flex:none; background:none; border:none; border-bottom:2px solid transparent;
+  color:var(--muted); cursor:pointer; padding:12px 16px; min-height:46px;
+  font-family:"Orbitron",sans-serif; font-weight:700; font-size:12px;
+  letter-spacing:.13em; text-transform:uppercase;
+  transition:color .14s, border-color .14s;
+}
+.tb:hover{color:var(--text)}
+.tb[aria-selected="true"]{
+  color:var(--accent); border-bottom-color:var(--accent);
+  text-shadow:0 0 18px var(--accent-dim);
+}
+.tb:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+
+/* replay */
+.rp{padding:16px}
+.rpbar{display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end; margin-bottom:14px}
+.rpgroup{display:flex; flex-direction:column; gap:6px}
+.rpl{
+  color:var(--muted); font-size:11px; text-transform:uppercase;
+  letter-spacing:.09em; display:flex; flex-direction:column; gap:6px;
+}
+.rpbar select, .rpbar input, .ticket input{
+  background:var(--lift); color:var(--text); border:1px solid var(--line);
+  font-family:"JetBrains Mono",monospace; font-size:14px; padding:10px 12px;
+  min-height:44px; width:100%;
+}
+.rpbar select:focus-visible, .rpbar input:focus-visible, .ticket input:focus-visible{
+  outline:2px solid var(--accent); outline-offset:2px
+}
+.tfrow{display:flex; gap:4px}
+.tfb{
+  background:var(--raised); border:1px solid var(--line); color:var(--muted);
+  font-family:"Chakra Petch",sans-serif; font-weight:600; font-size:12px;
+  padding:0 13px; min-height:44px; cursor:pointer;
+}
+.tfb[aria-pressed="true"]{border-color:var(--accent); color:var(--text); background:var(--lift)}
+.rpread{
+  display:flex; flex-wrap:wrap; gap:16px; padding:10px 0 12px;
+  border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft);
+  margin-bottom:12px; font-size:12.5px; color:var(--muted);
+}
+.rv b{color:var(--text); font-family:"JetBrains Mono",monospace}
+#rc{width:100%; display:block}
+.rpctl{display:flex; flex-wrap:wrap; gap:7px; align-items:center; margin-top:12px}
+.rbtn{
+  background:var(--raised); border:1px solid var(--line); color:var(--text);
+  font-family:"JetBrains Mono",monospace; font-size:13px; padding:0 15px;
+  min-height:44px; cursor:pointer;
+}
+.rbtn:hover{border-color:var(--accent)}
+.rbtn.ghostb{color:var(--muted); margin-left:auto}
+.rpsp{flex:1}
+.deck{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px}
+.deck h3{
+  font-family:"Orbitron",sans-serif; font-weight:800; font-size:13px;
+  letter-spacing:.09em; text-transform:uppercase; margin:0 0 14px;
+}
+.sides{display:flex; gap:9px; margin-bottom:14px}
+.sbtn{
+  flex:1; min-height:48px; cursor:pointer; border:1px solid;
+  font-family:"Orbitron",sans-serif; font-weight:700; font-size:13px;
+  letter-spacing:.11em; text-transform:uppercase; background:var(--raised);
+}
+.sbtn.buy{border-color:var(--win-faded); color:var(--win)}
+.sbtn.sell{border-color:var(--loss-faded); color:var(--loss)}
+.sbtn:disabled{opacity:.35; cursor:not-allowed}
+.sbtn.buy:not(:disabled):hover{background:var(--win-zone)}
+.sbtn.sell:not(:disabled):hover{background:var(--loss-zone)}
+.ticket{display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-bottom:12px}
+.ticket label:first-child{grid-column:1 / -1}
+.risknote{
+  margin:0 0 10px; padding:11px 13px; background:var(--lift);
+  border-left:2px solid var(--accent); font-size:13.5px;
+}
+.rplist{list-style:none; padding:0; margin:14px 0 0; display:grid; gap:5px}
+.rpi{
+  display:grid; grid-template-columns:1fr auto auto auto; gap:12px;
+  align-items:baseline; padding:9px 12px; background:var(--raised);
+  border:1px solid var(--line); font-size:12.5px;
+}
+.rpr,.rpm{font-family:"JetBrains Mono",monospace}
+.rpt{color:var(--faint); font-size:11px; text-transform:uppercase}
+
+/* system */
+.sysbook{margin-bottom:16px}
+.warnnote{color:var(--loss); margin-top:12px}
+
+/* learn */
+.steps{list-style:none; counter-reset:st; padding:0; margin:0; display:grid; gap:12px}
+.steps li{
+  counter-increment:st; position:relative; padding:18px 20px 18px 62px;
+  background:var(--raised); border:1px solid var(--line);
+}
+.steps li::before{
+  content:counter(st); position:absolute; left:20px; top:17px;
+  font-family:"Orbitron",sans-serif; font-weight:900; font-size:20px;
+  color:var(--accent); text-shadow:0 0 16px var(--accent-dim);
+}
+.steps h3{
+  font-family:"Orbitron",sans-serif; font-weight:800; font-size:13px;
+  letter-spacing:.08em; text-transform:uppercase; margin:0 0 7px;
+}
+.steps p{margin:0; color:var(--muted); font-size:14px; line-height:1.65}
+.lessons{list-style:none; padding:0; margin:0; display:grid; gap:10px}
+.lessons li{
+  display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:baseline;
+  padding:15px 18px; background:var(--raised);
+  border-left:2px solid var(--loss-faded);
+}
+.lessons .ln{
+  font-family:"JetBrains Mono",monospace; font-size:20px; color:var(--accent);
+  font-variant-numeric:tabular-nums;
+}
+.lessons .lt{font-size:14px; line-height:1.65}
+.lessons .lt b{display:block; margin-bottom:4px; color:var(--text)}
+.lessons .lt span{color:var(--muted)}
+
+/* your own note on a trade */
+.mynote{margin-top:16px; border-top:1px solid var(--line-soft); padding-top:14px}
+.mynote label{
+  display:block; color:var(--muted); font-size:11px; text-transform:uppercase;
+  letter-spacing:.09em; margin-bottom:7px;
+}
+.mynote textarea{
+  width:100%; min-height:84px; resize:vertical; background:var(--lift);
+  color:var(--text); border:1px solid var(--line); padding:11px 13px;
+  font-family:"Chakra Petch",sans-serif; font-size:14px; line-height:1.6;
+}
+.mynote textarea:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.mysaved{color:var(--faint); font-size:11.5px; margin:7px 0 0; min-height:16px}
+
 .install{
   display:flex; align-items:center; gap:18px; flex-wrap:wrap;
   padding:20px 22px; margin-bottom:34px;
@@ -173,6 +322,19 @@ EXTRA_CSS = """
 @media (max-width:640px){
   .wrap{padding-left:16px; padding-right:16px}
   h1{font-size:32px; letter-spacing:.04em}
+  .deck{grid-template-columns:1fr}
+  .rpbar{gap:11px}
+  .rpgroup{flex:1 1 100%}
+  /* 44px is the smallest thing a thumb reliably hits, and .bigbtn's padding
+     alone lands just under it. */
+  .bigbtn{min-height:48px; display:flex; align-items:center; justify-content:center}
+  .rpbar .bigbtn{width:100%}
+  .rbtn{flex:1 1 auto}
+  .rbtn.ghostb{margin-left:0; flex-basis:100%}
+  .rpi{grid-template-columns:1fr auto auto}
+  .rpi .rpt{display:none}
+  .tb{padding:12px 13px; font-size:11px; letter-spacing:.09em}
+  .steps li{padding-left:56px}
   .install{gap:14px; padding:18px}
   .install .bigbtn{width:100%; text-align:center}
   .toolrow{flex-direction:column}
@@ -217,8 +379,45 @@ def main():
     marker = "</header>\n"
     if marker not in src:
         raise SystemExit("the header moved; check the template")
-    src = src.replace(marker, marker + INSTALL, 1)
+    src = src.replace(marker, marker + NAV + INSTALL
+                      + '<div class="tabpane" data-tab="diary">\n', 1)
+
+    # Everything the template already had becomes the Diary tab. The other
+    # three are appended after it, before the footer that closes the page.
+    foot = "<footer>"
+    if foot not in src:
+        raise SystemExit("the footer moved; check the template")
+    extra = io.open(os.path.join(DOCS, "sections.html"), encoding="utf-8").read()
+    src = src.replace(foot, "</div>\n" + extra + "\n" + foot, 1)
+
     src = src.replace("__LEARN__", PRIVACY + SETTINGS)
+
+    # A box for what you were actually thinking, which is the one thing the
+    # diary cannot work out for you and the thing worth most a month later.
+    note_anchor = '<p class="note" id="note"></p>'
+    if note_anchor not in src:
+        raise SystemExit("the note paragraph moved; check the template")
+    src = src.replace(note_anchor, note_anchor + """
+        <div class="mynote">
+          <label for="mynotebox">What you were thinking</label>
+          <textarea id="mynotebox" disabled
+            placeholder="Why you took it, what you saw, what you would do differently. Saved on this device as you type."></textarea>
+          <p class="mysaved" id="mynotesaved"></p>
+        </div>""", 1)
+
+    # pick() is in the shared script and has no hook, so the note box is
+    # refreshed from the one place that already knows the trade changed.
+    for before, after in (
+        ("  head(); details(); draw();\n}",
+         "  head(); details(); draw();\n"
+         "  if (window.showMyNote) window.showMyNote(VIEW[cur]);\n}"),
+        ('    cv.getContext("2d").clearRect(0, 0, cv.width, cv.height);\n    return;',
+         '    cv.getContext("2d").clearRect(0, 0, cv.width, cv.height);\n'
+         '    if (window.showMyNote) window.showMyNote(null);\n    return;'),
+    ):
+        if before not in src:
+            raise SystemExit("pick() moved; check the template")
+        src = src.replace(before, after, 1)
 
     src, n = REPLAY_SECTION.subn("", src)
     if n != 1:

@@ -375,6 +375,145 @@ footer{
   color:var(--faint); font-size:12px; max-width:70ch; line-height:1.7;
 }
 
+/* tab navigation */
+.tabs2{
+  display:flex; gap:6px; margin:0 0 30px; overflow-x:auto;
+  border-bottom:1px solid var(--line); padding-bottom:0;
+  scrollbar-width:none;
+}
+.tabs2::-webkit-scrollbar{display:none}
+.tb{
+  flex:none; background:none; border:none; border-bottom:2px solid transparent;
+  color:var(--muted); cursor:pointer; padding:12px 16px; min-height:46px;
+  font-family:"Orbitron",sans-serif; font-weight:700; font-size:12px;
+  letter-spacing:.13em; text-transform:uppercase;
+  transition:color .14s, border-color .14s;
+}
+.tb:hover{color:var(--text)}
+.tb[aria-selected="true"]{
+  color:var(--accent); border-bottom-color:var(--accent);
+  text-shadow:0 0 18px var(--accent-dim);
+}
+.tb:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+
+/* replay */
+.rp{padding:16px}
+.rpbar{display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end; margin-bottom:14px}
+.rpgroup{display:flex; flex-direction:column; gap:6px}
+.rpl{
+  color:var(--muted); font-size:11px; text-transform:uppercase;
+  letter-spacing:.09em; display:flex; flex-direction:column; gap:6px;
+}
+.rpbar select, .rpbar input, .ticket input{
+  background:var(--lift); color:var(--text); border:1px solid var(--line);
+  font-family:"JetBrains Mono",monospace; font-size:14px; padding:10px 12px;
+  min-height:44px; width:100%;
+}
+.rpbar select:focus-visible, .rpbar input:focus-visible, .ticket input:focus-visible{
+  outline:2px solid var(--accent); outline-offset:2px
+}
+.tfrow{display:flex; gap:4px}
+.tfb{
+  background:var(--raised); border:1px solid var(--line); color:var(--muted);
+  font-family:"Chakra Petch",sans-serif; font-weight:600; font-size:12px;
+  padding:0 13px; min-height:44px; cursor:pointer;
+}
+.tfb[aria-pressed="true"]{border-color:var(--accent); color:var(--text); background:var(--lift)}
+.rpread{
+  display:flex; flex-wrap:wrap; gap:16px; padding:10px 0 12px;
+  border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft);
+  margin-bottom:12px; font-size:12.5px; color:var(--muted);
+}
+.rv b{color:var(--text); font-family:"JetBrains Mono",monospace}
+#rc{width:100%; display:block}
+.rpctl{display:flex; flex-wrap:wrap; gap:7px; align-items:center; margin-top:12px}
+.rbtn{
+  background:var(--raised); border:1px solid var(--line); color:var(--text);
+  font-family:"JetBrains Mono",monospace; font-size:13px; padding:0 15px;
+  min-height:44px; cursor:pointer;
+}
+.rbtn:hover{border-color:var(--accent)}
+.rbtn.ghostb{color:var(--muted); margin-left:auto}
+.rpsp{flex:1}
+.deck{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px}
+.deck h3{
+  font-family:"Orbitron",sans-serif; font-weight:800; font-size:13px;
+  letter-spacing:.09em; text-transform:uppercase; margin:0 0 14px;
+}
+.sides{display:flex; gap:9px; margin-bottom:14px}
+.sbtn{
+  flex:1; min-height:48px; cursor:pointer; border:1px solid;
+  font-family:"Orbitron",sans-serif; font-weight:700; font-size:13px;
+  letter-spacing:.11em; text-transform:uppercase; background:var(--raised);
+}
+.sbtn.buy{border-color:var(--win-faded); color:var(--win)}
+.sbtn.sell{border-color:var(--loss-faded); color:var(--loss)}
+.sbtn:disabled{opacity:.35; cursor:not-allowed}
+.sbtn.buy:not(:disabled):hover{background:var(--win-zone)}
+.sbtn.sell:not(:disabled):hover{background:var(--loss-zone)}
+.ticket{display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-bottom:12px}
+.ticket label:first-child{grid-column:1 / -1}
+.risknote{
+  margin:0 0 10px; padding:11px 13px; background:var(--lift);
+  border-left:2px solid var(--accent); font-size:13.5px;
+}
+.rplist{list-style:none; padding:0; margin:14px 0 0; display:grid; gap:5px}
+.rpi{
+  display:grid; grid-template-columns:1fr auto auto auto; gap:12px;
+  align-items:baseline; padding:9px 12px; background:var(--raised);
+  border:1px solid var(--line); font-size:12.5px;
+}
+.rpr,.rpm{font-family:"JetBrains Mono",monospace}
+.rpt{color:var(--faint); font-size:11px; text-transform:uppercase}
+
+/* system */
+.sysbook{margin-bottom:16px}
+.warnnote{color:var(--loss); margin-top:12px}
+
+/* learn */
+.steps{list-style:none; counter-reset:st; padding:0; margin:0; display:grid; gap:12px}
+.steps li{
+  counter-increment:st; position:relative; padding:18px 20px 18px 62px;
+  background:var(--raised); border:1px solid var(--line);
+}
+.steps li::before{
+  content:counter(st); position:absolute; left:20px; top:17px;
+  font-family:"Orbitron",sans-serif; font-weight:900; font-size:20px;
+  color:var(--accent); text-shadow:0 0 16px var(--accent-dim);
+}
+.steps h3{
+  font-family:"Orbitron",sans-serif; font-weight:800; font-size:13px;
+  letter-spacing:.08em; text-transform:uppercase; margin:0 0 7px;
+}
+.steps p{margin:0; color:var(--muted); font-size:14px; line-height:1.65}
+.lessons{list-style:none; padding:0; margin:0; display:grid; gap:10px}
+.lessons li{
+  display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:baseline;
+  padding:15px 18px; background:var(--raised);
+  border-left:2px solid var(--loss-faded);
+}
+.lessons .ln{
+  font-family:"JetBrains Mono",monospace; font-size:20px; color:var(--accent);
+  font-variant-numeric:tabular-nums;
+}
+.lessons .lt{font-size:14px; line-height:1.65}
+.lessons .lt b{display:block; margin-bottom:4px; color:var(--text)}
+.lessons .lt span{color:var(--muted)}
+
+/* your own note on a trade */
+.mynote{margin-top:16px; border-top:1px solid var(--line-soft); padding-top:14px}
+.mynote label{
+  display:block; color:var(--muted); font-size:11px; text-transform:uppercase;
+  letter-spacing:.09em; margin-bottom:7px;
+}
+.mynote textarea{
+  width:100%; min-height:84px; resize:vertical; background:var(--lift);
+  color:var(--text); border:1px solid var(--line); padding:11px 13px;
+  font-family:"Chakra Petch",sans-serif; font-size:14px; line-height:1.6;
+}
+.mynote textarea:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.mysaved{color:var(--faint); font-size:11.5px; margin:7px 0 0; min-height:16px}
+
 .install{
   display:flex; align-items:center; gap:18px; flex-wrap:wrap;
   padding:20px 22px; margin-bottom:34px;
@@ -430,6 +569,19 @@ footer{
 @media (max-width:640px){
   .wrap{padding-left:16px; padding-right:16px}
   h1{font-size:32px; letter-spacing:.04em}
+  .deck{grid-template-columns:1fr}
+  .rpbar{gap:11px}
+  .rpgroup{flex:1 1 100%}
+  /* 44px is the smallest thing a thumb reliably hits, and .bigbtn's padding
+     alone lands just under it. */
+  .bigbtn{min-height:48px; display:flex; align-items:center; justify-content:center}
+  .rpbar .bigbtn{width:100%}
+  .rbtn{flex:1 1 auto}
+  .rbtn.ghostb{margin-left:0; flex-basis:100%}
+  .rpi{grid-template-columns:1fr auto auto}
+  .rpi .rpt{display:none}
+  .tb{padding:12px 13px; font-size:11px; letter-spacing:.09em}
+  .steps li{padding-left:56px}
   .install{gap:14px; padding:18px}
   .install .bigbtn{width:100%; text-align:center}
   .toolrow{flex-direction:column}
@@ -456,6 +608,7 @@ footer{
   <p class="sub"><span class="num"><span id="ntrades">0</span></span> Trades &nbsp;/&nbsp; TradingView Paper Account</p>
   <div class="sources"><div class="srcrow" id="srcrow"></div><div id="srcpanes"></div></div>
 </header>
+<nav class="tabs2" role="tablist" aria-label="Sections"><button class="tb" role="tab" data-go="diary" aria-selected="true">Diary</button><button class="tb" role="tab" data-go="replay" aria-selected="false">Replay</button><button class="tb" role="tab" data-go="system" aria-selected="false">System</button><button class="tb" role="tab" data-go="learn" aria-selected="false">Learn</button></nav>
 <section id="installbar" hidden>
   <div class="card hud install">
     <div class="insticon" aria-hidden="true"></div>
@@ -467,6 +620,7 @@ footer{
     <button class="instx" id="instno" aria-label="Dismiss">Not now</button>
   </div>
 </section>
+<div class="tabpane" data-tab="diary">
 
 <section id="importer">
   <h2>Import a session</h2>
@@ -599,10 +753,197 @@ footer{
         <h3>What happened</h3>
         <div class="flags" id="flags"></div>
         <p class="note" id="note"></p>
+        <div class="mynote">
+          <label for="mynotebox">What you were thinking</label>
+          <textarea id="mynotebox" disabled
+            placeholder="Why you took it, what you saw, what you would do differently. Saved on this device as you type."></textarea>
+          <p class="mysaved" id="mynotesaved"></p>
+        </div>
       </div>
     </div>
   </div>
 </section>
+
+</div>
+<div class="tabpane" data-tab="replay" hidden>
+
+<section>
+  <h2>Bar replay</h2>
+  <p class="lead">Step a past session one bar at a time and trade it without
+  seeing what comes next. Stops and targets fill on the same rules the
+  backtester uses, so what you learn here can be compared with the real thing
+  rather than flattering it. Anything you save arrives in the Diary tagged as
+  practice, and is kept out of your live figures on purpose.</p>
+
+  <div class="card hud rp">
+    <div class="rpbar">
+      <div class="rpgroup">
+        <label class="rpl" for="rsym">Contract</label>
+        <select id="rsym"></select>
+      </div>
+      <div class="rpgroup">
+        <label class="rpl" for="rtf">Timeframe</label>
+        <div class="tfrow" id="rtf" role="group" aria-label="Timeframe"></div>
+      </div>
+      <div class="rpgroup">
+        <label class="rpl" for="rdate">Start from</label>
+        <input type="date" id="rdate">
+      </div>
+      <button class="bigbtn" id="rgo">Start here</button>
+    </div>
+
+    <div class="rpread" id="rpread"></div>
+    <canvas id="rc"></canvas>
+
+    <div class="rpctl" id="rpctl" hidden>
+      <button class="rbtn" id="rstep1" title="One bar">&#9654; 1</button>
+      <button class="rbtn" id="rstep5">&#9654;&#9654; 5</button>
+      <button class="rbtn" id="rstep20">&#9654;&#9654; 20</button>
+      <button class="rbtn" id="rplay">Auto</button>
+      <span class="rpsp"></span>
+      <button class="rbtn ghostb" id="rback">Back to browsing</button>
+    </div>
+  </div>
+
+  <div class="deck">
+    <div class="card hud">
+      <h3>Place a trade</h3>
+      <div class="sides">
+        <button class="sbtn buy" id="rbuy">Buy</button>
+        <button class="sbtn sell" id="rsell">Sell</button>
+      </div>
+      <div class="ticket">
+        <label class="rpl" for="rqty">Contracts<input type="number" id="rqty" min="1" step="1" value="1"></label>
+        <label class="rpl" for="rrisk">Stop, points<input type="number" id="rrisk" min="0.25" step="0.25" value="20"></label>
+        <label class="rpl" for="rrr">Target, times the risk<input type="number" id="rrr" min="0.1" step="0.1" value="2"></label>
+      </div>
+      <p class="risknote" id="rrisknote"></p>
+      <p class="lead" id="rposline"></p>
+      <button class="bigbtn ghost" id="rflat" hidden>Close at the market</button>
+    </div>
+
+    <div class="card hud">
+      <h3>This session</h3>
+      <div class="stats hud" id="rstats"></div>
+      <ul class="rplist" id="rplist"></ul>
+      <div class="toolrow">
+        <button class="bigbtn" id="rsave" hidden>Save to the Diary as practice</button>
+        <button class="bigbtn ghost" id="rclear" hidden>Discard these</button>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
+<div class="tabpane" data-tab="system" hidden>
+
+<section>
+  <h2>The automated system</h2>
+  <p class="lead">A version of the four-step method runs on its own against
+  live bars and reports here. It is not connected to your account and never
+  will be from this page. It exists to answer one question honestly: does the
+  method make money when a human is not choosing which setups to take.</p>
+  <ul class="stands" id="sysstand"></ul>
+</section>
+
+<section>
+  <h2>What it is doing now</h2>
+  <div class="card hud">
+    <div class="stats hud" id="sysstats"></div>
+    <p class="srcnote" id="sysline">Loading the live state...</p>
+  </div>
+</section>
+
+<section>
+  <h2>Two books, same bars</h2>
+  <p class="lead">The same setups are traded twice at once, at different
+  reward-to-risk shapes. A book that takes a small target wins most of its
+  trades by design, which looks like an edge and is not one. Running both side
+  by side on identical bars is the only way to tell the shape apart from the
+  edge.</p>
+  <div id="sysbooks"></div>
+</section>
+
+<section>
+  <h2>Every setup it was offered</h2>
+  <p class="lead">The system logs each setup it sees, whether or not it takes
+  it. That log is what settled the question of why its early record was almost
+  all longs.</p>
+  <div class="card hud">
+    <div class="stats hud" id="sysseen"></div>
+    <p class="srcnote" id="sysseenline"></p>
+  </div>
+</section>
+</div>
+
+<div class="tabpane" data-tab="learn" hidden>
+
+<section>
+  <h2>The method, in four steps</h2>
+  <p class="lead">This is the sequence the system looks for and the one your
+  own trades are read against. Each step has to happen in order. A setup that
+  skips one is not a setup.</p>
+  <ol class="steps">
+    <li>
+      <h3>Liquidity is taken</h3>
+      <p>Price runs past an obvious high or low, where stops are resting, and
+      then fails to continue. The run is the point: it is what fills the orders
+      the move needs. Without a sweep there is nothing to reverse.</p>
+    </li>
+    <li>
+      <h3>Structure breaks on the five minute</h3>
+      <p>After the sweep, price breaks the other way through the last swing
+      that mattered. This is the first evidence the sweep was a turn rather
+      than a pause.</p>
+    </li>
+    <li>
+      <h3>Something backs it up</h3>
+      <p>A gap left by the break, or price returning to the middle of the move.
+      One reason is not enough on its own; this is the step that separates a
+      break worth trading from noise.</p>
+    </li>
+    <li>
+      <h3>Enter on the one minute</h3>
+      <p>Only now, and on the smaller timeframe, so the stop can sit behind the
+      structure rather than out in the noise. The entry is the last decision,
+      not the first.</p>
+    </li>
+  </ol>
+</section>
+
+<section>
+  <h2>Where the money is actually lost</h2>
+  <p class="lead">Read from your own record rather than from a book. These are
+  the things this diary has caught in your trading, in the order they cost you
+  the most.</p>
+  <ul class="lessons" id="lessons"></ul>
+</section>
+
+<section>
+  <h2>Two rules this will not bend</h2>
+  <ul class="stands">
+    <li class="stand no">
+      <span class="sl2">R is the risk you took at entry</span>
+      <span class="sd">Never the trailed stop. Measuring against the stop you
+      trailed to divides a small loss by a tiny remaining risk. On real trades
+      that produced -22R on one of them, and turned a day that made money into
+      an expectancy of -3.8R. If it looks impossible, it is.</span>
+    </li>
+    <li class="stand no">
+      <span class="sl2">No stop on record means no R</span>
+      <span class="sd">Not zero, and not R measured against whatever stop
+      happens to be known. A trade with no stop has no risk you decided in
+      advance, so it has no R and no position size that could have been worked
+      out beforehand. The diary says so rather than filling the gap in.</span>
+    </li>
+  </ul>
+</section>
+
+<section>
+  <h2>What has and has not been proven</h2>
+  <ul class="stands" id="proof"></ul>
+</section>
+</div>
 
 <footer>
   Drawn on one-minute bars from the same feed the system trades. R is measured
@@ -942,9 +1283,11 @@ function pick(i){
     document.getElementById("note").textContent = "";
     const cv = document.getElementById("c");
     cv.getContext("2d").clearRect(0, 0, cv.width, cv.height);
+    if (window.showMyNote) window.showMyNote(null);
     return;
   }
   head(); details(); draw();
+  if (window.showMyNote) window.showMyNote(VIEW[cur]);
 }
 window.addEventListener("resize", ()=>{ draw(); drawEq(); });
 document.fonts.ready.then(()=>{ pick(cur); drawEq(); });
@@ -962,6 +1305,8 @@ pickSource(firstSrc ? firstSrc.dataset.src : "live");
  * no signal and no account.
  */
 import * as E from "./engine.js";
+import * as RP from "./replay.js";
+import * as SYS from "./system.js";
 
 const $ = id => document.getElementById(id);
 const KEY = "tradersdiary.v1";
@@ -1117,6 +1462,7 @@ function renderPanels() {
   }).join("");
 
   renderStanding();
+  renderLearn();
   const first = document.querySelector('.src[data-src="live"]')
              || document.querySelector(".src");
   window.pickSource(first ? first.dataset.src : "live");
@@ -1401,6 +1747,175 @@ tzSel.addEventListener("change", () => {
   say("Saved. Re-import a session for the New York clock check to use it.");
 });
 
+/* --------------------------------------------------------------- learn */
+
+/* The lessons are ranked by what these mistakes actually cost, in money, in
+   this record. A generic list of trading mistakes is worth nothing; the one
+   you keep paying for is worth reading. */
+const LESSON = {
+  "trailed early": ["Tightening the stop before your own rule says to",
+    "Your rule holds the stop until price has run about twice what you risked. "
+    + "Moving it in earlier turns a trade you were right about into a small loss, "
+    + "and it is the single most common thing in this record."],
+  "stopped into the news": ["Leaving a stop where a data release can reach it",
+    "US data lands at 08:30 and 10:00 New York, and the Fed at 14:00. In the "
+    + "minute before, the market reaches for resting stops. A stop just past the "
+    + "last few highs or lows is the easiest one to take."],
+  "cut short": ["Coming out before the target price then reached anyway",
+    "The read was right and the exit was early. Worth separating from the times "
+    + "leaving early saved you, which the diary marks differently."],
+  "closed early": ["Closing by hand well short of the target",
+    "Banking a winner is fine. Doing it at a third of the planned move, every "
+    + "time, means the target was never the trade you were actually managing."],
+  "right, stopped early": ["Right direction, stop inside the noise",
+    "Price went your way after stopping you out. The read was not the problem; "
+    + "the stop was closer than the market's normal wobble."],
+  "slipped": ["Stops filling worse than they were set",
+    "A stop is a market order. Once touched it takes whatever price is there, "
+    + "so the loss comes out bigger than the one you chose. Size for that."],
+  "stop wrong side": ["A stop moved past the entry",
+    "Placed the wrong side of the market it is already triggered, so it fills "
+    + "the instant it lands."],
+  "target far out": ["Targets set beyond what the trade was managed for",
+    "A target far enough away that you were never going to hold for it makes "
+    + "every exit look premature and every R figure meaningless."],
+  "no R": ["Trades with no stop on record",
+    "R is defined by the risk you take. No stop means no R, and no position "
+    + "size that could have been worked out in advance."],
+  "stopped fast": ["Stopped inside a minute",
+    "Entering where the stop is one wobble away. Usually a sign of entering "
+    + "before the setup finished rather than of a bad read."],
+};
+
+function renderLearn() {
+  const mine = window.TRADES.filter(t => (t.source || "live") === "live");
+  const cost = new Map();
+  for (const t of mine)
+    for (const f of (t.flags || [])) {
+      const c = cost.get(f) || {n: 0, lost: 0};
+      c.n++;
+      if (t.pnl < 0) c.lost += -t.pnl;
+      cost.set(f, c);
+    }
+
+  const ranked = [...cost.entries()]
+    .filter(([f]) => LESSON[f])
+    .sort((a, b) => (b[1].lost - a[1].lost) || (b[1].n - a[1].n))
+    .slice(0, 6);
+
+  $("lessons").innerHTML = mine.length
+    ? (ranked.map(([f, c]) => {
+        const [title, body] = LESSON[f];
+        const bill = c.lost
+          ? ` It appears on losses totalling ${dollars(-c.lost)}.`
+          : " It has not cost you money yet.";
+        return `<li><span class="ln">${c.n}</span><span class="lt">`
+          + `<b>${esc(title)}</b><span>${esc(body + bill)}</span></span></li>`;
+      }).join("")
+      || '<li><span class="ln">0</span><span class="lt"><b>Nothing flagged yet'
+         + '</b><span>Import a few more sessions and the pattern shows up '
+         + 'here.</span></span></li>')
+    : '<li><span class="ln">&mdash;</span><span class="lt"><b>Nothing imported '
+      + 'yet</b><span>This list is built from your own trades, so it fills in '
+      + 'once the Diary has some.</span></span></li>';
+
+  const rows = [];
+  const row = (state, label, detail) => rows.push(
+    `<li class="stand ${state}"><span class="sl2">${esc(label)}</span>`
+    + `<span class="sd">${detail}</span></li>`);
+
+  row("no", "The strategy is not proven",
+    "It fails walk-forward because the folds are too thin, and fails the "
+    + "second-source check because no independent futures feed is free. One "
+    + "configuration ever showed support, at about $500 a month on $50,000. "
+    + "Everything else tested came out negative or indistinguishable from zero.");
+  row("no", "Two filters were built, tested and rejected",
+    "An exhaustion rule and a news blackout. Both sounded right. Measured "
+    + "properly, the trades each one refused made more than the trades it kept, "
+    + "so neither was kept. A filter that is not measured is a superstition.");
+  row("warn", "This page can only tell you what you did",
+    "It has no opinion on whether your strategy works, and a run of green "
+    + "numbers over a handful of trades is not evidence. Do not size up because "
+    + "a page looks encouraging.");
+
+  const n = window.TRADES.filter(t => (t.source || "live") === "live").length;
+  if (n)
+    row(n >= 100 ? "ok" : "warn", `You have ${n} live trade${n === 1 ? "" : "s"}`,
+      n >= 100
+        ? "Enough to read an expectancy from, though one month is one market regime."
+        : `About 100 are needed before a win rate means anything. At ${n}, this `
+          + `describes what happened rather than what tends to happen.`);
+  $("proof").innerHTML = rows.join("");
+}
+
+/* ---------------------------------------------------------------- tabs */
+
+/* Four tabs, one app. The tab is kept in the URL hash so the back button
+   works and so a tab can be linked to, which matters once this is on a home
+   screen and reopening should land where it was left. */
+const TABNAMES = ["diary", "replay", "system", "learn"];
+
+function goTab(name, push) {
+  if (!TABNAMES.includes(name)) name = "diary";
+  document.querySelectorAll(".tabpane").forEach(p => {
+    p.hidden = p.dataset.tab !== name;
+  });
+  document.querySelectorAll(".tb").forEach(b => {
+    b.setAttribute("aria-selected", String(b.dataset.go === name));
+  });
+  if (push && location.hash.slice(1) !== name) location.hash = name;
+  scrollTo({top: 0, behavior: "instant"});
+
+  // A canvas sized while its pane was hidden has no width, so both charts are
+  // redrawn on the way in rather than on the way out.
+  if (name === "diary") { try { window.drawEq(); window.draw(); } catch { /* nothing loaded */ } }
+  if (name === "replay") RP.redraw();
+  if (name === "system") SYS.show();
+}
+
+document.querySelector(".tabs2").addEventListener("click", e => {
+  const b = e.target.closest(".tb");
+  if (b) goTab(b.dataset.go, true);
+});
+addEventListener("hashchange", () => goTab(location.hash.slice(1), false));
+
+/* --------------------------------------------------------- your own note */
+
+/* "What was I thinking" is the one thing a journal cannot work out for you,
+   and it is the thing worth most a month later. Kept against the trade rather
+   than in a separate file, so a backup carries it too. */
+const noteBox = $("mynotebox"), noteSaved = $("mynotesaved");
+let noteTimer = null;
+
+function keyOf(t) { return t.symbol + "|" + t.open_t; }
+
+window.showMyNote = function (t) {
+  if (!noteBox) return;
+  noteBox.value = t && t.mine ? t.mine : "";
+  noteBox.dataset.key = t ? keyOf(t) : "";
+  noteBox.disabled = !t;
+  noteSaved.textContent = "";
+};
+
+if (noteBox) {
+  noteBox.addEventListener("input", () => {
+    clearTimeout(noteTimer);
+    noteSaved.textContent = "typing...";
+    // Saving on every keystroke rewrites the whole store each time, which on a
+    // phone with a few hundred trades is felt. A short pause is enough.
+    noteTimer = setTimeout(() => {
+      const t = window.TRADES.find(x => keyOf(x) === noteBox.dataset.key);
+      if (!t) return;
+      const v = noteBox.value.trim();
+      if (v) t.mine = v; else delete t.mine;
+      const warn = save(window.TRADES, window.START);
+      noteSaved.textContent = warn
+        ? "Could not save: this browser is blocking storage."
+        : "Saved to this device.";
+    }, 600);
+  });
+}
+
 /* --------------------------------------------------------- installing */
 
 /* Getting this onto a home screen is the whole point, and on an iPhone it
@@ -1500,6 +2015,25 @@ loadBars(feedsFor(window.TRADES)).then(() => {
     renderPanels();
   }
 });
+
+RP.setClock(tzOffset);
+RP.init(practice => {
+  const byKey = new Map(window.TRADES.map(t => [t.source + "|" + t.symbol + "|" + t.open_t, t]));
+  let added = 0;
+  for (const t of practice) {
+    const k = "replay|" + t.symbol + "|" + t.open_t;
+    if (byKey.has(k)) continue;
+    byKey.set(k, t);
+    added++;
+  }
+  window.TRADES = [...byKey.values()].sort((a, b) => (a.open_t < b.open_t ? -1 : 1));
+  save(window.TRADES, window.START);
+  renderPanels();
+  storeLine();
+  return added;
+});
+
+goTab(location.hash.slice(1) || "diary", false);
 
 if ("serviceWorker" in navigator)
   addEventListener("load", () => navigator.serviceWorker.register("sw.js")

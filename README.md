@@ -6,6 +6,15 @@ Open it, drop in the CSV files TradingView gives you, and it draws every trade
 on the minute bars it actually happened on, with your entry, stop, target and
 exit marked, and a written read of what went right or wrong.
 
+Four tabs, one app:
+
+| Tab | What it is |
+| --- | --- |
+| **Diary** | Your real trades. Import a session, read what it says, add your own note to any trade. |
+| **Replay** | Step a past session forward one bar at a time and trade it blind. Practice is saved separately and never mixed into your live figures. |
+| **System** | The automated version of the method, running on its own against live bars, read live from where it publishes its record. |
+| **Learn** | The method in four steps, and the mistakes ranked by what they have actually cost you in this record. |
+
 It runs entirely in your browser. Nothing is uploaded, there is no account, and
 your trades never leave your device.
 
@@ -58,6 +67,13 @@ checked mechanically rather than when you happen to remember to look:
 - A stop taken in the last seconds before a scheduled data release.
 - A target so far out that the trade was never the one being managed.
 
+## Practice that cannot flatter you
+
+The Replay tab resolves fills exactly the way the backtester does. Both levels
+touched inside one bar counts as the loss, and a bar that opens past your stop
+fills at the open rather than at the stop. Practice that fills optimistically
+teaches a strategy that does not exist.
+
 ## Two rules it will not bend
 
 **R is the risk you took at entry, never the trailed stop.** Measuring against
@@ -92,8 +108,10 @@ site. So `tools/publish_bars.py` fetches recent minute bars once a day and
 commits them to `docs/bars/`, where the page reads them from its own origin
 with no permission needed. A GitHub Action does this automatically.
 
-That means charts go back about ten days. Import each session while it is
-recent and the chart is kept for good. Numbers are kept either way.
+One-minute bars go back about ten days, so import each session while it is
+recent and the chart is kept for good. Numbers are kept either way. Five-minute
+goes back two months and hourly back two years, which is what the Replay tab
+runs on.
 
 ## What this is not
 
