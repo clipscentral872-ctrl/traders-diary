@@ -84,6 +84,62 @@ INSTALL = """<section id="installbar" hidden>
 </section>
 """
 
+# The chart is the reason the diary exists, so it leads the tab and gets the
+# whole width. It used to be a small static picture below a screenful of
+# statistics, which is exactly backwards.
+TRADEVIEW = """<section class="platform" id="tradeview">
+  <div class="pbar">
+    <div class="pgroup" id="dfilter" role="group" aria-label="Which trades">
+      <button class="ptool" data-f="all" aria-pressed="true">All <span class="dfn">0</span></button>
+      <button class="ptool" data-f="won" aria-pressed="false">Winners <span class="dfn">0</span></button>
+      <button class="ptool" data-f="lost" aria-pressed="false">Losers <span class="dfn">0</span></button>
+    </div>
+    <div class="pgroup pgrow" id="dohlc2"></div>
+    <div class="pgroup">
+      <button class="ptool" id="dprev" title="Previous trade">&#9664;</button>
+      <button class="ptool" id="dnext" title="Next trade">&#9654;</button>
+    </div>
+  </div>
+
+  <div class="dstrip" id="dtabs" role="tablist" aria-label="Your trades"></div>
+
+  <div class="pstage">
+    <canvas id="dchart"></canvas>
+    <div class="ptools">
+      <button class="ptool" id="dzin2" title="Zoom in">+</button>
+      <button class="ptool" id="dzout2" title="Zoom out">&minus;</button>
+      <button class="ptool" id="dfit2" title="Fit the trade">Fit</button>
+    </div>
+    <p class="nobars" id="dnobars" hidden>No candles were stored for this trade.
+    The published bars only reach back about ten days, so import each session
+    while it is recent and the chart is kept for good. The numbers are exact
+    either way.</p>
+  </div>
+
+  <div class="chead" id="dhead"></div>
+  <div class="values" id="dvalues"></div>
+
+  <div class="body">
+    <div class="pane">
+      <h3>What happened</h3>
+      <div class="flags" id="dflags"></div>
+      <p class="note" id="dnote"></p>
+      <div class="mynote">
+        <label for="mynotebox">What you were thinking</label>
+        <textarea id="mynotebox" disabled
+          placeholder="Why you took it, what you saw, what you would do differently. Saved on this device as you type."></textarea>
+        <p class="mysaved" id="mynotesaved"></p>
+      </div>
+    </div>
+    <div class="pane">
+      <h3>Stop moves</h3>
+      <div class="trail" id="dtrail"></div>
+    </div>
+  </div>
+</section>
+"""
+
+
 PRIVACY = """<section>
   <h2>Where your trades live</h2>
   <p class="lead">Nowhere but this device. The files you drop are read in the
@@ -359,6 +415,61 @@ EXTRA_CSS = """
 .vplayer video{
   flex:1; min-height:0; width:100%; background:#000; border:1px solid var(--line);
 }
+
+/* the trade browser */
+.dstrip{
+  display:flex; gap:5px; overflow-x:auto; scrollbar-width:none;
+  background:var(--raised); border:1px solid var(--line);
+  border-top:none; border-bottom:none; padding:8px;
+}
+.dstrip::-webkit-scrollbar{display:none}
+.dtab{
+  flex:none; display:flex; flex-direction:column; gap:1px; cursor:pointer;
+  background:var(--lift); border:1px solid var(--line); padding:7px 11px;
+  color:var(--muted); font-family:"Chakra Petch",sans-serif; min-height:52px;
+  border-left-width:2px; text-align:left;
+}
+.dtab.win{border-left-color:var(--win)}
+.dtab.loss{border-left-color:var(--loss)}
+.dtab.on{background:var(--raised); border-color:var(--accent); color:var(--text)}
+.dtab:hover{color:var(--text)}
+.dtab:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+.dtn{font-family:"JetBrains Mono",monospace; font-size:10px; color:var(--faint)}
+.dts{font-size:12px; white-space:nowrap}
+.dtr{font-family:"JetBrains Mono",monospace; font-size:11px}
+.dtab.win .dtr{color:var(--win)}
+.dtab.loss .dtr{color:var(--loss)}
+.dfn{font-family:"JetBrains Mono",monospace; color:var(--accent); margin-left:5px}
+.nobars{
+  position:absolute; left:10%; right:10%; top:42%; text-align:center;
+  color:var(--muted); font-size:13px; line-height:1.6;
+}
+#tradeview .values{
+  display:flex; flex-wrap:wrap; background:var(--raised);
+  border:1px solid var(--line); border-top:none; margin:0;
+}
+.dval{
+  display:flex; flex-direction:column; gap:2px; padding:10px 16px;
+  border-right:1px solid var(--line); flex:1 1 130px;
+}
+.dvk{
+  color:var(--muted); font-size:10px; text-transform:uppercase;
+  letter-spacing:.1em;
+}
+.dvv{font-family:"JetBrains Mono",monospace; font-size:15px}
+.dvv small{display:block; color:var(--faint); font-size:10.5px; margin-top:1px}
+.dvv.win{color:var(--win)} .dvv.loss{color:var(--loss)}
+#tradeview .chead{
+  background:var(--raised); border:1px solid var(--line); border-top:none;
+}
+.tstep{
+  display:flex; gap:12px; align-items:baseline; padding:6px 0;
+  border-bottom:1px solid var(--line-soft); font-size:12.5px;
+}
+.tstep .tt{font-family:"JetBrains Mono",monospace; color:var(--muted)}
+.tstep .tp{font-family:"JetBrains Mono",monospace; color:var(--text)}
+.tstep .tk{color:var(--accent); font-size:11px; text-transform:uppercase}
+.tstep .tf{margin-left:auto; color:var(--faint); font-size:11px}
 
 /* The platform surface. A chart people work on wants to be the biggest thing
    on screen with its controls floating over it, not a small box under three
@@ -694,6 +805,44 @@ def main():
     src = src.replace("__PAT__", '<div id="patwrap"></div>')
     src = src.replace("__STAND__", "")
 
+    # The template's static trade browser is replaced wholesale rather than
+    # patched, so there is one of it and not two, and it moves to the top of
+    # the tab because it is the reason to open the tab at all.
+    src, n = re.subn(r'<section>\s*<h2>Trade by trade</h2>.*?</section>',
+                     "", src, flags=re.S)
+    if n != 1:
+        raise SystemExit("the Trade by trade section moved; check the template")
+    src = src.replace('<section id="importer">',
+                      TRADEVIEW + '<section id="importer">', 1)
+
+    # The shared page script still owns the equity curve and the source picker,
+    # but the trade browser is this build's own. pick() becomes pure delegation
+    # rather than keeping the old body as a fallback: the classic script runs
+    # BEFORE the module, so on first load that fallback ran against markup this
+    # build had already replaced and threw on every missing element.
+    body = re.compile(r"function pick\(i\)\{.*?\n\}", re.S)
+    stub = ("function pick(i){\n"
+            "  // The trade browser is a module in this build, and it registers\n"
+            "  // itself after this script has run. An early call has nothing to\n"
+            "  // do rather than something to break on.\n"
+            "  cur = i;\n"
+            "  if (window.__diaryPick) window.__diaryPick(i);\n"
+            "}")
+    src, n = body.subn(stub, src, count=1)
+    if n != 1:
+        raise SystemExit("pick() moved; check the template")
+
+    # head(), details() and draw() drew the markup this build replaced. They
+    # are unreachable through pick() now, but the template's resize handler
+    # still calls draw(), so they are emptied rather than left to throw.
+    for fn in ("head", "details", "draw", "tabs"):
+        dead = re.compile(r"function " + fn + r"\(\)\{.*?\n\}", re.S)
+        src, hit = dead.subn(
+            "function " + fn + "(){ /* the trade browser is a module here */ }",
+            src, count=1)
+        if not hit:
+            raise SystemExit(f"{fn}() moved; check the template")
+
     # Directly under the header, above everything else on the page.
     marker = "</header>\n"
     if marker not in src:
@@ -710,33 +859,6 @@ def main():
     src = src.replace(foot, "</div>\n" + extra + "\n" + foot, 1)
 
     src = src.replace("__LEARN__", PRIVACY + SETTINGS)
-
-    # A box for what you were actually thinking, which is the one thing the
-    # diary cannot work out for you and the thing worth most a month later.
-    note_anchor = '<p class="note" id="note"></p>'
-    if note_anchor not in src:
-        raise SystemExit("the note paragraph moved; check the template")
-    src = src.replace(note_anchor, note_anchor + """
-        <div class="mynote">
-          <label for="mynotebox">What you were thinking</label>
-          <textarea id="mynotebox" disabled
-            placeholder="Why you took it, what you saw, what you would do differently. Saved on this device as you type."></textarea>
-          <p class="mysaved" id="mynotesaved"></p>
-        </div>""", 1)
-
-    # pick() is in the shared script and has no hook, so the note box is
-    # refreshed from the one place that already knows the trade changed.
-    for before, after in (
-        ("  head(); details(); draw();\n}",
-         "  head(); details(); draw();\n"
-         "  if (window.showMyNote) window.showMyNote(VIEW[cur]);\n}"),
-        ('    cv.getContext("2d").clearRect(0, 0, cv.width, cv.height);\n    return;',
-         '    cv.getContext("2d").clearRect(0, 0, cv.width, cv.height);\n'
-         '    if (window.showMyNote) window.showMyNote(null);\n    return;'),
-    ):
-        if before not in src:
-            raise SystemExit("pick() moved; check the template")
-        src = src.replace(before, after, 1)
 
     src, n = REPLAY_SECTION.subn("", src)
     if n != 1:
@@ -772,10 +894,9 @@ def stamp_worker(page):
     """
     import hashlib
     parts = [page]
-    for name in ("engine.js", "replay.js", "system.js", "levels.js",
-             "lock.js", "demo.js", "revisit.js",
-             "dashboard.js", "chart.js",
-             "videos.js"):
+    for name in ("engine.js", "chart.js", "levels.js", "revisit.js",
+                 "replay.js", "demo.js", "diary.js", "videos.js",
+                 "system.js", "dashboard.js", "lock.js"):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())

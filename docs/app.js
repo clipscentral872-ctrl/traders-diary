@@ -13,6 +13,7 @@ import * as DEMO from "./demo.js";
 import * as RV from "./revisit.js";
 import * as DASH from "./dashboard.js";
 import * as VID from "./videos.js";
+import * as DIARY from "./diary.js";
 
 const $ = id => document.getElementById(id);
 const KEY = "tradersdiary.v1";
@@ -190,6 +191,7 @@ function renderPanels() {
   renderStanding();
   renderLearn();
   DASH.refreshRecord();
+  DIARY.pick(0);
   const first = document.querySelector('.src[data-src="live"]')
              || document.querySelector(".src");
   window.pickSource(first ? first.dataset.src : "live");
@@ -634,7 +636,10 @@ function goTab(name, push) {
 
   // A canvas sized while its pane was hidden has no width, so both charts are
   // redrawn on the way in rather than on the way out.
-  if (name === "diary") { try { window.drawEq(); window.draw(); } catch { /* nothing loaded */ } }
+  if (name === "diary") {
+    try { window.drawEq(); } catch { /* nothing loaded yet */ }
+    DIARY.redraw();
+  }
   if (name === "replay") RP.redraw();
   if (name === "demo") DEMO.redraw();
   if (name === "system") SYS.show();
@@ -997,6 +1002,11 @@ function intoDiary(incoming, source) {
 
 RP.setClock(tzOffset);
 RP.init(practice => intoDiary(practice, "replay"));
+
+DIARY.setClock(tzOffset);
+// The shared page script calls pick(); this is what it hands over to.
+window.__diaryPick = i => DIARY.pick(i);
+DIARY.init();
 
 VID.init();
 
