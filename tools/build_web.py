@@ -778,110 +778,179 @@ body{overflow:hidden}
   .pbar{gap:9px}
 }
 
-/* the dashboard */
-.hero{margin-bottom:8px}
-.hgrid{
-  display:grid; gap:12px; grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);
-  align-items:stretch;
+/* The dashboard: one face, four figures, six doors, one line of what is on.
+
+   The old version had fourteen tiles all the same size, which is the same as
+   having none: nothing led, so nothing was read. */
+.hero{margin-bottom:6px}
+.hpanel{
+  position:relative; overflow:hidden; isolation:isolate;
+  min-height:clamp(178px, 24vh, 236px);
+  background:
+    radial-gradient(120% 90% at 88% 4%, rgba(53,224,240,.10), transparent 62%),
+    var(--raised);
+  border:1px solid var(--line); padding:24px 26px;
+  display:flex; flex-direction:column; justify-content:flex-start;
 }
-.hbig{
-  background:var(--raised); border:1px solid var(--line); padding:22px 24px;
-  display:flex; flex-direction:column; justify-content:center; gap:6px;
-  position:relative; min-height:150px;
+/* The curve runs the full width behind the number rather than sitting in a box
+   beside it. isolation on the panel keeps z-index:-1 above the panel's own
+   background instead of dropping it behind the page. */
+.hpanel canvas{
+  position:absolute; inset:0; width:100%; height:100%; display:block; z-index:-1;
 }
-.hbig::before{
+.hpanel::before{
   content:""; position:absolute; left:-1px; top:-1px; width:22px; height:22px;
   border-top:2px solid var(--accent); border-left:2px solid var(--accent);
 }
-.hbig::after{
+.hpanel::after{
   content:""; position:absolute; right:-1px; bottom:-1px; width:22px; height:22px;
   border-bottom:2px solid var(--accent); border-right:2px solid var(--accent);
 }
+.hface{display:flex; flex-direction:column; gap:7px; max-width:min(100%, 620px)}
 .hk{
-  color:var(--muted); font-size:10.5px; text-transform:uppercase;
-  letter-spacing:.14em; font-weight:600;
+  color:var(--muted); font-size:10px; text-transform:uppercase;
+  letter-spacing:.15em; font-weight:600;
 }
 .hv{
   font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums;
-  font-size:clamp(30px, 4.6vw, 46px); line-height:1.05; letter-spacing:-.02em;
+  font-size:clamp(34px, 5.4vw, 54px); line-height:1.02; letter-spacing:-.025em;
 }
-.hv.win{color:var(--win); text-shadow:0 0 30px rgba(43,224,138,.28)}
-.hv.loss{color:var(--loss); text-shadow:0 0 30px rgba(255,92,110,.26)}
+.hv.win{color:var(--win); text-shadow:0 0 34px rgba(43,224,138,.3)}
+.hv.loss{color:var(--loss); text-shadow:0 0 34px rgba(255,92,110,.28)}
 .hsub{color:var(--faint); font-size:12.5px; line-height:1.5}
-.hcurve{
-  background:var(--raised); border:1px solid var(--line); padding:14px 16px;
-  display:flex; flex-direction:column; gap:8px; min-height:150px;
+/* Up in the corner rather than along the bottom, because the bottom is where
+   the curve lives and a line of text laid over a rising equity curve is
+   unreadable exactly when the curve is doing something worth looking at. */
+.hfoot{
+  position:absolute; top:17px; right:21px; display:flex; gap:9px;
+  align-items:baseline; pointer-events:none;
+  color:var(--muted); font-size:9.5px; text-transform:uppercase;
+  letter-spacing:.14em; font-weight:600;
 }
-.hclabel{
-  display:flex; justify-content:space-between; gap:12px;
-  color:var(--muted); font-size:10.5px; text-transform:uppercase;
-  letter-spacing:.13em; font-weight:600;
-}
-.hclabel span:last-child{
+.hfoot span:last-child{
   font-family:"JetBrains Mono",monospace; color:var(--faint);
-  text-transform:none; letter-spacing:0;
-}
-/* A sparkline, not a chart. The full curve with its scale is on the Diary
-   tab; this is here for the shape at a glance. */
-.hcurve canvas{width:100%; height:clamp(90px, 12vh, 130px); display:block}
-.jumps{display:grid; gap:9px; grid-template-columns:repeat(auto-fit,minmax(215px,1fr)); margin-top:18px}
-.jump{
-  display:flex; flex-direction:column; gap:3px; text-align:left; cursor:pointer;
-  background:var(--raised); border:1px solid var(--line); padding:15px 17px;
-  color:var(--text); font-family:"Chakra Petch",sans-serif; min-height:74px;
-  border-left:2px solid var(--line); transition:border-color .14s, background .14s;
-}
-.jump:hover{border-left-color:var(--accent); background:var(--lift)}
-.jump:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
-.jump b{
-  font-family:"Orbitron",sans-serif; font-weight:800; font-size:12.5px;
-  letter-spacing:.1em; text-transform:uppercase;
-}
-.jump span{color:var(--muted); font-size:12.5px; line-height:1.45}
-@media (max-width:760px){
-  .hgrid{grid-template-columns:1fr}
+  text-transform:none; letter-spacing:0; font-size:11px;
 }
 
-/* dashboard */
-.dashhead h2{margin-top:0}
-.dgrid{
-  display:grid; gap:12px; margin-top:20px;
-  grid-template-columns:repeat(auto-fit, minmax(215px, 1fr));
+/* Four figures, small on purpose. The big number above is the headline; these
+   are the footnotes to it, and footnotes do not get headline type. */
+.figs{
+  display:grid; gap:10px; margin-top:10px;
+  grid-template-columns:repeat(auto-fit, minmax(158px, 1fr));
 }
-.dtile{
-  background:var(--raised); border:1px solid var(--line); padding:16px 18px;
-  display:flex; flex-direction:column; gap:5px; position:relative;
-  min-height:104px; justify-content:center;
+.fig{
+  background:var(--raised); border:1px solid var(--line);
+  border-left:2px solid var(--line); padding:12px 14px;
+  display:flex; flex-direction:column; gap:3px;
 }
-.dtile::before{
-  content:""; position:absolute; left:-1px; top:-1px; width:16px; height:16px;
-  border-top:2px solid var(--accent); border-left:2px solid var(--accent);
+.fk{
+  color:var(--muted); font-size:9.5px; text-transform:uppercase;
+  letter-spacing:.14em; font-weight:600;
 }
-.dl{
-  color:var(--muted); font-size:10.5px; text-transform:uppercase;
-  letter-spacing:.13em; font-weight:600;
-}
-.dv{
+.fv{
   font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums;
-  font-size:27px; font-weight:500; line-height:1.15; letter-spacing:-.01em;
+  font-size:20px; line-height:1.2; letter-spacing:-.01em;
 }
-.dv.win{color:var(--win); text-shadow:0 0 22px rgba(43,224,138,.3)}
-.dv.loss{color:var(--loss); text-shadow:0 0 22px rgba(255,92,110,.28)}
-.dn{color:var(--faint); font-size:12px; line-height:1.45}
+.fv.win{color:var(--win)}
+.fv.loss{color:var(--loss)}
+.fn{color:var(--faint); font-size:11.5px; line-height:1.4}
+
 .dleak{
-  margin-top:14px; background:var(--line-soft); border:1px solid var(--line);
+  margin-top:12px; background:var(--line-soft); border:1px solid var(--line);
   border-left:2px solid var(--loss); padding:15px 18px;
 }
 .dlt{
-  color:var(--loss); font-size:10.5px; text-transform:uppercase;
-  letter-spacing:.13em; font-weight:700;
+  color:var(--loss); font-size:10px; text-transform:uppercase;
+  letter-spacing:.14em; font-weight:700;
 }
 .dleak p{margin:6px 0 0; color:var(--text); font-size:14px; line-height:1.65}
 .dleak b{color:var(--loss)}
-@media (max-width:640px){
-  .dgrid{grid-template-columns:1fr}
-  .dv{font-size:24px}
+
+/* Six doors into the rest of the app, because the tab strip is a row of words
+   and a row of words is not somewhere you want to go. */
+.jumps{
+  display:grid; gap:10px; margin-top:14px;
+  grid-template-columns:repeat(auto-fit, minmax(172px, 1fr));
 }
+.jump{
+  position:relative; overflow:hidden; display:flex; flex-direction:column;
+  gap:7px; text-align:left; cursor:pointer; min-height:126px;
+  justify-content:flex-end; padding:16px 17px; color:var(--text);
+  background:var(--raised); border:1px solid var(--line);
+  font-family:"Chakra Petch",sans-serif;
+  transition:border-color .16s, background .16s;
+}
+.jump::after{
+  content:""; position:absolute; right:-28%; top:-42%; width:100%; height:100%;
+  background:radial-gradient(circle, rgba(53,224,240,.18), transparent 68%);
+  opacity:0; transition:opacity .18s; pointer-events:none;
+}
+.jump svg{
+  width:25px; height:25px; margin-bottom:auto; stroke:var(--accent); fill:none;
+  stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round;
+  transition:transform .16s;
+}
+.jump b{
+  font-family:"Orbitron",sans-serif; font-weight:800; font-size:12px;
+  letter-spacing:.1em; text-transform:uppercase;
+}
+.jump span{color:var(--muted); font-size:12px; line-height:1.4}
+.jump:hover{border-color:var(--accent); background:var(--lift)}
+.jump:hover::after{opacity:1}
+.jump:hover svg{transform:translateY(-2px)}
+.jump:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+/* Six cards want two rows of three. Left to auto-fit, a wide window puts five
+   across and leaves the sixth stranded on a row of its own. */
+@media (min-width:860px){
+  .jumps{grid-template-columns:repeat(3, minmax(0,1fr))}
+}
+
+/* What the market is doing, as lines rather than as tiles. Three facts do not
+   need three cards. */
+.nowstrip{
+  display:grid; gap:1px; margin-top:14px;
+  background:var(--line); border:1px solid var(--line);
+}
+.nrow{
+  display:grid; grid-template-columns:92px auto 1fr; align-items:baseline;
+  gap:14px; background:var(--raised); padding:12px 16px;
+}
+.nk{
+  color:var(--muted); font-size:9.5px; text-transform:uppercase;
+  letter-spacing:.14em; font-weight:600;
+}
+.nv{
+  font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums;
+  font-size:16px; line-height:1.3;
+}
+.nv.win{color:var(--win)}
+.nv.loss{color:var(--loss)}
+.nn{color:var(--faint); font-size:12px; line-height:1.4; text-align:right}
+@media (max-width:640px){
+  .figs{grid-template-columns:repeat(2, minmax(0,1fr))}
+  .jumps{grid-template-columns:repeat(2, minmax(0,1fr))}
+  .jump{min-height:110px; padding:14px}
+  .jump span{font-size:11.5px}
+  .nrow{grid-template-columns:auto 1fr; row-gap:3px}
+  .nk{grid-column:1 / -1}
+}
+.more{margin-top:28px; border-top:1px solid var(--line)}
+.more>summary{
+  cursor:pointer; list-style:none; padding:16px 2px;
+  display:flex; align-items:center; gap:11px; color:var(--muted);
+  font-family:"Orbitron",sans-serif; font-weight:800; font-size:11.5px;
+  letter-spacing:.12em; text-transform:uppercase;
+}
+.more>summary::-webkit-details-marker{display:none}
+.more>summary::before{
+  content:"+"; display:grid; place-items:center; width:20px; height:20px;
+  border:1px solid var(--line); color:var(--accent);
+  font-family:"JetBrains Mono",monospace; font-size:14px; line-height:1;
+}
+.more[open]>summary::before{content:"-"}
+.more>summary:hover{color:var(--text)}
+.more>summary:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.more>summary+*{margin-top:4px}
 
 .install{
   display:flex; align-items:center; gap:18px; flex-wrap:wrap;
@@ -1141,8 +1210,14 @@ def main():
                  '<div class="col">')
     if home_open not in extra:
         raise SystemExit("the Home pane moved; check sections.html")
-    extra = extra.replace(
-        home_open, home_open + "\n" + INSTALL + source_block + reading, 1)
+    # The install bar stays at the top, because on a fresh phone it is the
+    # only thing on this page that matters. Everything else the template
+    # carried is reading material, and reading material below a dashboard
+    # is reference; above it, it is a wall.
+    extra = extra.replace(home_open, home_open + "\n" + INSTALL, 1)
+    if "<!--READING-->" not in extra:
+        raise SystemExit("the reading marker moved; check sections.html")
+    extra = extra.replace("<!--READING-->", source_block + reading, 1)
 
     shell = (APPBAR.replace("__NAV__", NAV)
              + '<div class="appbody">\n'
@@ -1158,12 +1233,12 @@ def main():
     if not tail:
         raise SystemExit("the footer moved; check the template")
     src = src.replace(tail.group(0), "", 1)
-    # The end of Home is wherever the next pane begins, which is Demo, not
-    # Videos: anchoring on Videos dropped the footer into the middle of Replay.
-    after_home = '<div class="tabpane" data-tab="demo"'
-    if after_home not in src:
-        raise SystemExit("the Demo pane moved; check sections.html")
-    src = src.replace(after_home, tail.group(0) + after_home, 1)
+    # A marker inside the column, not the tag that follows it. Anchoring on the
+    # next pane put the footer between two panes rather than inside Home, where
+    # it sat over the top of the page as a sibling of the panes themselves.
+    if "<!--FOOTER-->" not in src:
+        raise SystemExit("the footer marker moved; check sections.html")
+    src = src.replace("<!--FOOTER-->", tail.group(0), 1)
 
     src = src.replace("__LEARN__", PRIVACY + SETTINGS)
 

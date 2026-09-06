@@ -55,8 +55,15 @@ function loadAccount() {
   try {
     const o = JSON.parse(localStorage.getItem(KEY));
     if (o && typeof o.balance === "number") {
-      D.account = {balance: o.balance, trades: o.trades || []};
-      D.pos = o.pos || null;
+      // Anything in the list that is not a trade is dropped rather than
+      // trusted. A half-written or older-format entry here throws while the
+      // module is still starting, which takes the whole app down with it and
+      // leaves no screen to fix it from.
+      const ok = t => t && typeof t.got_r === "number"
+        && typeof t.pnl === "number";
+      D.account = {balance: o.balance,
+                   trades: (o.trades || []).filter(ok)};
+      D.pos = o.pos && typeof o.pos.entry === "number" ? o.pos : null;
     }
   } catch { /* a fresh account is the right fallback */ }
 }

@@ -658,6 +658,13 @@ document.addEventListener("click", e => {
 });
 addEventListener("hashchange", () => goTab(location.hash.slice(1), false));
 
+/* The equity curve measures its own width to draw. Folded inside a closed
+   <details> that width is zero, so it has to be told when the fold opens. */
+document.addEventListener("toggle", e => {
+  if (e.target.classList && e.target.classList.contains("more") && e.target.open)
+    try { window.drawEq(); } catch { /* nothing imported yet */ }
+}, true);
+
 /* --------------------------------------------------------- your own note */
 
 /* "What was I thinking" is the one thing a journal cannot work out for you,

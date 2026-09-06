@@ -19,44 +19,30 @@
 <div class="col">
 
 <section class="hero">
-  <div class="hgrid">
-    <div class="hbig" id="hmain"></div>
-    <div class="hcurve">
-      <div class="hclabel"><span>Equity</span><span id="hcnote"></span></div>
-      <canvas id="hspark"></canvas>
-    </div>
+  <div class="hpanel">
+    <canvas id="hspark" aria-hidden="true"></canvas>
+    <div class="hface" id="hmain"></div>
+    <div class="hfoot"><span>Equity</span><span id="hcnote"></span></div>
   </div>
-  <div class="dgrid" id="dashyou"></div>
+  <div class="figs" id="dashyou"></div>
   <div id="dashleak"></div>
 </section>
 
 <section>
-  <h2>In play right now</h2>
-  <p class="lead">Yesterday's high and low on NQ, and how often a level that
-  far away with that much of the session left has actually been tapped before
-  the close. Measured over sixty days, not guessed. A <b>?</b> means the
-  sample behind it is thin.</p>
-  <div class="dgrid" id="dashlevels"></div>
+  <h2>Jump to</h2>
+  <div class="jumps" id="dashjumps"></div>
 </section>
 
 <section>
-  <h2>The automated system</h2>
-  <p class="lead">Running on its own against live bars, connected to no money.
-  It is here to answer whether the method works without a human picking the
-  setups.</p>
-  <div class="dgrid" id="dashsys"></div>
+  <h2>Right now</h2>
+  <div class="nowstrip" id="dashnow"></div>
 </section>
 
-<section>
-  <h2>Go somewhere</h2>
-  <div class="jumps">
-    <button class="jump" data-go="diary"><b>Diary</b><span>Import a session, watch your trades back</span></button>
-    <button class="jump" data-go="demo"><b>Demo</b><span>Place a trade on today's market</span></button>
-    <button class="jump" data-go="replay"><b>Replay</b><span>Trade a past session bar by bar</span></button>
-    <button class="jump" data-go="videos"><b>Videos</b><span>Your winners and losers, cut apart</span></button>
-    <button class="jump" data-go="learn"><b>Learn</b><span>The method, and what it has cost you</span></button>
-  </div>
-</section>
+<details class="more">
+  <summary>All the figures</summary>
+  <!--READING-->
+</details>
+<!--FOOTER-->
 </div>
 </div>
 
