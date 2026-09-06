@@ -55,8 +55,9 @@ function yours() {
   const s = E.summarise(live);
   const scored = live.filter(t => t.got_r !== null && t.got_r !== undefined);
   return [
-    tile("your record", money(s.pnl), s.pnl >= 0 ? "win" : "loss",
-         `${s.trades} trades, ${s.wins}W / ${s.losses}L`),
+    tile("win rate", s.win_rate.toFixed(0) + "%", "",
+         `${s.wins} of ${s.trades}, average win ${plain(s.avg_win)} against `
+         + `${plain(Math.abs(s.avg_loss))} lost`),
     tile("expectancy", s.expectancy_r === null ? "no R yet"
          : (s.expectancy_r >= 0 ? "+" : "") + s.expectancy_r.toFixed(2) + "R",
          (s.expectancy_r || 0) >= 0 ? "win" : "loss",
@@ -182,15 +183,117 @@ async function system() {
   }
 }
 
+/* The one number that answers "how am I doing", said once and large.
+ *
+ * Not four numbers competing at the same size. An account balance and a win
+ * rate and an expectancy all shouting at once is how a dashboard ends up
+ * saying nothing. */
+function hero() {
+  const live = (window.TRADES || []).filter(t => (t.source || "live") === "live");
+  const box = $("hmain");
+  if (!box) return;
+  if (!live.length) {
+    box.innerHTML = '<span class="hk">Your record</span>'
+      + '<span class="hv">Nothing yet</span>'
+      + '<span class="hsub">Import your six TradingView exports on the Diary '
+      + 'tab and everything here fills in.</span>';
+    return;
+  }
+  const s = E.summarise(live);
+  const days = new Set(live.map(t => t.open_t.slice(0, 10))).size;
+  box.innerHTML = '<span class="hk">Your record</span>'
+    + `<span class="hv ${s.pnl >= 0 ? "win" : "loss"}">${money(s.pnl)}</span>`
+    + `<span class="hsub">${s.trades} trades over ${days} `
+    + `day${days === 1 ? "" : "s"}, ${s.wins}W / ${s.losses}L`
+    + (s.expectancy_r === null ? ""
+       : `, ${(s.expectancy_r >= 0 ? "+" : "") + s.expectancy_r.toFixed(2)}R a trade`)
+    + "</span>";
+}
+
+/* The shape of the account, which a row of numbers cannot show. Drawn small
+   and without axes on purpose: this is for the shape, and the Diary tab has
+   the real curve with its scale. */
+function spark() {
+  const cv = $("hspark");
+  if (!cv) return;
+  const live = (window.TRADES || [])
+    .filter(t => (t.source || "live") === "live")
+    .slice().sort((a, b) => (a.open_t < b.open_t ? -1 : 1));
+  const note = $("hcnote");
+  const dpr = Math.min(3, devicePixelRatio || 1);
+  const W = cv.clientWidth, H = cv.clientHeight;
+  if (!W || !H) return;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const x = cv.getContext("2d");
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  x.clearRect(0, 0, W, H);
+  const css = n => getComputedStyle(document.documentElement)
+    .getPropertyValue(n).trim();
+
+  if (live.length < 2) {
+    if (note) note.textContent = live.length ? "one trade so far" : "";
+    return;
+  }
+  const base = window.START == null ? 0 : window.START;
+  const eq = [base];
+  for (const t of live) eq.push(eq[eq.length - 1] + t.pnl);
+  const lo = Math.min(...eq), hi = Math.max(...eq);
+  const pad = (hi - lo) * 0.12 || 1;
+  const Y = v => H - 4 - (v - lo + pad) / (hi - lo + pad * 2) * (H - 8);
+  const X = i => 2 + i / (eq.length - 1) * (W - 4);
+
+  // The starting balance, so a curve that never got back to it is obvious.
+  x.strokeStyle = css("--line");
+  x.setLineDash([3, 3]);
+  x.beginPath(); x.moveTo(0, Y(base)); x.lineTo(W, Y(base)); x.stroke();
+  x.setLineDash([]);
+
+  const end = eq[eq.length - 1];
+  const col = end >= base ? css("--win") : css("--loss");
+  const grad = x.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, end >= base ? "rgba(43,224,138,.22)" : "rgba(255,92,110,.2)");
+  grad.addColorStop(1, "rgba(0,0,0,0)");
+  x.beginPath();
+  x.moveTo(X(0), Y(eq[0]));
+  eq.forEach((v, i) => x.lineTo(X(i), Y(v)));
+  x.lineTo(X(eq.length - 1), H);
+  x.lineTo(X(0), H);
+  x.closePath();
+  x.fillStyle = grad;
+  x.fill();
+
+  x.beginPath();
+  eq.forEach((v, i) => i ? x.lineTo(X(i), Y(v)) : x.moveTo(X(i), Y(v)));
+  x.strokeStyle = col;
+  x.lineWidth = 2;
+  x.stroke();
+
+  x.beginPath();
+  x.arc(X(eq.length - 1), Y(end), 3.5, 0, Math.PI * 2);
+  x.fillStyle = col;
+  x.fill();
+
+  if (note) note.textContent = plain(base) + " to " + plain(end);
+}
+
 export async function show() {
+  hero();
   $("dashyou").innerHTML = yours() + demo();
   $("dashleak").innerHTML = leak();
+  spark();
   await Promise.all([levelsInPlay(), system()]);
 }
+
+addEventListener("resize", () => {
+  const pane = document.querySelector('.tabpane[data-tab="home"]');
+  if (pane && !pane.hidden) spark();
+});
 
 /** Redraw the parts that depend on the trade record, after an import. */
 export function refreshRecord() {
   if (!$("dashyou")) return;
+  hero();
   $("dashyou").innerHTML = yours() + demo();
   $("dashleak").innerHTML = leak();
+  spark();
 }

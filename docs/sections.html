@@ -17,11 +17,14 @@
 
 <div class="tabpane" data-tab="home" hidden>
 
-<section class="dashhead">
-  <h2>Where you stand</h2>
-  <p class="lead">Everything on this screen lives somewhere else in the app.
-  It is here so that opening the diary and reading four tiles is enough to
-  know whether anything needs you today.</p>
+<section class="hero">
+  <div class="hgrid">
+    <div class="hbig" id="hmain"></div>
+    <div class="hcurve">
+      <div class="hclabel"><span>Equity</span><span id="hcnote"></span></div>
+      <canvas id="hspark"></canvas>
+    </div>
+  </div>
   <div class="dgrid" id="dashyou"></div>
   <div id="dashleak"></div>
 </section>
@@ -30,8 +33,8 @@
   <h2>In play right now</h2>
   <p class="lead">Yesterday's high and low on NQ, and how often a level that
   far away with that much of the session left has actually been tapped before
-  the close. Measured, not guessed. A <b>?</b> means the sample behind it is
-  thin.</p>
+  the close. Measured over sixty days, not guessed. A <b>?</b> means the
+  sample behind it is thin.</p>
   <div class="dgrid" id="dashlevels"></div>
 </section>
 
@@ -45,11 +48,12 @@
 
 <section>
   <h2>Go somewhere</h2>
-  <div class="toolrow">
-    <button class="bigbtn" data-go="diary">Import a session</button>
-    <button class="bigbtn ghost" data-go="demo">Demo account</button>
-    <button class="bigbtn ghost" data-go="replay">Bar replay</button>
-    <button class="bigbtn ghost" data-go="learn">The method</button>
+  <div class="jumps">
+    <button class="jump" data-go="diary"><b>Diary</b><span>Import a session, watch your trades back</span></button>
+    <button class="jump" data-go="demo"><b>Demo</b><span>Place a trade on today's market</span></button>
+    <button class="jump" data-go="replay"><b>Replay</b><span>Trade a past session bar by bar</span></button>
+    <button class="jump" data-go="videos"><b>Videos</b><span>Your winners and losers, cut apart</span></button>
+    <button class="jump" data-go="learn"><b>Learn</b><span>The method, and what it has cost you</span></button>
   </div>
 </section>
 </div>

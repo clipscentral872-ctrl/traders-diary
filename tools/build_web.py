@@ -600,6 +600,70 @@ EXTRA_CSS = """
   .pbar{gap:9px}
 }
 
+/* the dashboard */
+.hero{margin-bottom:8px}
+.hgrid{
+  display:grid; gap:12px; grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);
+  align-items:stretch;
+}
+.hbig{
+  background:var(--raised); border:1px solid var(--line); padding:22px 24px;
+  display:flex; flex-direction:column; justify-content:center; gap:6px;
+  position:relative; min-height:150px;
+}
+.hbig::before{
+  content:""; position:absolute; left:-1px; top:-1px; width:22px; height:22px;
+  border-top:2px solid var(--accent); border-left:2px solid var(--accent);
+}
+.hbig::after{
+  content:""; position:absolute; right:-1px; bottom:-1px; width:22px; height:22px;
+  border-bottom:2px solid var(--accent); border-right:2px solid var(--accent);
+}
+.hk{
+  color:var(--muted); font-size:10.5px; text-transform:uppercase;
+  letter-spacing:.14em; font-weight:600;
+}
+.hv{
+  font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums;
+  font-size:clamp(30px, 4.6vw, 46px); line-height:1.05; letter-spacing:-.02em;
+}
+.hv.win{color:var(--win); text-shadow:0 0 30px rgba(43,224,138,.28)}
+.hv.loss{color:var(--loss); text-shadow:0 0 30px rgba(255,92,110,.26)}
+.hsub{color:var(--faint); font-size:12.5px; line-height:1.5}
+.hcurve{
+  background:var(--raised); border:1px solid var(--line); padding:14px 16px;
+  display:flex; flex-direction:column; gap:8px; min-height:150px;
+}
+.hclabel{
+  display:flex; justify-content:space-between; gap:12px;
+  color:var(--muted); font-size:10.5px; text-transform:uppercase;
+  letter-spacing:.13em; font-weight:600;
+}
+.hclabel span:last-child{
+  font-family:"JetBrains Mono",monospace; color:var(--faint);
+  text-transform:none; letter-spacing:0;
+}
+/* A sparkline, not a chart. The full curve with its scale is on the Diary
+   tab; this is here for the shape at a glance. */
+.hcurve canvas{width:100%; height:clamp(90px, 12vh, 130px); display:block}
+.jumps{display:grid; gap:9px; grid-template-columns:repeat(auto-fit,minmax(215px,1fr)); margin-top:18px}
+.jump{
+  display:flex; flex-direction:column; gap:3px; text-align:left; cursor:pointer;
+  background:var(--raised); border:1px solid var(--line); padding:15px 17px;
+  color:var(--text); font-family:"Chakra Petch",sans-serif; min-height:74px;
+  border-left:2px solid var(--line); transition:border-color .14s, background .14s;
+}
+.jump:hover{border-left-color:var(--accent); background:var(--lift)}
+.jump:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.jump b{
+  font-family:"Orbitron",sans-serif; font-weight:800; font-size:12.5px;
+  letter-spacing:.1em; text-transform:uppercase;
+}
+.jump span{color:var(--muted); font-size:12.5px; line-height:1.45}
+@media (max-width:760px){
+  .hgrid{grid-template-columns:1fr}
+}
+
 /* dashboard */
 .dashhead h2{margin-top:0}
 .dgrid{
