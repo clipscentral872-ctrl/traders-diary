@@ -18,6 +18,10 @@ import * as DIARY from "./diary.js";
 const $ = id => document.getElementById(id);
 const KEY = "tradersdiary.v1";
 const TZ_KEY = "tradersdiary.tz";
+// Set the first time the seed is planted, and also by "Erase everything", so
+// an app you have deliberately emptied stays empty instead of filling itself
+// back up on the next reload.
+const SEED_KEY = "tradersdiary.seeded";
 
 /* ------------------------------------------------------------- storage */
 
@@ -66,6 +70,36 @@ function save(trades, start) {
 let STATE = load();
 window.TRADES = STATE.trades;
 window.START = STATE.start;
+
+/* The record this app ships with.
+ *
+ * A fresh install used to open empty and ask for six CSV exports before it
+ * could say anything, which is the wrong first screen for a record that
+ * already exists. seed.json holds it, and lands only on a browser that has
+ * never stored anything: with a record present, a sealed store, a store that
+ * failed to read, or an erase behind it, this does nothing at all. It can
+ * never overwrite or resurrect a thing. */
+async function plantSeed() {
+  if (window.TRADES.length || STATE.sealed || STATE.broken) return false;
+  try {
+    if (localStorage.getItem(SEED_KEY)) return false;
+  } catch { return false; }
+  try {
+    const r = await fetch("seed.json", {cache: "no-cache"});
+    if (!r.ok) return false;
+    const body = await r.json();
+    if (!Array.isArray(body.trades) || !body.trades.length) return false;
+    window.TRADES = body.trades;
+    window.START = body.start ?? null;
+    save(window.TRADES, window.START);
+    try { localStorage.setItem(SEED_KEY, "1"); } catch { /* fine */ }
+    return true;
+  } catch {
+    // No seed published, or offline on a first run. An empty diary that asks
+    // for an import is a perfectly good fallback.
+    return false;
+  }
+}
 
 const tzOffset = () => {
   const v = parseFloat(localStorage.getItem(TZ_KEY));
@@ -453,6 +487,9 @@ $("wipe").addEventListener("click", () => {
   if (!confirm(`Erase all ${window.TRADES.length} trades from this browser? `
              + `This cannot be undone unless you saved a backup.`)) return;
   localStorage.removeItem(KEY);
+  // Erased means erased. Without this the seed would plant itself again on
+  // the next reload and it would look like the erase had not worked.
+  try { localStorage.setItem(SEED_KEY, "1"); } catch { /* fine */ }
   window.TRADES = [];
   window.START = null;
   renderPanels();
@@ -985,7 +1022,17 @@ lockState();
 if (STATE.sealed) showGate("");
 // A sealed store has nothing loaded yet, so there is nothing to draw candles
 // on. This runs again after unlocking instead.
-if (!STATE.sealed) loadBars(feedsFor(window.TRADES)).then(fillCandles);
+if (!STATE.sealed) {
+  plantSeed().then(planted => {
+    if (planted) {
+      renderPanels();
+      storeLine();
+      say(`Your ${window.TRADES.length} trades are already here. Import a new `
+        + `session on the Diary tab whenever you have one.`);
+    }
+    return loadBars(feedsFor(window.TRADES)).then(fillCandles);
+  });
+}
 
 /** Take trades from Replay or Demo into the Diary, ignoring any already there.
  *

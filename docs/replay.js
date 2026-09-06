@@ -152,7 +152,8 @@ function render() {
   $("rpread").textContent = b
     ? `${S.sym} ${S.tf}   ${stamp(b.ms).slice(0, 16)}   `
       + (S.mode === "browse"
-         ? "browsing the whole series. Press Cut, then click where to start."
+         ? "the whole series. Press Cut, then click the chart where you "
+           + "want the future to stop."
          : `bar ${S.i + 1} of ${S.bars.length}`)
     : "Loading the market...";
   $("rpctl").hidden = S.mode !== "replay";
@@ -356,13 +357,21 @@ function cutAt(i) {
   render();
 }
 
+/** Show or clear the armed state, in the three places it has to agree. */
+function armed(on) {
+  $("rcut").setAttribute("aria-pressed", on ? "true" : "false");
+  $("rcuthint").hidden = !on;
+  chart.pick(on);
+}
+
 /** The scissors. Click the chart to choose where the future stops. */
 async function armCut() {
+  if (chart.picking) { armed(false); render(); return; }
   if (!S.bars.length && !(await browse())) return;
-  chart.pick(true);
-  $("rcut").setAttribute("aria-pressed", "true");
-  $("rpread").textContent = "Click the chart where you want to start. "
-    + "Everything after that point is hidden until you play it forward.";
+  armed(true);
+  $("rpread").textContent = "Scroll back to the moment you want, then click "
+    + "the chart. Everything after that point is hidden until you play it "
+    + "forward.";
 }
 
 /** The other way in, which every platform also offers: pick a date. */
@@ -378,8 +387,7 @@ async function startFromDate() {
 
 function reset() {
   stopAuto();
-  chart.pick(false);
-  $("rcut").setAttribute("aria-pressed", "false");
+  armed(false);
   browse();
 }
 
@@ -399,7 +407,7 @@ export function init(onSave) {
     onHover: b => ohlc(b || S.bars[S.i]),
     onLevelMove: levelMoved,
     onLevelDrop: which => { recordMove(which); render(); },
-    onPick: i => { $("rcut").setAttribute("aria-pressed", "false"); cutAt(i); },
+    onPick: i => { armed(false); cutAt(i); },
   });
 
   $("rsym").innerHTML = SYMS.map(s => `<option value="${s}">${s}</option>`).join("");

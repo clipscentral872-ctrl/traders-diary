@@ -101,7 +101,6 @@
 <div class="tabpane" data-tab="replay" hidden>
 <div class="ws">
   <div class="wsrail">
-    <button class="rbtn2" id="rcut" aria-pressed="false" title="Cut the chart here and replay from it">&#9986;</button>
     <button class="rbtn2" id="rlevels" aria-pressed="true" title="Session highs and lows">Lv</button>
     <button class="rbtn2" id="rzin" title="Zoom in">+</button>
     <button class="rbtn2" id="rzout" title="Zoom out">&minus;</button>
@@ -114,12 +113,18 @@
     <div class="wstop">
       <select id="rsym" class="psel" aria-label="Contract"></select>
       <div class="tfrow" id="rtf" role="group" aria-label="Timeframe"></div>
+      <button class="pbtn cuttool" id="rcut" aria-pressed="false"
+              title="Cut the chart and hide everything after it">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.6 7.5 20 18M8.6 16.5 20 6"/></svg>Cut
+      </button>
       <input type="date" id="rdate" class="psel" aria-label="Start from">
       <button class="pbtn go" id="rgo">Start</button>
       <div class="pgrow" id="rohlc"></div>
     </div>
     <div class="wsstage">
       <canvas id="rc"></canvas>
+      <div class="cuthint" id="rcuthint" hidden>Click the chart where you
+      want the future to stop</div>
       <div class="ptransport" id="rpctl" hidden>
         <button class="ptool" id="rstep1" title="One bar">&#9654;</button>
         <button class="ptool" id="rstep5" title="Five bars">&#9654;&#9654;</button>

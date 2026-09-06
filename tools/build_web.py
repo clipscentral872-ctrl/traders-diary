@@ -173,6 +173,12 @@ PRIVACY = """<section>
   uploaded, there is no account, and no one else can see it, including whoever
   made this. That also means clearing your browser data clears the diary, so
   keep a backup.</p>
+  <p class="lead">One exception, and it is worth knowing about. This copy ships
+  with a starting record already in it, so a fresh install opens with something
+  to look at instead of an empty screen. That record is part of the published
+  site, which is public, so anyone with the link can read those trades. Press
+  <b>Erase everything</b> and it is gone for good on this device: it is never
+  put back. Everything you import after that is yours alone.</p>
   <div class="toolrow">
     <button class="bigbtn" id="save">Save a backup file</button>
     <button class="bigbtn ghost" id="load">Restore from a backup</button>
@@ -673,6 +679,36 @@ body{overflow:hidden}
 }
 .pbtn.go{border-color:var(--accent); color:var(--accent)}
 .pbtn:hover{background:var(--raised)}
+
+/* The cut tool. It used to be a scissors glyph in the left rail with no label,
+   which is the same as not having it: nobody found it. It sits in the toolbar
+   now, named, and lights up while it is armed.
+
+   Called cuttool and not cut: the template already owns .cut for the video
+   clip buttons, and those reset each other's pressed state on click, which
+   would have reached in and un-armed this one. */
+/* flex:none because the toolbar is a nowrap flex row that will happily
+   squeeze a button below its content and stack the icon over the word. */
+.pbtn.cuttool{
+  display:inline-flex; flex-direction:row; align-items:center; gap:7px;
+  white-space:nowrap; flex:none; min-width:max-content; padding:9px 15px;
+  line-height:1;
+}
+.pbtn.go{flex:none}
+.pbtn.cuttool svg{
+  flex:none; width:15px; height:15px; fill:none; stroke:currentColor;
+  stroke-width:1.8; stroke-linecap:round;
+}
+.pbtn.cuttool[aria-pressed="true"]{
+  background:var(--accent); border-color:var(--accent); color:#04121A;
+}
+.cuthint{
+  position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:3;
+  background:var(--accent); color:#04121A; padding:8px 15px; max-width:88%;
+  font-family:"Chakra Petch",sans-serif; font-weight:600; font-size:12px;
+  letter-spacing:.06em; text-transform:uppercase; text-align:center;
+  pointer-events:none;
+}
 
 /* The OHLC readout that follows the crosshair, the way a chart names what is
    under the cursor instead of making you guess. */
@@ -1279,7 +1315,7 @@ def stamp_worker(page):
     for name in ("engine.js", "chart.js", "levels.js", "revisit.js",
                  "replay.js", "demo.js", "diary.js", "videos.js",
                  "system.js", "dashboard.js", "lock.js", "watchlist.js",
-                 "series.js"):
+                 "series.js", "seed.json"):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())
