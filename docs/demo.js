@@ -16,6 +16,7 @@
  */
 import * as E from "./engine.js";
 import {levelsAt, FAMILY_COLOUR} from "./levels.js";
+import {createChart} from "./chart.js";
 import * as RV from "./revisit.js";
 
 const $ = id => document.getElementById(id);
@@ -182,107 +183,40 @@ function close(price, ms, how) {
 
 /* ---------------------------------------------------------------- draw */
 
-function draw() {
-  const cv = $("dc");
-  if (!cv) return;
-  const W = cv.clientWidth, H = Math.max(250, Math.min(400, W * 0.5));
-  const dpr = devicePixelRatio || 1;
-  cv.width = W * dpr; cv.height = H * dpr;
-  const x = cv.getContext("2d");
-  x.scale(dpr, dpr);
-  x.clearRect(0, 0, W, H);
-  // Read once per draw. This used to be called per candle and per level, and
-  // every call forces the browser to recompute style, which was most of the
-  // cost of stepping the chart.
-  const _cs = getComputedStyle(document.documentElement);
-  const _pal = {};
-  const css = n => (_pal[n] !== undefined ? _pal[n]
-                    : (_pal[n] = _cs.getPropertyValue(n).trim()));
+let chart = null;
 
-  const N = Math.max(30, Math.floor(W / 6));
-  const view = D.bars.slice(-N);
-  if (!view.length) return;
-
-  const L = 8, R = 74, T = 12, B = 22;
-  const w = W - L - R, h = H - T - B;
-  let lo = Infinity, up = -Infinity;
-  for (const b of view) { lo = Math.min(lo, b.l); up = Math.max(up, b.h); }
-  const p = D.pos;
-  if (p) { lo = Math.min(lo, p.stop, p.target); up = Math.max(up, p.stop, p.target); }
-  const pad = (up - lo) * 0.08 || 1;
-  lo -= pad; up += pad;
-  const Y = v => T + h - (v - lo) / (up - lo) * h;
-  const cw = w / view.length;
-
-  x.strokeStyle = css("--line-soft");
-  x.lineWidth = 1;
-  for (let g = 0; g <= 4; g++) {
-    const yy = Math.round(T + h * g / 4) + 0.5;
-    x.beginPath(); x.moveTo(L, yy); x.lineTo(L + w, yy); x.stroke();
+function overlayLevels() {
+  if (!D.levels || !D.bars.length) return [];
+  const atMs = last() ? last().ms : null;
+  const marks = levelsAt(D.bars, atMs)
+    .map(m => ({...m, colour: FAMILY_COLOUR[m.family]}));
+  // Measured on the five-minute history; whether a level has been tapped TODAY
+  // is read off the minute bars on screen.
+  const odds = RV.untappedNow(D.bars, atMs, D.model);
+  for (const m of marks) {
+    const o = m.label.includes("High") ? odds.get("above") : odds.get("below");
+    if (m.family === "day" && o && Math.abs(o.price - m.price) < 1e-6)
+      m.label += "  " + RV.pct(o.p) + " revisit" + (o.thin ? " ?" : "");
   }
+  return marks;
+}
 
-  if (D.levels) {
-    x.font = '10px "JetBrains Mono", monospace';
-    x.textBaseline = "middle";
-    const atMs = last() ? last().ms : null;
-    // The model comes from the five-minute history; whether a level has been
-    // tapped TODAY is read off the minute bars on screen.
-    const odds = RV.untappedNow(D.bars, atMs, D.model);
-    const marks = levelsAt(D.bars, atMs).filter(m => m.price >= lo && m.price <= up);
-    for (const m of marks) {
-      const o = m.label.includes("High") ? odds.get("above") : odds.get("below");
-      if (m.family === "day" && o && Math.abs(o.price - m.price) < 1e-6)
-        m.label += "  " + RV.pct(o.p) + " revisit" + (o.thin ? " ?" : "");
-    }
-    for (const m of marks) {
-      const y = Math.round(Y(m.price)) + 0.5;
-      x.strokeStyle = x.fillStyle = FAMILY_COLOUR[m.family] || css("--faint");
-      x.globalAlpha = 0.5;
-      x.setLineDash([2, 4]);
-      x.beginPath(); x.moveTo(L, y); x.lineTo(L + w, y); x.stroke();
-      x.setLineDash([]);
-      x.globalAlpha = 0.85;
-      x.fillText(m.label, L + 4, y - 7);
-      x.globalAlpha = 1;
-    }
-  }
+function paint() {
+  if (!chart) return;
+  chart.setLevels(overlayLevels());
+  chart.setPosition(D.pos);
+}
 
-  if (p) {
-    x.fillStyle = css("--loss-zone");
-    x.fillRect(L, Y(Math.max(p.entry, p.stop)), w, Math.abs(Y(p.stop) - Y(p.entry)));
-    x.fillStyle = css("--win-zone");
-    x.fillRect(L, Y(Math.max(p.entry, p.target)), w, Math.abs(Y(p.target) - Y(p.entry)));
-    for (const [v, col] of [[p.stop, css("--loss-faded")],
-                            [p.target, css("--win-faded")],
-                            [p.entry, css("--text")]]) {
-      x.strokeStyle = col;
-      x.setLineDash(v === p.entry ? [] : [5, 4]);
-      x.beginPath(); x.moveTo(L, Y(v) + 0.5); x.lineTo(L + w, Y(v) + 0.5); x.stroke();
-    }
-    x.setLineDash([]);
-  }
-
-  view.forEach((b, k) => {
-    const cx = L + cw * (k + 0.5);
-    x.strokeStyle = x.fillStyle = css(b.c >= b.o ? "--candle-up" : "--candle-dn");
-    x.lineWidth = 1;
-    x.beginPath();
-    x.moveTo(Math.round(cx) + 0.5, Y(b.h));
-    x.lineTo(Math.round(cx) + 0.5, Y(b.l));
-    x.stroke();
-    const bw = Math.max(1.6, cw * 0.6);
-    const y1 = Y(Math.max(b.o, b.c)), y2 = Y(Math.min(b.o, b.c));
-    x.fillRect(cx - bw / 2, y1, bw, Math.max(1, y2 - y1));
-  });
-
-  x.font = '11px "JetBrains Mono", monospace';
-  x.textBaseline = "middle";
-  x.fillStyle = css("--muted");
-  for (let g = 0; g <= 4; g++)
-    x.fillText(px(up - (up - lo) * g / 4), L + w + 7, T + h * g / 4);
-  const b = view[view.length - 1];
-  x.fillStyle = css("--accent");
-  x.fillText(px(b.c), L + w + 7, Y(b.c));
+function ohlc(b) {
+  const box = $("dohlc");
+  if (!box) return;
+  if (!b) { box.innerHTML = ""; return; }
+  const up = b.c >= b.o;
+  box.innerHTML = '<span class="pohlc">'
+    + `<span>${stamp(b.ms).slice(11, 16)}</span>`
+    + `<span>O <b>${px(b.o)}</b></span><span>H <b>${px(b.h)}</b></span>`
+    + `<span>L <b>${px(b.l)}</b></span>`
+    + `<span class="${up ? "up" : "dn"}">C <b>${px(b.c)}</b></span></span>`;
 }
 
 /* -------------------------------------------------------------- render */
@@ -296,10 +230,9 @@ function ticket() {
   const lose = risk * pv * qty, win = risk * rr * pv * qty;
   const acct = D.account.balance;
   $("drisknote").innerHTML = b
-    ? `Risking <b class="loss">${money(-lose)}</b> to make `
-      + `<b class="win">${money(win)}</b>, at ${rr.toFixed(1)} times your risk. `
-      + `That is <b>${(lose / acct * 100).toFixed(1)}%</b> of the account on `
-      + `this one trade.`
+    ? `Risk <b class="loss">${money(-lose)}</b> to make `
+      + `<b class="win">${money(win)}</b><br>`
+      + `<b>${(lose / acct * 100).toFixed(1)}%</b> of the account`
       + (rr < 1 ? '<span class="rrwarn">Risking more than you stand to make</span>' : "")
       + (lose / acct > 0.02
           ? '<span class="rrwarn">Over 2% of the account on one trade</span>' : "")
@@ -310,11 +243,14 @@ function render() {
   const b = last();
   const d = delayMin();
   $("dread").innerHTML = b
-    ? `<span class="rv"><b>${D.sym}</b></span>`
-      + `<span class="rv">last <b>${px(b.c)}</b></span>`
-      + `<span class="rv ${d > 90 ? "loss" : ""}">${ageWords(d)}</span>`
-      + `<span class="rv">${stamp(b.ms).slice(0, 16)}</span>`
-    : '<span class="rv">Loading the market...</span>';
+    ? `${stamp(b.ms).slice(0, 16)} &nbsp; `
+      + `<span class="${d > 90 ? "old" : ""}">${ageWords(d)}</span>`
+    : "Loading the market...";
+  if (b) {
+    $("dbuypx").textContent = px(b.c);
+    $("dsellpx").textContent = px(b.c);
+    ohlc(b);
+  }
 
   const p = D.pos;
   const stats = [
@@ -364,7 +300,7 @@ function render() {
   $("dsend").hidden = !D.account.trades.length;
 
   ticket();
-  draw();
+  paint();
 }
 
 /* ------------------------------------------------------------ controls */
@@ -395,12 +331,21 @@ export async function refresh() {
     D.model = await loadModel(sym);
     D.modelKey = sym;
   }
+  if (chart) chart.setData(D.bars, {keepView: true});
   render();
 }
 
 export function init(onSaveToDiary, onTradeClosed) {
   loadAccount();
   onClosed = onTradeClosed || (() => {});
+
+  chart = createChart($("dc"), {
+    timeLabel: ms => stamp(ms).slice(5, 16),
+    onHover: b => ohlc(b || last()),
+  });
+  $("dzin").addEventListener("click", () => chart.zoomIn());
+  $("dzout").addEventListener("click", () => chart.zoomOut());
+  $("dfit").addEventListener("click", () => chart.fit(160));
 
   $("dsym").innerHTML = SYMS.map(s => `<option value="${s}">${s}</option>`).join("");
   $("dsym").addEventListener("change", async () => {
@@ -421,7 +366,7 @@ export function init(onSaveToDiary, onTradeClosed) {
   $("dlevels").addEventListener("click", () => {
     D.levels = !D.levels;
     $("dlevels").setAttribute("aria-pressed", String(D.levels));
-    draw();
+    paint();
   });
   for (const id of ["dqty", "drisk", "drr"])
     $(id).addEventListener("input", ticket);
@@ -443,11 +388,6 @@ export function init(onSaveToDiary, onTradeClosed) {
     render();
   });
 
-  addEventListener("resize", () => {
-    const pane = document.querySelector('.tabpane[data-tab="demo"]');
-    if (pane && !pane.hidden) draw();
-  });
-
   render();
   refresh();
   // The site republishes bars through the session, so a tab left open picks
@@ -455,5 +395,5 @@ export function init(onSaveToDiary, onTradeClosed) {
   setInterval(refresh, 5 * 60000);
 }
 
-export const redraw = () => { if (D.bars.length) draw(); };
+export const redraw = () => { if (chart) chart.draw(); };
 export const inTrade = () => !!D.pos;

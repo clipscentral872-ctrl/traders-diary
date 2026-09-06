@@ -321,6 +321,135 @@ EXTRA_CSS = """
 #updbar span{flex:1 1 160px; font-size:14px}
 @media (max-width:640px){ #updbar{flex-direction:column; align-items:stretch} }
 
+/* The platform surface. A chart people work on wants to be the biggest thing
+   on screen with its controls floating over it, not a small box under three
+   paragraphs. Everything here exists to get out of the chart's way. */
+.platform{margin-bottom:34px}
+.pbar{
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  background:var(--raised); border:1px solid var(--line); border-bottom:none;
+  padding:9px 12px;
+}
+.pgroup{display:flex; align-items:center; gap:8px; min-width:0}
+.pgrow{flex:1 1 auto; overflow:hidden}
+.psel{
+  background:var(--lift); color:var(--text); border:1px solid var(--line);
+  font-family:"JetBrains Mono",monospace; font-size:12.5px; padding:8px 10px;
+  min-height:38px;
+}
+.psel:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+.pbtn{
+  background:var(--lift); border:1px solid var(--line); color:var(--text);
+  font-family:"Chakra Petch",sans-serif; font-weight:600; font-size:12px;
+  text-transform:uppercase; letter-spacing:.09em; padding:9px 14px;
+  min-height:38px; cursor:pointer;
+}
+.pbtn.go{border-color:var(--accent); color:var(--accent)}
+.pbtn:hover{background:var(--raised)}
+
+/* The OHLC readout that follows the crosshair, the way a chart names what is
+   under the cursor instead of making you guess. */
+.pohlc{
+  display:flex; gap:12px; font-family:"JetBrains Mono",monospace;
+  font-size:11.5px; color:var(--muted); white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis;
+}
+.pohlc b{color:var(--text); font-weight:500}
+.pohlc .up{color:var(--candle-up)} .pohlc .dn{color:var(--candle-dn)}
+.pstale{
+  font-family:"JetBrains Mono",monospace; font-size:11.5px; color:var(--muted);
+  white-space:nowrap;
+}
+.pstale .old{color:var(--loss)}
+
+.pstage{
+  position:relative; background:var(--ground);
+  border:1px solid var(--line); overflow:hidden;
+}
+.pstage canvas{
+  display:block; width:100%; height:clamp(340px, 56vh, 620px);
+  touch-action:none;
+}
+
+.ptools{
+  position:absolute; top:10px; left:10px; display:flex; gap:5px; z-index:2;
+}
+.ptransport{
+  position:absolute; bottom:10px; left:10px; right:10px;
+  display:flex; gap:5px; align-items:center; z-index:2;
+}
+.pspacer{flex:1}
+.ptool{
+  background:rgba(10,15,23,.86); border:1px solid var(--line);
+  color:var(--muted); font-family:"Chakra Petch",sans-serif; font-weight:600;
+  font-size:11.5px; letter-spacing:.06em; padding:0 11px; min-width:38px;
+  min-height:38px; cursor:pointer; backdrop-filter:blur(3px);
+}
+.ptool:hover{color:var(--text); border-color:var(--accent)}
+.ptool[aria-pressed="true"]{color:var(--accent); border-color:var(--accent)}
+.ptool:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+
+/* The order ticket, floating on the chart like a platform's. The two big
+   coloured buttons carry the price, so what you would get is on the button
+   you are about to press. */
+.pticket{
+  position:absolute; top:10px; right:10px; width:206px; z-index:2;
+  background:rgba(10,15,23,.9); border:1px solid var(--line); padding:11px;
+  backdrop-filter:blur(4px);
+}
+.tq{display:grid; grid-template-columns:auto 1fr; gap:6px 8px; align-items:center}
+.tq label{
+  color:var(--muted); font-size:10px; text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.tq input{
+  background:var(--ground); border:1px solid var(--line); color:var(--text);
+  font-family:"JetBrains Mono",monospace; font-size:12.5px; padding:6px 7px;
+  width:100%; min-height:34px;
+}
+.tq input:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+.tbtns{display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:9px}
+.tbuy,.tsell{
+  border:none; cursor:pointer; padding:9px 4px; min-height:50px;
+  display:flex; flex-direction:column; align-items:center; gap:1px;
+  font-family:"Chakra Petch",sans-serif; color:#04120B;
+}
+.tbuy{background:var(--win)} .tsell{background:var(--loss); color:#1A0407}
+.tbuy b,.tsell b{font-size:12.5px; text-transform:uppercase; letter-spacing:.09em}
+.tbuy span,.tsell span{font-family:"JetBrains Mono",monospace; font-size:11px; opacity:.82}
+.tbuy:hover{filter:brightness(1.12)} .tsell:hover{filter:brightness(1.12)}
+.tbuy:disabled,.tsell:disabled{opacity:.3; cursor:not-allowed; filter:none}
+.tbuy:focus-visible,.tsell:focus-visible{outline:2px solid var(--text); outline-offset:2px}
+.tflat{
+  width:100%; margin-top:6px; background:var(--lift); border:1px solid var(--line);
+  color:var(--text); font-family:"Chakra Petch",sans-serif; font-size:11.5px;
+  text-transform:uppercase; letter-spacing:.08em; padding:9px; min-height:38px;
+  cursor:pointer;
+}
+.tflat:hover{border-color:var(--accent)}
+.trisk{
+  margin:9px 0 0; font-size:11px; line-height:1.5; color:var(--muted);
+}
+.trisk b{font-family:"JetBrains Mono",monospace}
+.rrwarn{display:block; margin-top:4px; color:var(--loss); font-weight:600}
+.pstatus{
+  margin:0; background:var(--raised); border:1px solid var(--line);
+  border-top:none; padding:9px 12px; color:var(--muted); font-size:12.5px;
+}
+
+@media (max-width:760px){
+  /* On a phone the ticket cannot float over the chart without covering it. */
+  .pticket{
+    position:static; width:auto; margin-top:0; border-top:none;
+    backdrop-filter:none; background:var(--raised);
+  }
+  .pstage{overflow:visible}
+  .pstage canvas{height:clamp(280px, 46vh, 420px)}
+  .ptransport{position:static; margin:10px; flex-wrap:wrap}
+  .tbtns{grid-template-columns:1fr 1fr}
+  .pbar{gap:9px}
+}
+
 /* dashboard */
 .dashhead h2{margin-top:0}
 .dgrid{
@@ -606,7 +735,7 @@ def stamp_worker(page):
     parts = [page]
     for name in ("engine.js", "replay.js", "system.js", "levels.js",
              "lock.js", "demo.js", "revisit.js",
-             "dashboard.js"):
+             "dashboard.js", "chart.js"):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())

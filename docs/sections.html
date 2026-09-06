@@ -56,134 +56,124 @@
 
 <div class="tabpane" data-tab="demo" hidden>
 
-<section>
-  <h2>Demo account</h2>
-  <p class="lead">Place a trade on today's market and let it run. The account
-  starts at $100,000, the same as your TradingView paper account, so the
-  numbers are comparable. Trades settle by themselves as new bars arrive, on
-  the same fill rules the backtester uses.</p>
-  <p class="lead"><b>The price is not live.</b> A browser cannot hold a market
-  feed, so this is the last bar the site published and that refreshes every
-  fifteen minutes or so through the session. The age of the price is shown
-  above the chart, and it is worth reading before you click. That makes this
-  good for sizing and for letting a trade run, and no good for practising the
-  timing of an entry. <b>Replay</b> is the honest place for timing, because
-  there every bar arrives in order and nothing after it is visible.</p>
-
-  <div class="card hud rp">
-    <div class="rpbar">
-      <div class="rpgroup">
-        <label class="rpl" for="dsym">Contract</label>
-        <select id="dsym"></select>
-      </div>
-      <button class="rbtn" id="dlevels" aria-pressed="true">Session levels</button>
+<section class="platform">
+  <div class="pbar">
+    <div class="pgroup">
+      <select id="dsym" class="psel" aria-label="Contract"></select>
     </div>
-    <div class="rpread" id="dread"></div>
-    <canvas id="dc"></canvas>
+    <div class="pgroup pgrow" id="dohlc"></div>
+    <div class="pgroup"><span class="pstale" id="dread"></span></div>
   </div>
 
-  <div class="deck">
-    <div class="card hud">
-      <h3>Place a trade</h3>
-      <div class="sides">
-        <button class="sbtn buy" id="dbuy">Buy</button>
-        <button class="sbtn sell" id="dsell">Sell</button>
-      </div>
-      <div class="ticket">
-        <label class="rpl" for="dqty">Contracts<input type="number" id="dqty" min="1" step="1" value="1"></label>
-        <label class="rpl" for="drisk">Stop, points<input type="number" id="drisk" min="0.25" step="0.25" value="20"></label>
-        <label class="rpl" for="drr">Target, times the risk<input type="number" id="drr" min="0.1" step="0.1" value="2"></label>
-      </div>
-      <p class="risknote" id="drisknote"></p>
-      <p class="lead" id="dposline"></p>
-      <button class="bigbtn ghost" id="dflat" hidden>Close at the market</button>
+  <div class="pstage">
+    <canvas id="dc"></canvas>
+
+    <div class="ptools">
+      <button class="ptool" id="dlevels" aria-pressed="true" title="Session levels">Levels</button>
+      <button class="ptool" id="dzin" title="Zoom in">+</button>
+      <button class="ptool" id="dzout" title="Zoom out">&minus;</button>
+      <button class="ptool" id="dfit" title="Fit the chart">Fit</button>
     </div>
 
-    <div class="card hud">
-      <h3>The account</h3>
-      <div class="stats hud" id="dstats"></div>
-      <ul class="rplist" id="dlist"></ul>
-      <div class="toolrow">
-        <button class="bigbtn" id="dsend" hidden>Send these to the Diary</button>
-        <button class="bigbtn ghost" id="dreset">Reset the account</button>
+    <div class="pticket">
+      <div class="tq">
+        <label for="dqty">Qty</label><input type="number" id="dqty" min="1" step="1" value="1">
+        <label for="drisk">Stop pts</label><input type="number" id="drisk" min="0.25" step="0.25" value="20">
+        <label for="drr">Target R</label><input type="number" id="drr" min="0.1" step="0.1" value="2">
       </div>
+      <div class="tbtns">
+        <button class="tbuy" id="dbuy"><b>Buy</b><span id="dbuypx"></span></button>
+        <button class="tsell" id="dsell"><b>Sell</b><span id="dsellpx"></span></button>
+      </div>
+      <button class="tflat" id="dflat" hidden>Close at market</button>
+      <p class="trisk" id="drisknote"></p>
     </div>
+  </div>
+
+  <p class="pstatus" id="dposline"></p>
+</section>
+
+<section>
+  <h2>The account</h2>
+  <p class="lead">Starts at $100,000, the same as your TradingView paper
+  account, so the numbers are comparable. <b>The price is not live</b>: it is
+  the last bar this site published, refreshed every fifteen minutes or so
+  through the session, and its age is in the bar above the chart. Good for
+  sizing and for letting a trade run; use <b>Replay</b> to practise timing.</p>
+  <div class="stats hud" id="dstats"></div>
+  <ul class="rplist" id="dlist"></ul>
+  <div class="toolrow">
+    <button class="bigbtn" id="dsend" hidden>Send these to the Diary</button>
+    <button class="bigbtn ghost" id="dreset">Reset the account</button>
   </div>
 </section>
 </div>
 
 <div class="tabpane" data-tab="replay" hidden>
 
-<section>
-  <h2>Bar replay</h2>
-  <p class="lead">Step a past session one bar at a time and trade it without
-  seeing what comes next. Stops and targets fill on the same rules the
-  backtester uses, so what you learn here can be compared with the real thing
-  rather than flattering it. Anything you save arrives in the Diary tagged as
-  practice, and is kept out of your live figures on purpose.</p>
-
-  <p class="lead">Session highs and lows are drawn on as you step: Asia in
-  purple, London in amber, New York in cyan, the previous day in grey. Each one
-  appears only once that session has <b>closed</b>, because a level you could
-  not have known yet is the answer written on the exam paper.</p>
-
-  <div class="card hud rp">
-    <div class="rpbar">
-      <div class="rpgroup">
-        <label class="rpl" for="rsym">Contract</label>
-        <select id="rsym"></select>
-      </div>
-      <div class="rpgroup">
-        <label class="rpl" for="rtf">Timeframe</label>
-        <div class="tfrow" id="rtf" role="group" aria-label="Timeframe"></div>
-      </div>
-      <div class="rpgroup">
-        <label class="rpl" for="rdate">Start from</label>
-        <input type="date" id="rdate">
-      </div>
-      <button class="bigbtn" id="rgo">Start here</button>
+<section class="platform">
+  <div class="pbar">
+    <div class="pgroup">
+      <select id="rsym" class="psel" aria-label="Contract"></select>
+      <div class="tfrow" id="rtf" role="group" aria-label="Timeframe"></div>
     </div>
-
-    <div class="rpread" id="rpread"></div>
-    <canvas id="rc"></canvas>
-
-    <div class="rpctl" id="rpctl" hidden>
-      <button class="rbtn" id="rstep1" title="One bar">&#9654; 1</button>
-      <button class="rbtn" id="rstep5">&#9654;&#9654; 5</button>
-      <button class="rbtn" id="rstep20">&#9654;&#9654; 20</button>
-      <button class="rbtn" id="rplay">Auto</button>
-      <span class="rpsp"></span>
-      <button class="rbtn" id="rlevels" aria-pressed="true">Session levels</button>
-      <button class="rbtn ghostb" id="rback">Back to browsing</button>
+    <div class="pgroup pgrow" id="rohlc"></div>
+    <div class="pgroup">
+      <input type="date" id="rdate" class="psel" aria-label="Start from">
+      <button class="pbtn go" id="rgo">Start here</button>
     </div>
   </div>
 
-  <div class="deck">
-    <div class="card hud">
-      <h3>Place a trade</h3>
-      <div class="sides">
-        <button class="sbtn buy" id="rbuy">Buy</button>
-        <button class="sbtn sell" id="rsell">Sell</button>
-      </div>
-      <div class="ticket">
-        <label class="rpl" for="rqty">Contracts<input type="number" id="rqty" min="1" step="1" value="1"></label>
-        <label class="rpl" for="rrisk">Stop, points<input type="number" id="rrisk" min="0.25" step="0.25" value="20"></label>
-        <label class="rpl" for="rrr">Target, times the risk<input type="number" id="rrr" min="0.1" step="0.1" value="2"></label>
-      </div>
-      <p class="risknote" id="rrisknote"></p>
-      <p class="lead" id="rposline"></p>
-      <button class="bigbtn ghost" id="rflat" hidden>Close at the market</button>
+  <div class="pstage">
+    <canvas id="rc"></canvas>
+
+    <div class="ptools">
+      <button class="ptool" id="rlevels" aria-pressed="true" title="Session levels">Levels</button>
+      <button class="ptool" id="rzin" title="Zoom in">+</button>
+      <button class="ptool" id="rzout" title="Zoom out">&minus;</button>
+      <button class="ptool" id="rfit" title="Fit the chart">Fit</button>
     </div>
 
-    <div class="card hud">
-      <h3>This session</h3>
-      <div class="stats hud" id="rstats"></div>
-      <ul class="rplist" id="rplist"></ul>
-      <div class="toolrow">
-        <button class="bigbtn" id="rsave" hidden>Save to the Diary as practice</button>
-        <button class="bigbtn ghost" id="rclear" hidden>Discard these</button>
+    <div class="pticket" id="rticket" hidden>
+      <div class="tq">
+        <label for="rqty">Qty</label><input type="number" id="rqty" min="1" step="1" value="1">
+        <label for="rrisk">Stop pts</label><input type="number" id="rrisk" min="0.25" step="0.25" value="20">
+        <label for="rrr">Target R</label><input type="number" id="rrr" min="0.1" step="0.1" value="2">
       </div>
+      <div class="tbtns">
+        <button class="tbuy" id="rbuy"><b>Buy</b><span id="rbuypx"></span></button>
+        <button class="tsell" id="rsell"><b>Sell</b><span id="rsellpx"></span></button>
+      </div>
+      <button class="tflat" id="rflat" hidden>Close at market</button>
+      <p class="trisk" id="rrisknote"></p>
     </div>
+
+    <div class="ptransport" id="rpctl" hidden>
+      <button class="ptool" id="rstep1" title="One bar">&#9654;</button>
+      <button class="ptool" id="rstep5">&#9654;&#9654;</button>
+      <button class="ptool" id="rstep20">&#9654;&#9654;&#9654;</button>
+      <button class="ptool" id="rplay">Auto</button>
+      <span class="pspacer"></span>
+      <button class="ptool" id="rback">Exit replay</button>
+    </div>
+  </div>
+
+  <p class="pstatus" id="rpread"></p>
+</section>
+
+<section>
+  <h2>This replay session</h2>
+  <p class="lead">Stops and targets fill on the same rules the backtester
+  uses, so what you learn here can be compared with the real thing rather than
+  flattering it. Session highs and lows appear only once that session has
+  closed, and the revisit percentage beside a previous-day level is measured,
+  not guessed.</p>
+  <div class="stats hud" id="rstats"></div>
+  <ul class="rplist" id="rplist"></ul>
+  <p class="lead" id="rposline"></p>
+  <div class="toolrow">
+    <button class="bigbtn" id="rsave" hidden>Save to the Diary as practice</button>
+    <button class="bigbtn ghost" id="rclear" hidden>Discard these</button>
   </div>
 </section>
 </div>

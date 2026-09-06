@@ -1,22 +1,27 @@
 /* Bar replay: step a past session forward without seeing what comes next.
  *
- * The one thing that makes this worth doing rather than scrolling a chart is
- * that fills are resolved exactly the way the backtester resolves them. Both
+ * Two things make it worth doing rather than scrolling a chart.
+ *
+ * Fills are resolved exactly the way the backtester resolves them. Both
  * levels touched inside one bar counts as the loss, and a bar that opens past
  * your stop fills at the open rather than at the stop. Practice that fills
  * optimistically teaches a strategy that does not exist.
+ *
+ * And nothing past the playhead exists. The chart pans and zooms freely, but
+ * the data simply stops there, so there is no way to see the answer early.
  */
 import * as E from "./engine.js";
 import {levelsAt, FAMILY_COLOUR} from "./levels.js";
 import * as RV from "./revisit.js";
+import {createChart} from "./chart.js";
 
 const $ = id => document.getElementById(id);
 const PRACTICE_KEY = "tradersdiary.replay";
 
-export const TF = [["1m", "1 min"], ["5m", "5 min"], ["1h", "1 hour"]];
+export const TF = [["1m", "1m"], ["5m", "5m"], ["1h", "1h"]];
 const SYMS = ["NQ", "ES", "YM", "RTY"];
 
-const series = new Map();       // "NQ_5m" -> [{ms,o,h,l,c}]
+const series = new Map();
 const loading = new Map();
 
 async function load(sym, tf) {
@@ -48,28 +53,23 @@ const S = {
   model: null, modelKey: null,
 };
 
-/** Build the revisit model once per contract and timeframe, not per frame. */
-function modelFor() {
-  const k = S.sym + "_" + S.tf;
-  if (S.modelKey !== k) { S.model = RV.build(S.bars); S.modelKey = k; }
-  return S.model;
-}
+let chart = null;
 
 const money = v => (v < 0 ? "-" : "+") + "$"
   + Math.abs(v).toLocaleString("en-US", {maximumFractionDigits: 0});
 const px = v => v.toLocaleString("en-US",
   {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
-// A replay stamp is shown in the trader's own clock, the same one the diary
-// reads exports in, so a session here and a session there line up.
+let tzHours = () => 2;
+export const setClock = fn => { tzHours = fn; };
+
 const stamp = ms => {
   const d = new Date(ms + tzHours() * 3600e3);
   const p = n => String(n).padStart(2, "0");
   return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} `
        + `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:00`;
 };
-let tzHours = () => 2;
-export const setClock = fn => { tzHours = fn; };
+const clock = ms => stamp(ms).slice(11, 16);
 
 /* --------------------------------------------------------------- fills */
 
@@ -115,158 +115,79 @@ function closeAt(price, ms, how) {
   saveDraft();
 }
 
-/* ---------------------------------------------------------------- draw */
+/* -------------------------------------------------------------- overlay */
 
-function draw() {
-  const cv = $("rc");
-  const W = cv.clientWidth, H = Math.max(260, Math.min(430, W * 0.52));
-  const dpr = devicePixelRatio || 1;
-  cv.width = W * dpr; cv.height = H * dpr;
-  const x = cv.getContext("2d");
-  x.scale(dpr, dpr);
-  x.clearRect(0, 0, W, H);
-  // Read once per draw. This used to be called per candle and per level, and
-  // every call forces the browser to recompute style, which was most of the
-  // cost of stepping the chart.
-  const _cs = getComputedStyle(document.documentElement);
-  const _pal = {};
-  const css = n => (_pal[n] !== undefined ? _pal[n]
-                    : (_pal[n] = _cs.getPropertyValue(n).trim()));
-
-  const N = Math.max(30, Math.floor(W / 7));
-  const hi = Math.min(S.bars.length, S.i + 1);
-  const view = S.bars.slice(Math.max(0, hi - N), hi);
-  if (!view.length) return;
-
-  const L = 8, R = 74, T = 12, B = 22;
-  const w = W - L - R, h = H - T - B;
-  let lo = Infinity, up = -Infinity;
-  for (const b of view) { lo = Math.min(lo, b.l); up = Math.max(up, b.h); }
-  const p = S.pos;
-  if (p) { lo = Math.min(lo, p.stop, p.target); up = Math.max(up, p.stop, p.target); }
-  const pad = (up - lo) * 0.08 || 1;
-  // Levels are not allowed to stretch the scale. A previous-day low far below
-  // the screen would squash the candles into a line to make room for it.
-  lo -= pad; up += pad;
-  const Y = v => T + h - (v - lo) / (up - lo) * h;
-  const cw = w / view.length;
-
-  x.strokeStyle = css("--line-soft");
-  x.lineWidth = 1;
-  for (let g = 0; g <= 4; g++) {
-    const yy = Math.round(T + h * g / 4) + 0.5;
-    x.beginPath(); x.moveTo(L, yy); x.lineTo(L + w, yy); x.stroke();
+function modelFor() {
+  // The revisit model is about daily levels, so it is always built on the
+  // five-minute series whatever timeframe is being drawn.
+  if (S.modelKey !== S.sym) {
+    S.modelKey = S.sym;
+    S.model = null;
+    load(S.sym, "5m").then(b => { S.model = RV.build(b); paint(); }).catch(() => {});
   }
+  return S.model;
+}
 
-  // Session levels sit behind everything, because they are context rather
-  // than the trade. Only sessions that have closed by the playhead appear.
-  let marks = [];
-  if (S.levels) {
-    const atMs = S.bars[S.i] ? S.bars[S.i].ms : null;
-    marks = levelsAt(S.bars, atMs).filter(m => m.price >= lo && m.price <= up);
-    // How often a level like this one actually got tapped before the close,
-    // measured over the published history. Only on the previous day's high
-    // and low, which is what the model was built from.
-    const odds = RV.untappedNow(S.bars, atMs, modelFor());
-    for (const m of marks) {
-      const o = m.label.includes("High") ? odds.get("above") : odds.get("below");
-      if (m.family === "day" && o && Math.abs(o.price - m.price) < 1e-6)
-        m.label += "  " + RV.pct(o.p) + " revisit" + (o.thin ? " ?" : "");
-    }
-    x.font = '10px "JetBrains Mono", monospace';
-    x.textBaseline = "middle";
-    for (const m of marks) {
-      const y = Math.round(Y(m.price)) + 0.5;
-      x.strokeStyle = FAMILY_COLOUR[m.family] || css("--faint");
-      x.globalAlpha = 0.5;
-      x.setLineDash([2, 4]);
-      x.beginPath(); x.moveTo(L, y); x.lineTo(L + w, y); x.stroke();
-      x.setLineDash([]);
-      x.globalAlpha = 0.85;
-      x.fillStyle = FAMILY_COLOUR[m.family] || css("--faint");
-      x.fillText(m.label, L + 4, y - 7);
-      x.globalAlpha = 1;
-    }
+function overlayLevels() {
+  if (!S.levels || !S.bars.length) return [];
+  const atMs = S.bars[S.i] ? S.bars[S.i].ms : null;
+  const marks = levelsAt(S.bars, atMs)
+    .map(m => ({...m, colour: FAMILY_COLOUR[m.family]}));
+  const odds = RV.untappedNow(S.bars, atMs, modelFor());
+  for (const m of marks) {
+    const o = m.label.includes("High") ? odds.get("above") : odds.get("below");
+    if (m.family === "day" && o && Math.abs(o.price - m.price) < 1e-6)
+      m.label += "  " + RV.pct(o.p) + " revisit" + (o.thin ? " ?" : "");
   }
+  return marks;
+}
 
-  if (p) {
-    const long = p.side === "Long";
-    x.fillStyle = css("--loss-zone");
-    x.fillRect(L, Y(Math.max(p.entry, p.stop)), w,
-               Math.abs(Y(p.stop) - Y(p.entry)));
-    x.fillStyle = css("--win-zone");
-    x.fillRect(L, Y(Math.max(p.entry, p.target)), w,
-               Math.abs(Y(p.target) - Y(p.entry)));
-    for (const [v, col] of [[p.stop, css("--loss-faded")],
-                            [p.target, css("--win-faded")],
-                            [p.entry, css("--text")]]) {
-      x.strokeStyle = col;
-      x.setLineDash(v === p.entry ? [] : [5, 4]);
-      x.beginPath(); x.moveTo(L, Y(v) + 0.5); x.lineTo(L + w, Y(v) + 0.5); x.stroke();
-    }
-    x.setLineDash([]);
-  }
-
-  view.forEach((b, k) => {
-    const cx = L + cw * (k + 0.5);
-    const up_ = b.c >= b.o;
-    x.strokeStyle = x.fillStyle = css(up_ ? "--candle-up" : "--candle-dn");
-    x.lineWidth = 1;
-    x.beginPath();
-    x.moveTo(Math.round(cx) + 0.5, Y(b.h));
-    x.lineTo(Math.round(cx) + 0.5, Y(b.l));
-    x.stroke();
-    const bw = Math.max(1.6, cw * 0.62);
-    const y1 = Y(Math.max(b.o, b.c)), y2 = Y(Math.min(b.o, b.c));
-    x.fillRect(cx - bw / 2, y1, bw, Math.max(1, y2 - y1));
-  });
-
-  x.font = '11px "JetBrains Mono", monospace';
-  x.textBaseline = "middle";
-  x.fillStyle = css("--muted");
-  for (let g = 0; g <= 4; g++) {
-    const v = up - (up - lo) * g / 4;
-    x.fillText(px(v), L + w + 7, T + h * g / 4);
-  }
-  const last = view[view.length - 1];
-  x.fillStyle = css("--accent");
-  x.fillText(px(last.c), L + w + 7, Y(last.c));
-  x.fillStyle = css("--faint");
-  x.textBaseline = "alphabetic";
-  x.fillText(stamp(view[0].ms).slice(0, 16), L, H - 6);
-  const endLabel = stamp(last.ms).slice(0, 16);
-  x.fillText(endLabel, L + w - x.measureText(endLabel).width, H - 6);
+function paint() {
+  if (!chart) return;
+  chart.setLevels(overlayLevels());
+  chart.setPosition(S.pos);
+  chart.setLimit(S.mode === "replay" ? S.i + 1 : null);
 }
 
 /* -------------------------------------------------------------- render */
 
+function ohlc(b) {
+  const box = $("rohlc");
+  if (!b) { box.innerHTML = ""; return; }
+  const up = b.c >= b.o;
+  box.innerHTML = '<span class="pohlc">'
+    + `<span>${clock(b.ms)}</span>`
+    + `<span>O <b>${px(b.o)}</b></span><span>H <b>${px(b.h)}</b></span>`
+    + `<span>L <b>${px(b.l)}</b></span>`
+    + `<span class="${up ? "up" : "dn"}">C <b>${px(b.c)}</b></span></span>`;
+}
+
 function render() {
   const b = S.bars[S.i];
-  $("rpread").innerHTML = b
-    ? `<span class="rv"><b>${S.sym}</b> ${S.tf}</span>`
-      + `<span class="rv">${stamp(b.ms).slice(0, 16)}</span>`
-      + `<span class="rv">last <b>${px(b.c)}</b></span>`
-      + `<span class="rv">${S.mode === "browse"
-          ? "browsing: pick where to start"
-          : `bar ${S.i + 1} of ${S.bars.length}`}</span>`
-      + (S.levels && S.mode === "replay"
-          ? `<span class="rv">${levelsAt(S.bars, b.ms).length} session levels</span>`
-          : "")
-    : "";
+  $("rpread").textContent = b
+    ? `${S.sym} ${S.tf}   ${stamp(b.ms).slice(0, 16)}   `
+      + (S.mode === "browse" ? "browsing"
+         : `bar ${S.i + 1} of ${S.bars.length}`)
+    : "Pick a contract, a timeframe and a date, then press Start here.";
   $("rpctl").hidden = S.mode !== "replay";
+  $("rticket").hidden = S.mode !== "replay";
 
   const p = S.pos;
   $("rposline").textContent = p
     ? `In a ${p.side.toLowerCase()} of ${p.qty} from ${px(p.entry)}. `
       + `Stop ${px(p.stop)}, target ${px(p.target)}.`
-    : S.mode === "replay" ? "Flat. Step forward, or take a side."
-    : "Pick a date and press Start here.";
+    : S.mode === "replay" ? "Flat. Step forward, or take a side." : "";
   $("rflat").hidden = !p;
   $("rbuy").disabled = $("rsell").disabled = !!p || S.mode !== "replay";
+  if (b) {
+    $("rbuypx").textContent = px(b.c);
+    $("rsellpx").textContent = px(b.c);
+    ohlc(b);
+  }
 
   riskNote();
   results();
-  draw();
+  paint();
 }
 
 function riskNote() {
@@ -276,9 +197,9 @@ function riskNote() {
   const rr = Math.max(0.1, +$("rrr").value || 0);
   const pv = E.POINT[S.sym] ?? 1;
   $("rrisknote").innerHTML = b
-    ? `Risking <b class="loss">${money(-risk * pv * qty)}</b> to make `
-      + `<b class="win">${money(risk * rr * pv * qty)}</b> `
-      + `at ${rr.toFixed(1)} times your risk.`
+    ? `Risk <b class="loss">${money(-risk * pv * qty)}</b> to make `
+      + `<b class="win">${money(risk * rr * pv * qty)}</b>`
+      + (rr < 1 ? '<span class="rrwarn">Risking more than you stand to make</span>' : "")
     : "";
 }
 
@@ -302,7 +223,6 @@ function results() {
     + `${(t.got_r >= 0 ? "+" : "") + t.got_r.toFixed(2)}R</span>`
     + `<span class="rpm ${t.pnl >= 0 ? "win" : "loss"}">${money(t.pnl)}</span>`
     + `<span class="rpt">${t.exit_type}</span></li>`).join("");
-
   $("rsave").hidden = $("rclear").hidden = !S.done.length;
 }
 
@@ -314,8 +234,7 @@ function open_(side) {
   const qty = Math.max(1, +$("rqty").value || 1);
   const risk = Math.max(0.25, +$("rrisk").value || 0);
   const rr = Math.max(0.1, +$("rrr").value || 0);
-  const entry = b.c;
-  const long = side === "Long";
+  const entry = b.c, long = side === "Long";
   S.pos = {
     side, qty, entry, ms: b.ms, open_t: stamp(b.ms),
     stop: Math.round((long ? entry - risk : entry + risk) * 100) / 100,
@@ -340,10 +259,10 @@ function stopAuto() {
 
 async function start() {
   const d = $("rdate").value;
-  if (!d) { $("rposline").textContent = "Pick a date first."; return; }
+  if (!d) { $("rpread").textContent = "Pick a date first."; return; }
   const all = await load(S.sym, S.tf).catch(() => null);
   if (!all || !all.length) {
-    $("rposline").textContent = "No published bars for that contract yet.";
+    $("rpread").textContent = "No published bars for that contract yet.";
     return;
   }
   S.bars = all;
@@ -355,14 +274,41 @@ async function start() {
   S.i = Math.max(30, i);
   S.mode = "replay";
   S.pos = null;
+  chart.setData(S.bars);
+  chart.setLimit(S.i + 1);
+  chart.fit(160);
   render();
 }
 
-function bindOnce() {
-  $("rsym").innerHTML = SYMS.map(s =>
-    `<option value="${s}">${s}</option>`).join("");
+function reset() {
+  stopAuto();
+  S.mode = "browse";
+  S.pos = null;
+  S.bars = [];
+  S.i = 0;
+  chart.setData([]);
+  render();
+}
+
+function saveDraft() {
+  try { localStorage.setItem(PRACTICE_KEY, JSON.stringify(S.done)); } catch { /* fine */ }
+}
+function restoreDraft() {
+  try {
+    const raw = localStorage.getItem(PRACTICE_KEY);
+    if (raw) S.done = JSON.parse(raw) || [];
+  } catch { S.done = []; }
+}
+
+export function init(onSave) {
+  chart = createChart($("rc"), {
+    timeLabel: ms => stamp(ms).slice(5, 16),
+    onHover: b => ohlc(b || S.bars[S.i]),
+  });
+
+  $("rsym").innerHTML = SYMS.map(s => `<option value="${s}">${s}</option>`).join("");
   $("rtf").innerHTML = TF.map(([k, label]) =>
-    `<button class="tfb" data-tf="${k}" aria-pressed="${k === S.tf}">${label}</button>`)
+    `<button class="ptool tfb" data-tf="${k}" aria-pressed="${k === S.tf}">${label}</button>`)
     .join("");
 
   $("rsym").addEventListener("change", () => { S.sym = $("rsym").value; reset(); });
@@ -371,7 +317,7 @@ function bindOnce() {
     if (!b) return;
     S.tf = b.dataset.tf;
     [...$("rtf").children].forEach(c =>
-      c.setAttribute("aria-pressed", c.dataset.tf === S.tf));
+      c.setAttribute("aria-pressed", String(c.dataset.tf === S.tf)));
     reset();
   });
 
@@ -385,11 +331,6 @@ function bindOnce() {
     $("rplay").textContent = "Stop";
   });
   $("rback").addEventListener("click", reset);
-  $("rlevels").addEventListener("click", () => {
-    S.levels = !S.levels;
-    $("rlevels").setAttribute("aria-pressed", String(S.levels));
-    draw();
-  });
   $("rbuy").addEventListener("click", () => open_("Long"));
   $("rsell").addEventListener("click", () => open_("Short"));
   $("rflat").addEventListener("click", () => {
@@ -397,51 +338,30 @@ function bindOnce() {
     if (S.pos && b) closeAt(b.c, b.ms, "Market");
     render();
   });
+  $("rlevels").addEventListener("click", () => {
+    S.levels = !S.levels;
+    $("rlevels").setAttribute("aria-pressed", String(S.levels));
+    paint();
+  });
+  $("rzin").addEventListener("click", () => chart.zoomIn());
+  $("rzout").addEventListener("click", () => chart.zoomOut());
+  $("rfit").addEventListener("click", () => chart.fit(160));
   for (const id of ["rqty", "rrisk", "rrr"])
     $(id).addEventListener("input", riskNote);
 
-  // A phone has no keyboard, but on a laptop stepping with the arrow keys is
-  // the difference between studying a session and clicking three hundred times.
+  // On a laptop, stepping with the arrow keys is the difference between
+  // studying a session and clicking three hundred times.
   addEventListener("keydown", e => {
     const pane = document.querySelector('.tabpane[data-tab="replay"]');
     if (!pane || pane.hidden) return;
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
     if (e.key === "ArrowRight") { e.preventDefault(); step(e.shiftKey ? 5 : 1); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); chart.panBy(e.shiftKey ? -5 : -1); }
   });
 
-  addEventListener("resize", () => {
-    const pane = document.querySelector('.tabpane[data-tab="replay"]');
-    if (pane && !pane.hidden) draw();
-  });
-
-  const today = new Date(Date.now() - 3 * 864e5).toISOString().slice(0, 10);
-  $("rdate").value = today;
+  $("rdate").value = new Date(Date.now() - 3 * 864e5).toISOString().slice(0, 10);
   restoreDraft();
-}
 
-function reset() {
-  stopAuto();
-  S.mode = "browse";
-  S.pos = null;
-  S.bars = [];
-  S.i = 0;
-  render();
-}
-
-/* Practice survives a reload, because a session studied properly takes longer
-   than a phone stays awake. */
-function saveDraft() {
-  try { localStorage.setItem(PRACTICE_KEY, JSON.stringify(S.done)); } catch { /* fine */ }
-}
-function restoreDraft() {
-  try {
-    const raw = localStorage.getItem(PRACTICE_KEY);
-    if (raw) S.done = JSON.parse(raw) || [];
-  } catch { S.done = []; }
-}
-
-export function init(onSave) {
-  bindOnce();
   $("rsave").addEventListener("click", () => {
     if (!S.done.length) return;
     const n = onSave(S.done);
@@ -449,7 +369,7 @@ export function init(onSave) {
     saveDraft();
     results();
     $("rposline").textContent = `${n} practice trade${n === 1 ? "" : "s"} sent `
-      + `to the Diary. They sit under Replay and stay out of your live figures.`;
+      + `to the Diary, under Replay and out of your live figures.`;
   });
   $("rclear").addEventListener("click", () => {
     if (!confirm(`Discard ${S.done.length} practice trades?`)) return;
@@ -460,9 +380,5 @@ export function init(onSave) {
   render();
 }
 
-export const redraw = () => { if (S.bars.length) draw(); };
-
-// An update is a reload, and a reload would throw away an open position
-// mid-session. The app asks before doing that.
+export const redraw = () => { if (chart) chart.draw(); };
 export const inTrade = () => !!S.pos;
-
