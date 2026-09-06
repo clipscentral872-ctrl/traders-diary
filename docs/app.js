@@ -1088,6 +1088,17 @@ RP.setClock(tzOffset);
 RP.init(practice => intoDiary(practice, "replay"));
 
 DIARY.setClock(tzOffset);
+/* The video of the trade you are looking at, offered only when it is actually
+   here. A button that does nothing is worse than no button. */
+DIARY.setOnShow(t => {
+  const block = $("dvidblock");
+  if (block) block.hidden = !VID.forTrade(t);
+});
+const vidBtn = $("dvid");
+if (vidBtn) vidBtn.addEventListener("click", () => {
+  const t = DIARY.current();
+  if (t && VID.playTrade(t)) goTab("videos", true);
+});
 // The shared page script calls pick(); this is what it hands over to.
 window.__diaryPick = i => DIARY.pick(i);
 DIARY.init();

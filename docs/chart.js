@@ -21,6 +21,9 @@
 const DPR = () => Math.min(3, globalThis.devicePixelRatio || 1);
 
 const PAD = {left: 6, right: 78, top: 10, bottom: 26};
+// The page's own face, so the chart does not read as a picture pasted
+// into it. Numbers are tabular here by being a single width in Inter.
+const FONT = '11px Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,sans-serif';
 const MIN_BARS = 12;          // how far zooming in is allowed to go
 const MAX_BARS = 3000;        // and out
 
@@ -92,19 +95,50 @@ export function createChart(canvas, opts = {}) {
     };
   })();
 
-  function draw() {
-    const cs = DPR();
+  /* Where things are, without drawing anything.
+   *
+   * Split out because hit testing needs `plot` to be current the moment a
+   * pointer moves, while the picture itself can wait for the next frame. */
+  function layout() {
     W = canvas.clientWidth;
     H = canvas.clientHeight;
-    if (!W || !H) return;
-    canvas.width = Math.round(W * cs);
-    canvas.height = Math.round(H * cs);
-    const x = canvas.getContext("2d");
+    if (!W || !H) return false;
+    plot = {x: PAD.left, y: PAD.top,
+            w: W - PAD.left - PAD.right, h: H - PAD.top - PAD.bottom};
+    return true;
+  }
+
+  let ctx = null;
+  let frame = 0;
+
+  /* Ask for a repaint. Several asks in the same frame are one repaint.
+   *
+   * This used to paint synchronously on every mousemove, and worse, it set
+   * canvas.width every time, which throws away the drawing buffer and
+   * allocates a new one. A mouse fires those faster than a screen refreshes,
+   * so most of that work was drawing frames nobody ever saw, and the whole
+   * app felt like it was dragging something heavy behind the cursor. */
+  function draw() {
+    if (!layout()) return;
+    if (frame) return;
+    frame = requestAnimationFrame(() => { frame = 0; paint(); });
+  }
+
+  function paint() {
+    const cs = DPR();
+    if (!layout()) return;
+    // Only when it actually changed. Assigning the same number still wipes
+    // the buffer, which is the expensive part.
+    const cw = Math.round(W * cs), ch = Math.round(H * cs);
+    if (canvas.width !== cw || canvas.height !== ch) {
+      canvas.width = cw;
+      canvas.height = ch;
+      ctx = null;
+    }
+    const x = ctx || (ctx = canvas.getContext("2d"));
     x.setTransform(cs, 0, 0, cs, 0, 0);
     x.clearRect(0, 0, W, H);
 
-    plot = {x: PAD.left, y: PAD.top,
-            w: W - PAD.left - PAD.right, h: H - PAD.top - PAD.bottom};
     const v = visible();
     if (!v.bars.length) return;
     const r = priceRange(v.bars);
@@ -220,7 +254,7 @@ export function createChart(canvas, opts = {}) {
 
   function levels(x, Y) {
     if (!state.levels.length) return;
-    x.font = '10px "JetBrains Mono", monospace';
+    x.font = FONT.replace("11px", "10px");
     x.textBaseline = "middle";
     for (const m of state.levels) {
       const y = Y(m.price);
@@ -282,8 +316,9 @@ export function createChart(canvas, opts = {}) {
     mark(t.exitIndex, t.exit, t.pnl >= 0 ? css("--win") : css("--loss"), "out");
   }
 
+  /** A label on the price axis, the way a chart names the level you are on. */
   function tag(x, yy, text, bg, fg) {
-    x.font = '11px "JetBrains Mono", monospace';
+    x.font = FONT;
     const w = x.measureText(text).width + 10;
     const px = plot.x + plot.w + 3;
     x.fillStyle = bg;
@@ -293,11 +328,28 @@ export function createChart(canvas, opts = {}) {
     x.fillText(text, px + 5, yy);
   }
 
+  /** The same, on the time axis. Centred on the cursor and kept inside the
+   *  plot, because a label half off the edge is worse than no label. */
+  function timeTag(x, cx, text) {
+    x.font = FONT;
+    const w = x.measureText(text).width + 12;
+    const left = Math.max(plot.x,
+      Math.min(plot.x + plot.w - w, cx - w / 2));
+    const top = plot.y + plot.h + 3;
+    x.fillStyle = css("--text");
+    x.fillRect(left, top, w, 17);
+    x.fillStyle = css("--ground");
+    x.textBaseline = "middle";
+    x.textAlign = "center";
+    x.fillText(text, left + w / 2, top + 8.5);
+    x.textAlign = "left";
+  }
+
   const fmtPrice = p => p.toLocaleString("en-US",
     {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
   function axes(x, r, Y, v) {
-    x.font = '11px "JetBrains Mono", monospace';
+    x.font = FONT;
     x.textBaseline = "middle";
     x.fillStyle = css("--muted");
     for (let g = 0; g <= 5; g++) {
@@ -335,8 +387,12 @@ export function createChart(canvas, opts = {}) {
     x.stroke();
     x.restore();
 
+    // Both readouts, the way TradingView does it: the price where the cursor
+    // is, and the time of the bar under it, each on its own axis in a solid
+    // label. A crosshair with no numbers on it is decoration.
     const price = r.hi - (c.y - plot.y) / plot.h * (r.hi - r.lo);
-    tag(x, c.y, fmtPrice(price), css("--lift"), css("--text"));
+    tag(x, c.y, fmtPrice(price), css("--text"), css("--ground"));
+    if (opts.timeLabel) timeTag(x, cx, opts.timeLabel(b.ms));
     if (opts.onHover) opts.onHover(b, v.start + k);
   }
 

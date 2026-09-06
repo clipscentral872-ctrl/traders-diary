@@ -19,6 +19,10 @@ const S = {list: [], i: 0, filter: "all", source: "live"};
 let chart = null;
 let tzHours = () => 2;
 export const setClock = fn => { tzHours = fn; };
+// Told whenever the trade on the chart changes, so the panel beside it can
+// offer the video of that exact trade rather than of the whole day it was in.
+let onShow = null;
+export const setOnShow = fn => { onShow = fn; };
 
 const px = v => v == null ? "—" : v.toLocaleString("en-US",
   {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -154,6 +158,7 @@ export function pick(i) {
   // The note box is owned by the shared page script, which knows how to save
   // it. This just tells it which trade is on screen.
   if (window.showMyNote) window.showMyNote(t);
+  if (onShow) onShow(t);
 
   const bars = barsOf(t);
   $("dprev").disabled = S.i === 0;

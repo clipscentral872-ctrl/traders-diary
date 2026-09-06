@@ -148,6 +148,10 @@ TRADEVIEW = """<div class="ws">
       <h4>Stop moves</h4>
       <div class="trail" id="dtrail"></div>
     </div>
+    <div class="pblock" id="dvidblock" hidden>
+      <h4>Watch it back</h4>
+      <button class="bigbtn" id="dvid">Play this trade</button>
+    </div>
     <div class="pblock">
       <h4>Import a session</h4>
       <div class="drop" id="drop" tabindex="0" role="button"
@@ -1316,9 +1320,49 @@ def main():
 
     src = src.replace("</style>", EXTRA_CSS + "</style>", 1)
     src = HEAD_TAGS + src
+    version = stamp_worker(src)
+    src = version_modules(src, version)
     io.open(OUT, "w", encoding="utf-8").write(src)
     print(f"{len(src):,} chars -> {os.path.abspath(OUT)}")
-    stamp_worker(src)
+
+
+# Every module the page loads. Listed rather than discovered, because a name
+# that quietly stops being versioned is exactly the bug this exists to catch,
+# and it would not show up until a deploy went out half old and half new.
+MODULES = [
+    "engine.js", "chart.js", "levels.js", "revisit.js", "series.js",
+    "clock.js", "vault.js", "watchlist.js", "lock.js",
+    "replay.js", "demo.js", "diary.js", "videos.js", "system.js",
+    "dashboard.js",
+]
+
+
+def version_modules(page, version):
+    """Pin every module to this build, with an import map.
+
+    A browser keeps a module it has already fetched and is not fussy about
+    it: same URL, same module, whatever the server now says. So after a
+    rebuild the page would load the new shell and then satisfy half its
+    imports from copies it already had, giving an app assembled out of two
+    different versions. It does not fail cleanly. It fails as a missing
+    function somewhere unrelated, which is how an afternoon disappears.
+
+    The URL carries the build now, so a new build is a new URL and there is
+    nothing to reuse. On a phone that also means the app updates all at once
+    or not at all.
+    """
+    imports = {}
+    for m in MODULES:
+        if not os.path.exists(os.path.join(DOCS, m)):
+            raise SystemExit(m + " is in MODULES but not in docs/")
+        imports["./" + m] = "./" + m + "?v=" + version
+    tag = ('<script type="importmap">'
+           + json.dumps({"imports": imports}, separators=(",", ":"))
+           + "</script>" + chr(10))
+    # It has to come before the first module script. Once one has run, a
+    # browser ignores the map entirely rather than complaining about it.
+    at = page.index('<script type="module">')
+    return page[:at] + tag + page[at:]
 
 
 def stamp_worker(page):
@@ -1334,7 +1378,7 @@ def stamp_worker(page):
     for name in ("engine.js", "chart.js", "levels.js", "revisit.js",
                  "replay.js", "demo.js", "diary.js", "videos.js",
                  "system.js", "dashboard.js", "lock.js", "watchlist.js",
-                 "series.js", "clock.js", "seed.json"):
+                 "series.js", "clock.js", "vault.js", "seed.json"):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())
@@ -1351,6 +1395,7 @@ def stamp_worker(page):
         raise SystemExit("could not stamp sw.js; the VERSION line moved")
     io.open(p, "w", encoding="utf-8").write(new)
     print(f"service worker version {build}")
+    return build
 
 
 if __name__ == "__main__":

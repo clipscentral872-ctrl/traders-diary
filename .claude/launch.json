@@ -4,7 +4,10 @@
     {
       "name": "diary",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8791", "--directory", "docs"],
+      "runtimeArgs": [
+        "C:/Users/chris/TradersDiary/tools/serve.py",
+        "8791"
+      ],
       "port": 8791
     }
   ]

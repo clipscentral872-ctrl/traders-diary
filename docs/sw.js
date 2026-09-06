@@ -16,12 +16,12 @@
 // Stamped by tools/build_web.py from the content of the files below. A
 // fixed version meant a cache-first shell served the old page forever:
 // once installed, no update could reach anyone.
-const VERSION = "421081b7ce28";
+const VERSION = "e5e080fececd";
 const SHELL = "diary-shell-" + VERSION;
 const DATA = "diary-bars-" + VERSION;
 
 const FILES = [
-  "./", "./index.html", "./engine.js", "./replay.js", "./system.js", "./levels.js", "./lock.js", "./demo.js", "./revisit.js", "./dashboard.js", "./chart.js", "./watchlist.js", "./series.js", "./videos.js", "./diary.js", "./clock.js",
+  "./", "./index.html", "./engine.js", "./replay.js", "./system.js", "./levels.js", "./lock.js", "./demo.js", "./revisit.js", "./dashboard.js", "./chart.js", "./watchlist.js", "./series.js", "./videos.js", "./diary.js", "./clock.js", "./vault.js",
   "./seed.json",
   "./manifest.webmanifest", "./icon.svg",
   "./icon-180.png", "./icon-192.png", "./icon-512.png",
