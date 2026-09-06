@@ -1,23 +1,12 @@
 {
- "updated": "2026-09-05T09:51:19Z",
+ "updated": "2026-09-06T20:04:15Z",
  "series": [
   {
-   "symbol": "NQ",
-   "tf": "1m",
-   "bars": 9229,
-   "from": "2026-08-27"
-  },
-  {
-   "symbol": "NQ",
-   "tf": "5m",
-   "bars": 13736,
-   "from": "2026-06-26"
-  },
-  {
-   "symbol": "NQ",
+   "symbol": "ES",
    "tf": "1h",
-   "bars": 13741,
-   "from": "2024-04-14"
+   "bars": 12576,
+   "from": "2024-06-26",
+   "days": 800
   },
   {
    "symbol": "ES",
@@ -29,31 +18,35 @@
    "symbol": "ES",
    "tf": "5m",
    "bars": 13735,
-   "from": "2026-06-26"
+   "from": "2026-06-26",
+   "days": 70
   },
   {
-   "symbol": "ES",
+   "symbol": "NQ",
    "tf": "1h",
-   "bars": 13742,
-   "from": "2024-04-14"
+   "bars": 12576,
+   "from": "2024-06-26",
+   "days": 800
   },
   {
-   "symbol": "YM",
+   "symbol": "NQ",
    "tf": "1m",
-   "bars": 8945,
+   "bars": 9229,
    "from": "2026-08-27"
   },
   {
-   "symbol": "YM",
+   "symbol": "NQ",
    "tf": "5m",
-   "bars": 13771,
-   "from": "2026-06-26"
+   "bars": 13736,
+   "from": "2026-06-26",
+   "days": 70
   },
   {
-   "symbol": "YM",
+   "symbol": "RTY",
    "tf": "1h",
-   "bars": 13738,
-   "from": "2024-04-14"
+   "bars": 12597,
+   "from": "2024-06-26",
+   "days": 800
   },
   {
    "symbol": "RTY",
@@ -65,13 +58,28 @@
    "symbol": "RTY",
    "tf": "5m",
    "bars": 13729,
-   "from": "2026-06-26"
+   "from": "2026-06-26",
+   "days": 70
   },
   {
-   "symbol": "RTY",
+   "symbol": "YM",
    "tf": "1h",
-   "bars": 13770,
-   "from": "2024-04-14"
+   "bars": 12573,
+   "from": "2024-06-26",
+   "days": 800
+  },
+  {
+   "symbol": "YM",
+   "tf": "1m",
+   "bars": 8945,
+   "from": "2026-08-27"
+  },
+  {
+   "symbol": "YM",
+   "tf": "5m",
+   "bars": 13771,
+   "from": "2026-06-26",
+   "days": 70
   }
  ]
 }

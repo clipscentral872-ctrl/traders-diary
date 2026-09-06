@@ -33,10 +33,20 @@ OUT = os.path.join(HERE, "..", "docs", "bars")
 
 SYMBOLS = {"NQ": "NQ=F", "ES": "ES=F", "YM": "YM=F", "RTY": "RTY=F"}
 
-# What Yahoo will give away, per timeframe. One minute is the sharp end and it
-# only reaches back a week, which is why this has to run daily. The higher
-# timeframes reach far enough back for replay to have somewhere to go.
-TIMEFRAMES = [("1m", "8d", 60), ("5m", "60d", 300), ("1h", "730d", 3600)]
+# What Yahoo will give away, per timeframe, and how much of it is kept.
+#
+# The window is a hard cap on Yahoo's side and there is no asking for more: a
+# five-minute request for anything older than sixty days is refused outright,
+# whatever period you pass. That is the whole reason KEEP exists. Every run
+# used to overwrite the file with just the window, so the archive could never
+# be longer than the window and every bar older than sixty days was thrown
+# away, daily, forever. Now each run is merged into what is already there and
+# the history grows on its own.
+#
+# One minute is not kept, because a year of it is 100,000 bars a contract and
+# it exists for drawing the candles under a recent trade, not for replay.
+TIMEFRAMES = [("1m", "8d", 60, 12), ("5m", "60d", 300, 500),
+              ("1h", "730d", 3600, 800)]
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
@@ -70,6 +80,56 @@ def pack(res, step):
     return {"t0": t0, "step": step, "bars": grid}, kept, n
 
 
+def merge(old, fresh, step, keep_days):
+    """Fold a fresh window into the archive, oldest bar first.
+
+    Both sides are a fixed grid, so this goes back to (time, bar) pairs, lets
+    the fresh copy win any minute they disagree on, and lays a new grid over
+    the union. Fresh wins because Yahoo revises: a bar can come back with a
+    different high once the late prints land.
+    """
+    have = {}
+    if old:
+        t0, st = old["t0"], old["step"]
+        for i, b in enumerate(old["bars"]):
+            if b:
+                have[t0 + i * st] = b
+    t0, st = fresh["t0"], fresh["step"]
+    for i, b in enumerate(fresh["bars"]):
+        if b:
+            have[t0 + i * st] = b
+    if not have:
+        return fresh, 0
+
+    newest = max(have)
+    floor = newest - keep_days * 86400
+    have = {t: b for t, b in have.items() if t >= floor}
+
+    first = min(have)
+    n = (newest - first) // step + 1
+    grid = [None] * n
+    for t, b in have.items():
+        j = (t - first) // step
+        if 0 <= j < n:
+            grid[j] = b
+    return {"t0": first, "step": step, "bars": grid}, len(have)
+
+
+def read_existing(path, step):
+    """The archive as it stands, or None. A file that will not parse is
+    treated as absent rather than allowed to take the run down: losing the
+    history is bad, publishing nothing at all is worse."""
+    if not os.path.exists(path):
+        return None
+    try:
+        j = json.load(io.open(path, encoding="utf-8"))
+        if j.get("step") != step or not isinstance(j.get("bars"), list):
+            return None
+        return j
+    except (ValueError, OSError):
+        return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", default="", help="just these timeframes, eg 1m")
@@ -84,7 +144,7 @@ def main():
              "series": []}
     failed = wanted = 0
     for name, feed in SYMBOLS.items():
-        for tf, rng, step in wanted_tf:
+        for tf, rng, step, keep_days in wanted_tf:
             wanted += 1
             path = os.path.join(OUT, f"{name}_{tf}.json")
             try:
@@ -96,16 +156,24 @@ def main():
                       f"keeping what is there")
                 failed += 1
                 continue
+            before = read_existing(path, step)
+            packed, kept = merge(before, packed, step, keep_days)
             packed["symbol"] = name
             packed["tf"] = tf
             io.open(path, "w", encoding="utf-8").write(
                 json.dumps(packed, separators=(",", ":")))
             kb = os.path.getsize(path) / 1024
             first = time.strftime("%Y-%m-%d", time.gmtime(packed["t0"]))
-            print(f"  {name:<4} {tf:<3} {kept:>6,} bars from {first}"
-                  f"   {kb:>6,.0f} KB")
+            days = (packed["t0"] + len(packed["bars"]) * step
+                    - packed["t0"]) // 86400
+            grew = ""
+            if before and before["t0"] < packed["t0"] + 1:
+                added = time.strftime("%Y-%m-%d", time.gmtime(before["t0"]))
+                grew = "" if added == first else f"  (was from {added})"
+            print(f"  {name:<4} {tf:<3} {kept:>7,} bars from {first}"
+                  f"  {days:>4} days  {kb:>6,.0f} KB{grew}")
             index["series"].append({"symbol": name, "tf": tf, "bars": kept,
-                                    "from": first})
+                                    "from": first, "days": days})
 
     # A partial run only knows about what it fetched, so the rest of the index
     # is carried across rather than dropped. Otherwise a 1m-only refresh would

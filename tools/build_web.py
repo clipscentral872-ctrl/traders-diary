@@ -280,14 +280,13 @@ EXTRA_CSS = """
 .tb{
   flex:none; background:none; border:none; border-bottom:2px solid transparent;
   color:var(--muted); cursor:pointer; padding:12px 16px; min-height:46px;
-  font-family:"Orbitron",sans-serif; font-weight:700; font-size:12px;
-  letter-spacing:.13em; text-transform:uppercase;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:700; font-size:12px;
+  letter-spacing:.04em; text-transform:uppercase;
   transition:color .14s, border-color .14s;
 }
 .tb:hover{color:var(--text)}
 .tb[aria-selected="true"]{
   color:var(--accent); border-bottom-color:var(--accent);
-  text-shadow:0 0 18px var(--accent-dim);
 }
 .tb:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
 
@@ -297,11 +296,11 @@ EXTRA_CSS = """
 .rpgroup{display:flex; flex-direction:column; gap:6px}
 .rpl{
   color:var(--muted); font-size:11px; text-transform:uppercase;
-  letter-spacing:.09em; display:flex; flex-direction:column; gap:6px;
+  letter-spacing:.02em; display:flex; flex-direction:column; gap:6px;
 }
 .rpbar select, .rpbar input, .ticket input{
   background:var(--lift); color:var(--text); border:1px solid var(--line);
-  font-family:"JetBrains Mono",monospace; font-size:14px; padding:10px 12px;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:14px; padding:10px 12px;
   min-height:44px; width:100%;
 }
 .rpbar select:focus-visible, .rpbar input:focus-visible, .ticket input:focus-visible{
@@ -310,21 +309,28 @@ EXTRA_CSS = """
 .tfrow{display:flex; gap:4px}
 .tfb{
   background:var(--raised); border:1px solid var(--line); color:var(--muted);
-  font-family:"Chakra Petch",sans-serif; font-weight:600; font-size:12px;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:600; font-size:12px;
   padding:0 13px; min-height:44px; cursor:pointer;
 }
-.tfb[aria-pressed="true"]{border-color:var(--accent); color:var(--text); background:var(--lift)}
+/* A quiet pill until it is the one you are on, which is how TradingView
+   marks the live timeframe. */
+.tfb{border-color:transparent; border-radius:4px}
+.tfb:hover{background:var(--lift); color:var(--text)}
+.tfb[aria-pressed="true"]{
+  background:var(--accent-dim); border-color:transparent;
+  color:var(--accent); font-weight:600;
+}
 .rpread{
   display:flex; flex-wrap:wrap; gap:16px; padding:10px 0 12px;
   border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft);
   margin-bottom:12px; font-size:12.5px; color:var(--muted);
 }
-.rv b{color:var(--text); font-family:"JetBrains Mono",monospace}
+.rv b{color:var(--text); font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif}
 #rc{width:100%; display:block}
 .rpctl{display:flex; flex-wrap:wrap; gap:7px; align-items:center; margin-top:12px}
 .rbtn{
   background:var(--raised); border:1px solid var(--line); color:var(--text);
-  font-family:"JetBrains Mono",monospace; font-size:13px; padding:0 15px;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:13px; padding:0 15px;
   min-height:44px; cursor:pointer;
 }
 .rbtn:hover{border-color:var(--accent)}
@@ -332,13 +338,13 @@ EXTRA_CSS = """
 .rpsp{flex:1}
 .deck{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px}
 .deck h3{
-  font-family:"Orbitron",sans-serif; font-weight:800; font-size:13px;
-  letter-spacing:.09em; text-transform:uppercase; margin:0 0 14px;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:13px;
+  letter-spacing:.02em; text-transform:uppercase; margin:0 0 14px;
 }
 .sides{display:flex; gap:9px; margin-bottom:14px}
 .sbtn{
   flex:1; min-height:48px; cursor:pointer; border:1px solid;
-  font-family:"Orbitron",sans-serif; font-weight:700; font-size:13px;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:700; font-size:13px;
   letter-spacing:.11em; text-transform:uppercase; background:var(--raised);
 }
 .sbtn.buy{border-color:var(--win-faded); color:var(--win)}
@@ -358,7 +364,7 @@ EXTRA_CSS = """
   align-items:baseline; padding:9px 12px; background:var(--raised);
   border:1px solid var(--line); font-size:12.5px;
 }
-.rpr,.rpm{font-family:"JetBrains Mono",monospace}
+.rpr,.rpm{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif}
 .rpt{color:var(--faint); font-size:11px; text-transform:uppercase}
 
 /* system */
@@ -373,12 +379,12 @@ EXTRA_CSS = """
 }
 .steps li::before{
   content:counter(st); position:absolute; left:20px; top:17px;
-  font-family:"Orbitron",sans-serif; font-weight:900; font-size:20px;
-  color:var(--accent); text-shadow:0 0 16px var(--accent-dim);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:900; font-size:20px;
+  color:var(--accent);
 }
 .steps h3{
-  font-family:"Orbitron",sans-serif; font-weight:800; font-size:13px;
-  letter-spacing:.08em; text-transform:uppercase; margin:0 0 7px;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:13px;
+  letter-spacing:.02em; text-transform:uppercase; margin:0 0 7px;
 }
 .steps p{margin:0; color:var(--muted); font-size:14px; line-height:1.65}
 .lessons{list-style:none; padding:0; margin:0; display:grid; gap:10px}
@@ -388,7 +394,7 @@ EXTRA_CSS = """
   border-left:2px solid var(--loss-faded);
 }
 .lessons .ln{
-  font-family:"JetBrains Mono",monospace; font-size:20px; color:var(--accent);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:20px; color:var(--accent);
   font-variant-numeric:tabular-nums;
 }
 .lessons .lt{font-size:14px; line-height:1.65}
@@ -399,12 +405,12 @@ EXTRA_CSS = """
 .mynote{margin-top:16px; border-top:1px solid var(--line-soft); padding-top:14px}
 .mynote label{
   display:block; color:var(--muted); font-size:11px; text-transform:uppercase;
-  letter-spacing:.09em; margin-bottom:7px;
+  letter-spacing:.02em; margin-bottom:7px;
 }
 .mynote textarea{
   width:100%; min-height:84px; resize:vertical; background:var(--lift);
   color:var(--text); border:1px solid var(--line); padding:11px 13px;
-  font-family:"Chakra Petch",sans-serif; font-size:14px; line-height:1.6;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:14px; line-height:1.6;
 }
 .mynote textarea:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .mysaved{color:var(--faint); font-size:11.5px; margin:7px 0 0; min-height:16px}
@@ -421,15 +427,15 @@ EXTRA_CSS = """
 /* the video library */
 .vgroup{margin-top:24px}
 .vgroup h3{
-  font-family:"Orbitron",sans-serif; font-weight:800; font-size:13px;
-  letter-spacing:.1em; text-transform:uppercase; color:var(--accent);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:13px;
+  letter-spacing:.02em; text-transform:uppercase; color:var(--accent);
   margin:0 0 10px;
 }
 .vlist{display:grid; gap:7px; grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
 .vcut{
   display:flex; align-items:center; gap:11px; text-align:left; cursor:pointer;
   background:var(--raised); border:1px solid var(--line); color:var(--text);
-  font-family:"Chakra Petch",sans-serif; padding:12px 14px; min-height:52px;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; padding:12px 14px; min-height:52px;
 }
 .vcut:hover{border-color:var(--accent); background:var(--lift)}
 .vcut:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
@@ -439,7 +445,7 @@ EXTRA_CSS = """
 }
 .vcut .vn{flex:1; font-size:13.5px; line-height:1.35}
 .vcut .vs{
-  font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--faint);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:11px; color:var(--faint);
 }
 .vcut.win{border-left:2px solid var(--win)}
 .vcut.loss{border-left:2px solid var(--loss)}
@@ -449,8 +455,8 @@ EXTRA_CSS = """
 }
 .vhead{
   display:flex; align-items:center; justify-content:space-between; gap:14px;
-  font-family:"Orbitron",sans-serif; font-weight:800; font-size:13px;
-  letter-spacing:.08em; text-transform:uppercase;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:13px;
+  letter-spacing:.02em; text-transform:uppercase;
 }
 .vplayer video{
   flex:1; min-height:0; width:100%; background:#000; border:1px solid var(--line);
@@ -470,12 +476,12 @@ body{overflow:hidden}
   padding:0 14px; height:46px; overflow:hidden;
 }
 .brand{
-  font-family:"Orbitron",sans-serif; font-weight:900; font-size:13px;
-  letter-spacing:.13em; text-transform:uppercase; color:var(--text);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:900; font-size:13px;
+  letter-spacing:.04em; text-transform:uppercase; color:var(--text);
   white-space:nowrap; flex:none;
 }
 .appmeta{
-  margin-left:auto; flex:none; font-family:"JetBrains Mono",monospace;
+  margin-left:auto; flex:none; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
   font-size:11.5px; color:var(--muted); white-space:nowrap;
 }
 .appmeta b{color:var(--text)}
@@ -497,11 +503,12 @@ body{overflow:hidden}
 .rbtn2{
   width:36px; height:36px; display:flex; align-items:center;
   justify-content:center; background:none; border:1px solid transparent;
-  color:var(--muted); cursor:pointer; font-family:"Chakra Petch",sans-serif;
+  color:var(--muted); cursor:pointer; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
   font-size:12px; font-weight:600; border-radius:2px;
 }
+.rbtn2{border-radius:4px}
 .rbtn2:hover{color:var(--text); background:var(--lift)}
-.rbtn2[aria-pressed="true"]{color:var(--accent); border-color:var(--accent)}
+.rbtn2[aria-pressed="true"]{color:var(--accent); background:var(--accent-dim)}
 .rbtn2:focus-visible{outline:2px solid var(--accent); outline-offset:-1px}
 .railgap{flex:1}
 
@@ -516,7 +523,7 @@ body{overflow:hidden}
 .wsfoot{
   flex:none; display:flex; align-items:center; gap:14px; padding:0 12px;
   height:34px; border-top:1px solid var(--line); background:var(--raised);
-  font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--muted);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:11px; color:var(--muted);
   overflow-x:auto; white-space:nowrap; scrollbar-width:none;
 }
 .wsfoot::-webkit-scrollbar{display:none}
@@ -527,8 +534,8 @@ body{overflow:hidden}
 }
 .pblock{border-bottom:1px solid var(--line); padding:13px 14px}
 .pblock h4{
-  margin:0 0 9px; font-family:"Orbitron",sans-serif; font-weight:800;
-  font-size:10.5px; letter-spacing:.13em; text-transform:uppercase;
+  margin:0 0 9px; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800;
+  font-size:10.5px; letter-spacing:.04em; text-transform:uppercase;
   color:var(--muted);
 }
 .pblock:last-child{border-bottom:none}
@@ -588,22 +595,22 @@ body{overflow:hidden}
   display:grid; grid-template-columns:auto 1fr auto; gap:2px 9px;
   align-items:baseline; text-align:left; cursor:pointer; padding:7px 8px;
   background:none; border:1px solid transparent; border-left:2px solid transparent;
-  color:var(--muted); font-family:"Chakra Petch",sans-serif;
+  color:var(--muted); font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
 }
 .wl:hover{background:var(--lift); color:var(--text)}
 .wl.on{border-left-color:var(--accent); background:var(--lift); color:var(--text)}
 .wl:focus-visible{outline:2px solid var(--accent); outline-offset:-1px}
 .wls{
-  font-family:"Orbitron",sans-serif; font-weight:800; font-size:11.5px;
-  letter-spacing:.06em; color:var(--text);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:11.5px;
+  letter-spacing:.02em; color:var(--text);
 }
 .wln{font-size:11px; color:var(--faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .wlp{
-  font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--text);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:12px; color:var(--text);
   font-variant-numeric:tabular-nums;
 }
 .wlc{
-  grid-column:3; font-family:"JetBrains Mono",monospace; font-size:10.5px;
+  grid-column:3; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:10.5px;
   font-variant-numeric:tabular-nums; text-align:right;
 }
 
@@ -617,7 +624,7 @@ body{overflow:hidden}
 .dtab{
   flex:none; display:flex; flex-direction:column; gap:1px; cursor:pointer;
   background:var(--lift); border:1px solid var(--line); padding:7px 11px;
-  color:var(--muted); font-family:"Chakra Petch",sans-serif; min-height:52px;
+  color:var(--muted); font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; min-height:52px;
   border-left-width:2px; text-align:left;
 }
 .dtab.win{border-left-color:var(--win)}
@@ -625,12 +632,12 @@ body{overflow:hidden}
 .dtab.on{background:var(--raised); border-color:var(--accent); color:var(--text)}
 .dtab:hover{color:var(--text)}
 .dtab:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
-.dtn{font-family:"JetBrains Mono",monospace; font-size:10px; color:var(--faint)}
+.dtn{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:10px; color:var(--faint)}
 .dts{font-size:12px; white-space:nowrap}
-.dtr{font-family:"JetBrains Mono",monospace; font-size:11px}
+.dtr{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:11px}
 .dtab.win .dtr{color:var(--win)}
 .dtab.loss .dtr{color:var(--loss)}
-.dfn{font-family:"JetBrains Mono",monospace; color:var(--accent); margin-left:5px}
+.dfn{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; color:var(--accent); margin-left:5px}
 .nobars{
   position:absolute; left:10%; right:10%; top:42%; text-align:center;
   color:var(--muted); font-size:13px; line-height:1.6;
@@ -645,9 +652,9 @@ body{overflow:hidden}
 }
 .dvk{
   color:var(--muted); font-size:10px; text-transform:uppercase;
-  letter-spacing:.1em;
+  letter-spacing:.02em;
 }
-.dvv{font-family:"JetBrains Mono",monospace; font-size:15px}
+.dvv{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:15px}
 .dvv small{display:block; color:var(--faint); font-size:10.5px; margin-top:1px}
 .dvv.win{color:var(--win)} .dvv.loss{color:var(--loss)}
 #tradeview .chead{
@@ -657,8 +664,8 @@ body{overflow:hidden}
   display:flex; gap:12px; align-items:baseline; padding:6px 0;
   border-bottom:1px solid var(--line-soft); font-size:12.5px;
 }
-.tstep .tt{font-family:"JetBrains Mono",monospace; color:var(--muted)}
-.tstep .tp{font-family:"JetBrains Mono",monospace; color:var(--text)}
+.tstep .tt{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; color:var(--muted)}
+.tstep .tp{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; color:var(--text)}
 .tstep .tk{color:var(--accent); font-size:11px; text-transform:uppercase}
 .tstep .tf{margin-left:auto; color:var(--faint); font-size:11px}
 
@@ -675,18 +682,22 @@ body{overflow:hidden}
 .pgrow{flex:1 1 auto; overflow:hidden}
 .psel{
   background:var(--lift); color:var(--text); border:1px solid var(--line);
-  font-family:"JetBrains Mono",monospace; font-size:12.5px; padding:8px 10px;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:12.5px; padding:8px 10px;
   min-height:38px;
 }
 .psel:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
 .pbtn{
   background:var(--lift); border:1px solid var(--line); color:var(--text);
-  font-family:"Chakra Petch",sans-serif; font-weight:600; font-size:12px;
-  text-transform:uppercase; letter-spacing:.09em; padding:9px 14px;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:600; font-size:12px;
+  text-transform:uppercase; letter-spacing:.02em; padding:9px 14px;
   min-height:38px; cursor:pointer;
 }
-.pbtn.go{border-color:var(--accent); color:var(--accent)}
-.pbtn:hover{background:var(--raised)}
+/* The one solid button on the screen, so it is obvious which control
+   starts the thing you came here to do. */
+.pbtn{border-radius:4px}
+.pbtn.go{background:var(--accent); border-color:var(--accent); color:#FFF}
+.pbtn.go:hover{background:#1E53E5; border-color:#1E53E5}
+.pbtn:hover{background:var(--lift)}
 
 /* The cut tool. It used to be a scissors glyph in the left rail with no label,
    which is the same as not having it: nobody found it. It sits in the toolbar
@@ -707,7 +718,7 @@ body{overflow:hidden}
    assumed. EDT and EST are not the same clock. */
 .chead .when i{
   font-style:normal; color:var(--accent); font-size:10px;
-  letter-spacing:.09em; margin-left:7px; opacity:.85;
+  letter-spacing:.02em; margin-left:7px; opacity:.85;
 }
 .pbtn.cuttool svg{
   flex:none; width:15px; height:15px; fill:none; stroke:currentColor;
@@ -719,22 +730,22 @@ body{overflow:hidden}
 .cuthint{
   position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:3;
   background:var(--accent); color:#04121A; padding:8px 15px; max-width:88%;
-  font-family:"Chakra Petch",sans-serif; font-weight:600; font-size:12px;
-  letter-spacing:.06em; text-transform:uppercase; text-align:center;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:600; font-size:12px;
+  letter-spacing:.02em; text-transform:uppercase; text-align:center;
   pointer-events:none;
 }
 
 /* The OHLC readout that follows the crosshair, the way a chart names what is
    under the cursor instead of making you guess. */
 .pohlc{
-  display:flex; gap:12px; font-family:"JetBrains Mono",monospace;
+  display:flex; gap:12px; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
   font-size:11.5px; color:var(--muted); white-space:nowrap;
   overflow:hidden; text-overflow:ellipsis;
 }
 .pohlc b{color:var(--text); font-weight:500}
 .pohlc .up{color:var(--candle-up)} .pohlc .dn{color:var(--candle-dn)}
 .pstale{
-  font-family:"JetBrains Mono",monospace; font-size:11.5px; color:var(--muted);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:11.5px; color:var(--muted);
   white-space:nowrap;
 }
 .pstale .old{color:var(--loss)}
@@ -758,9 +769,9 @@ body{overflow:hidden}
 .pspacer{flex:1}
 .ptool{
   background:rgba(10,15,23,.86); border:1px solid var(--line);
-  color:var(--muted); font-family:"Chakra Petch",sans-serif; font-weight:600;
-  font-size:11.5px; letter-spacing:.06em; padding:0 11px; min-width:38px;
-  min-height:38px; cursor:pointer; backdrop-filter:blur(3px);
+  color:var(--muted); font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:600;
+  font-size:11.5px; letter-spacing:.02em; padding:0 11px; min-width:38px;
+  min-height:38px; cursor:pointer;
 }
 .ptool:hover{color:var(--text); border-color:var(--accent)}
 .ptool[aria-pressed="true"]{color:var(--accent); border-color:var(--accent)}
@@ -772,16 +783,15 @@ body{overflow:hidden}
 .pticket{
   position:absolute; top:10px; right:10px; width:206px; z-index:2;
   background:rgba(10,15,23,.9); border:1px solid var(--line); padding:11px;
-  backdrop-filter:blur(4px);
 }
 .tq{display:grid; grid-template-columns:auto 1fr; gap:6px 8px; align-items:center}
 .tq label{
   color:var(--muted); font-size:10px; text-transform:uppercase;
-  letter-spacing:.08em;
+  letter-spacing:.02em;
 }
 .tq input{
   background:var(--ground); border:1px solid var(--line); color:var(--text);
-  font-family:"JetBrains Mono",monospace; font-size:12.5px; padding:6px 7px;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:12.5px; padding:6px 7px;
   width:100%; min-height:34px;
 }
 .tq input:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
@@ -789,25 +799,25 @@ body{overflow:hidden}
 .tbuy,.tsell{
   border:none; cursor:pointer; padding:9px 4px; min-height:50px;
   display:flex; flex-direction:column; align-items:center; gap:1px;
-  font-family:"Chakra Petch",sans-serif; color:#04120B;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; color:#04120B;
 }
 .tbuy{background:var(--win)} .tsell{background:var(--loss); color:#1A0407}
-.tbuy b,.tsell b{font-size:12.5px; text-transform:uppercase; letter-spacing:.09em}
-.tbuy span,.tsell span{font-family:"JetBrains Mono",monospace; font-size:11px; opacity:.82}
+.tbuy b,.tsell b{font-size:12.5px; text-transform:uppercase; letter-spacing:.02em}
+.tbuy span,.tsell span{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:11px; opacity:.82}
 .tbuy:hover{filter:brightness(1.12)} .tsell:hover{filter:brightness(1.12)}
 .tbuy:disabled,.tsell:disabled{opacity:.3; cursor:not-allowed; filter:none}
 .tbuy:focus-visible,.tsell:focus-visible{outline:2px solid var(--text); outline-offset:2px}
 .tflat{
   width:100%; margin-top:6px; background:var(--lift); border:1px solid var(--line);
-  color:var(--text); font-family:"Chakra Petch",sans-serif; font-size:11.5px;
-  text-transform:uppercase; letter-spacing:.08em; padding:9px; min-height:38px;
+  color:var(--text); font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:11.5px;
+  text-transform:uppercase; letter-spacing:.02em; padding:9px; min-height:38px;
   cursor:pointer;
 }
 .tflat:hover{border-color:var(--accent)}
 .trisk{
   margin:9px 0 0; font-size:11px; line-height:1.5; color:var(--muted);
 }
-.trisk b{font-family:"JetBrains Mono",monospace}
+.trisk b{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif}
 .rrwarn{display:block; margin-top:4px; color:var(--loss); font-weight:600}
 .okmove{display:block; margin-top:4px; color:var(--win); font-weight:600}
 .pstatus{
@@ -818,8 +828,7 @@ body{overflow:hidden}
 @media (max-width:760px){
   /* On a phone the ticket cannot float over the chart without covering it. */
   .pticket{
-    position:static; width:auto; margin-top:0; border-top:none;
-    backdrop-filter:none; background:var(--raised);
+    position:static; width:auto; margin-top:0; border-top:none; background:var(--raised);
   }
   .pstage{overflow:visible}
   .pstage canvas{height:clamp(280px, 46vh, 420px)}
@@ -834,11 +843,9 @@ body{overflow:hidden}
    having none: nothing led, so nothing was read. */
 .hero{margin-bottom:6px}
 .hpanel{
-  position:relative; overflow:hidden; isolation:isolate;
+  border-radius:8px; position:relative; overflow:hidden; isolation:isolate;
   min-height:clamp(178px, 24vh, 236px);
-  background:
-    radial-gradient(120% 90% at 88% 4%, rgba(53,224,240,.10), transparent 62%),
-    var(--raised);
+  background:var(--raised);
   border:1px solid var(--line); padding:24px 26px;
   display:flex; flex-direction:column; justify-content:flex-start;
 }
@@ -849,21 +856,19 @@ body{overflow:hidden}
   position:absolute; inset:0; width:100%; height:100%; display:block; z-index:-1;
 }
 .hpanel::before{
-  content:""; position:absolute; left:-1px; top:-1px; width:22px; height:22px;
-  border-top:2px solid var(--accent); border-left:2px solid var(--accent);
+  content:none;
 }
 .hpanel::after{
-  content:""; position:absolute; right:-1px; bottom:-1px; width:22px; height:22px;
-  border-bottom:2px solid var(--accent); border-right:2px solid var(--accent);
+  content:none;
 }
 .hface{display:flex; flex-direction:column; gap:7px; max-width:min(100%, 620px)}
 .hk{
   color:var(--muted); font-size:10px; text-transform:uppercase;
-  letter-spacing:.15em; font-weight:600;
+  letter-spacing:.04em; font-weight:600;
 }
 .hv{
-  font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums;
-  font-size:clamp(34px, 5.4vw, 54px); line-height:1.02; letter-spacing:-.025em;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-variant-numeric:tabular-nums;
+  font-size:clamp(34px, 5.4vw, 54px); line-height:1.02; letter-spacing:-.01em;
 }
 .hv.win{color:var(--win); text-shadow:0 0 34px rgba(43,224,138,.3)}
 .hv.loss{color:var(--loss); text-shadow:0 0 34px rgba(255,92,110,.28)}
@@ -875,10 +880,10 @@ body{overflow:hidden}
   position:absolute; top:17px; right:21px; display:flex; gap:9px;
   align-items:baseline; pointer-events:none;
   color:var(--muted); font-size:9.5px; text-transform:uppercase;
-  letter-spacing:.14em; font-weight:600;
+  letter-spacing:.04em; font-weight:600;
 }
 .hfoot span:last-child{
-  font-family:"JetBrains Mono",monospace; color:var(--faint);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; color:var(--faint);
   text-transform:none; letter-spacing:0; font-size:11px;
 }
 
@@ -889,16 +894,16 @@ body{overflow:hidden}
   grid-template-columns:repeat(auto-fit, minmax(158px, 1fr));
 }
 .fig{
-  background:var(--raised); border:1px solid var(--line);
+  border-radius:6px; background:var(--raised); border:1px solid var(--line);
   border-left:2px solid var(--line); padding:12px 14px;
   display:flex; flex-direction:column; gap:3px;
 }
 .fk{
   color:var(--muted); font-size:9.5px; text-transform:uppercase;
-  letter-spacing:.14em; font-weight:600;
+  letter-spacing:.04em; font-weight:600;
 }
 .fv{
-  font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-variant-numeric:tabular-nums;
   font-size:20px; line-height:1.2; letter-spacing:-.01em;
 }
 .fv.win{color:var(--win)}
@@ -911,7 +916,7 @@ body{overflow:hidden}
 }
 .dlt{
   color:var(--loss); font-size:10px; text-transform:uppercase;
-  letter-spacing:.14em; font-weight:700;
+  letter-spacing:.04em; font-weight:700;
 }
 .dleak p{margin:6px 0 0; color:var(--text); font-size:14px; line-height:1.65}
 .dleak b{color:var(--loss)}
@@ -923,16 +928,16 @@ body{overflow:hidden}
   grid-template-columns:repeat(auto-fit, minmax(172px, 1fr));
 }
 .jump{
-  position:relative; overflow:hidden; display:flex; flex-direction:column;
+  border-radius:6px; position:relative; overflow:hidden; display:flex; flex-direction:column;
   gap:7px; text-align:left; cursor:pointer; min-height:126px;
   justify-content:flex-end; padding:16px 17px; color:var(--text);
   background:var(--raised); border:1px solid var(--line);
-  font-family:"Chakra Petch",sans-serif;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
   transition:border-color .16s, background .16s;
 }
 .jump::after{
   content:""; position:absolute; right:-28%; top:-42%; width:100%; height:100%;
-  background:radial-gradient(circle, rgba(53,224,240,.18), transparent 68%);
+  background:radial-gradient(circle, rgba(41,98,255,.10), transparent 68%);
   opacity:0; transition:opacity .18s; pointer-events:none;
 }
 .jump svg{
@@ -941,8 +946,8 @@ body{overflow:hidden}
   transition:transform .16s;
 }
 .jump b{
-  font-family:"Orbitron",sans-serif; font-weight:800; font-size:12px;
-  letter-spacing:.1em; text-transform:uppercase;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:12px;
+  letter-spacing:.02em; text-transform:uppercase;
 }
 .jump span{color:var(--muted); font-size:12px; line-height:1.4}
 .jump:hover{border-color:var(--accent); background:var(--lift)}
@@ -967,10 +972,10 @@ body{overflow:hidden}
 }
 .nk{
   color:var(--muted); font-size:9.5px; text-transform:uppercase;
-  letter-spacing:.14em; font-weight:600;
+  letter-spacing:.04em; font-weight:600;
 }
 .nv{
-  font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-variant-numeric:tabular-nums;
   font-size:16px; line-height:1.3;
 }
 .nv.win{color:var(--win)}
@@ -988,14 +993,14 @@ body{overflow:hidden}
 .more>summary{
   cursor:pointer; list-style:none; padding:16px 2px;
   display:flex; align-items:center; gap:11px; color:var(--muted);
-  font-family:"Orbitron",sans-serif; font-weight:800; font-size:11.5px;
-  letter-spacing:.12em; text-transform:uppercase;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:11.5px;
+  letter-spacing:.03em; text-transform:uppercase;
 }
 .more>summary::-webkit-details-marker{display:none}
 .more>summary::before{
   content:"+"; display:grid; place-items:center; width:20px; height:20px;
   border:1px solid var(--line); color:var(--accent);
-  font-family:"JetBrains Mono",monospace; font-size:14px; line-height:1;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:14px; line-height:1;
 }
 .more[open]>summary::before{content:"-"}
 .more>summary:hover{color:var(--text)}
@@ -1008,7 +1013,7 @@ body{overflow:hidden}
 }
 .insticon{
   flex:none; width:38px; height:38px; border:2px solid var(--accent);
-  border-radius:9px; position:relative; box-shadow:0 0 18px var(--accent-dim);
+  border-radius:9px; position:relative; box-shadow:var(--shadow);
 }
 .insticon::before{
   content:""; position:absolute; left:50%; top:9px; width:2px; height:15px;
@@ -1021,15 +1026,15 @@ body{overflow:hidden}
 }
 .insttext{flex:1 1 240px; min-width:0}
 .instbig{
-  font-family:"Orbitron",sans-serif; font-weight:800; font-size:14px;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:14px;
   letter-spacing:.07em; text-transform:uppercase; margin:0 0 5px;
 }
 .instsub{margin:0; color:var(--muted); font-size:13.5px; line-height:1.6}
 .instsub b{color:var(--text)}
 .instx{
   background:none; border:none; color:var(--faint); cursor:pointer;
-  font-family:"Chakra Petch",sans-serif; font-size:12px; padding:12px;
-  text-transform:uppercase; letter-spacing:.08em; min-height:44px;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:12px; padding:12px;
+  text-transform:uppercase; letter-spacing:.02em; min-height:44px;
 }
 .instx:hover{color:var(--muted)}
 .instx:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
@@ -1045,7 +1050,7 @@ body{overflow:hidden}
 .lockcard h2::before{display:none}
 .lockmark{
   width:34px; height:26px; margin:0 auto 18px; border:2px solid var(--accent);
-  border-radius:4px; position:relative; box-shadow:0 0 18px var(--accent-dim);
+  border-radius:4px; position:relative; box-shadow:var(--shadow);
 }
 .lockmark::before{
   content:""; position:absolute; left:50%; top:-15px; width:18px; height:16px;
@@ -1055,7 +1060,7 @@ body{overflow:hidden}
 #lockform{display:flex; flex-direction:column; gap:10px; margin:20px 0 4px}
 #lockpin{
   background:var(--lift); border:1px solid var(--line); color:var(--text);
-  font-family:"JetBrains Mono",monospace; font-size:17px; letter-spacing:.2em;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:17px; letter-spacing:.2em;
   padding:14px; text-align:center; min-height:50px;
 }
 #lockpin:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
@@ -1069,7 +1074,7 @@ body{overflow:hidden}
 #setform{display:flex; flex-direction:column; gap:14px; margin-top:16px}
 #setform input[type=password]{
   background:var(--lift); border:1px solid var(--line); color:var(--text);
-  font-family:"JetBrains Mono",monospace; font-size:16px; letter-spacing:.14em;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:16px; letter-spacing:.04em;
   padding:13px; min-height:48px;
 }
 #setform input[type=password]:focus-visible{
@@ -1103,7 +1108,7 @@ body{overflow:hidden}
 .setrow label{color:var(--muted); font-size:13px}
 .setrow select{
   background:var(--lift); color:var(--text); border:1px solid var(--line);
-  font-family:"JetBrains Mono",monospace; font-size:14px; padding:9px 12px;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:14px; padding:9px 12px;
   min-height:44px;
 }
 .setrow select:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
@@ -1124,7 +1129,7 @@ body{overflow:hidden}
   .rbtn.ghostb{margin-left:0; flex-basis:100%}
   .rpi{grid-template-columns:1fr auto auto}
   .rpi .rpt{display:none}
-  .tb{padding:12px 13px; font-size:11px; letter-spacing:.09em}
+  .tb{padding:12px 13px; font-size:11px; letter-spacing:.02em}
   .steps li{padding-left:56px}
   .install{gap:14px; padding:18px}
   .install .bigbtn{width:100%; text-align:center}
