@@ -244,15 +244,23 @@ PRIVACY = """<section>
 """
 
 SETTINGS = """<section>
-  <h2>One setting</h2>
-  <p class="lead">TradingView stamps its exports in your own local time and
-  never says which. The diary needs to know, because the check for a stop taken
-  seconds before a data release is measured on the New York clock. Pick the
-  offset your computer runs on and this is right all year, daylight saving
-  included.</p>
+  <h2>Clocks</h2>
+  <p class="lead">Two different things, on purpose. TradingView stamps its
+  exports in your own local time and never says which, so the diary has to be
+  told, or a stop taken seconds before a data release lands in the wrong
+  minute. What you read on a chart is a separate question, and the answer is
+  almost always New York: the open is 09:30 there, the releases are 08:30
+  there, and that is what your TradingView charts print.</p>
   <div class="setrow">
     <label for="tz">Your exports are stamped in</label>
     <select id="tz"></select>
+  </div>
+  <div class="setrow">
+    <label for="showtz">Show every time in</label>
+    <select id="showtz">
+      <option value="America/New_York">New York, like TradingView</option>
+      <option value="device">This device</option>
+    </select>
   </div>
 </section>
 """
@@ -695,6 +703,12 @@ body{overflow:hidden}
   line-height:1;
 }
 .pbtn.go{flex:none}
+/* The zone the times on screen are in, said once beside them rather than
+   assumed. EDT and EST are not the same clock. */
+.chead .when i{
+  font-style:normal; color:var(--accent); font-size:10px;
+  letter-spacing:.09em; margin-left:7px; opacity:.85;
+}
 .pbtn.cuttool svg{
   flex:none; width:15px; height:15px; fill:none; stroke:currentColor;
   stroke-width:1.8; stroke-linecap:round;
@@ -1315,7 +1329,7 @@ def stamp_worker(page):
     for name in ("engine.js", "chart.js", "levels.js", "revisit.js",
                  "replay.js", "demo.js", "diary.js", "videos.js",
                  "system.js", "dashboard.js", "lock.js", "watchlist.js",
-                 "series.js", "seed.json"):
+                 "series.js", "clock.js", "seed.json"):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())

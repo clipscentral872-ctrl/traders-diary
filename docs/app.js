@@ -6,6 +6,7 @@
  * no signal and no account.
  */
 import * as E from "./engine.js";
+import * as C from "./clock.js";
 import * as RP from "./replay.js";
 import * as SYS from "./system.js";
 import * as LOCK from "./lock.js";
@@ -22,6 +23,7 @@ const TZ_KEY = "tradersdiary.tz";
 // an app you have deliberately emptied stays empty instead of filling itself
 // back up on the next reload.
 const SEED_KEY = "tradersdiary.seeded";
+const SHOW_TZ_KEY = "tradersdiary.showtz";
 
 /* ------------------------------------------------------------- storage */
 
@@ -100,6 +102,12 @@ async function plantSeed() {
     return false;
   }
 }
+
+/** New York unless you have said otherwise. */
+const displayZone = () => {
+  try { return localStorage.getItem(SHOW_TZ_KEY) || C.NY; }
+  catch { return C.NY; }
+};
 
 const tzOffset = () => {
   const v = parseFloat(localStorage.getItem(TZ_KEY));
@@ -511,6 +519,24 @@ tzSel.addEventListener("change", () => {
   localStorage.setItem(TZ_KEY, tzSel.value);
   E.setLocalOffset(parseFloat(tzSel.value));
   say("Saved. Re-import a session for the New York clock check to use it.");
+});
+
+/* Which clock the screen is read in, which is a different question from which
+   clock the export was written in. New York by default: it is what the
+   session is measured in and what TradingView prints. */
+const showSel = $("showtz");
+showSel.value = displayZone();
+showSel.addEventListener("change", () => {
+  try { localStorage.setItem(SHOW_TZ_KEY, showSel.value); } catch { /* fine */ }
+  C.setZone(showSel.value);
+  C.reset();
+  renderPanels();
+  DIARY.redraw();
+  DEMO.redraw();
+  RP.redraw();
+  say(showSel.value === "device"
+      ? "Times now follow this device."
+      : "Times now match your TradingView charts.");
 });
 
 /* --------------------------------------------------------------- learn */
@@ -1014,6 +1040,10 @@ if (STATE.broken)
     + "old data has not been deleted. Restore from a backup, or import again.", true);
 
 E.setLocalOffset(tzOffset());
+// The clock has to know both halves before anything is drawn: how to read a
+// stored stamp, and which zone to print it in.
+C.setExportOffset(tzOffset);
+C.setZone(displayZone());
 renderPanels();
 storeLine();
 lockState();

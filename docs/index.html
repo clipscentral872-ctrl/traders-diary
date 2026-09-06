@@ -808,6 +808,12 @@ body{overflow:hidden}
   line-height:1;
 }
 .pbtn.go{flex:none}
+/* The zone the times on screen are in, said once beside them rather than
+   assumed. EDT and EST are not the same clock. */
+.chead .when i{
+  font-style:normal; color:var(--accent); font-size:10px;
+  letter-spacing:.09em; margin-left:7px; opacity:.85;
+}
 .pbtn.cuttool svg{
   flex:none; width:15px; height:15px; fill:none; stroke:currentColor;
   stroke-width:1.8; stroke-linecap:round;
@@ -1485,15 +1491,23 @@ body{overflow:hidden}
   works with no signal.</p>
 </section>
 <section>
-  <h2>One setting</h2>
-  <p class="lead">TradingView stamps its exports in your own local time and
-  never says which. The diary needs to know, because the check for a stop taken
-  seconds before a data release is measured on the New York clock. Pick the
-  offset your computer runs on and this is right all year, daylight saving
-  included.</p>
+  <h2>Clocks</h2>
+  <p class="lead">Two different things, on purpose. TradingView stamps its
+  exports in your own local time and never says which, so the diary has to be
+  told, or a stop taken seconds before a data release lands in the wrong
+  minute. What you read on a chart is a separate question, and the answer is
+  almost always New York: the open is 09:30 there, the releases are 08:30
+  there, and that is what your TradingView charts print.</p>
   <div class="setrow">
     <label for="tz">Your exports are stamped in</label>
     <select id="tz"></select>
+  </div>
+  <div class="setrow">
+    <label for="showtz">Show every time in</label>
+    <select id="showtz">
+      <option value="America/New_York">New York, like TradingView</option>
+      <option value="device">This device</option>
+    </select>
   </div>
 </section>
 
@@ -1976,6 +1990,7 @@ pickSource(firstSrc ? firstSrc.dataset.src : "live");
  * no signal and no account.
  */
 import * as E from "./engine.js";
+import * as C from "./clock.js";
 import * as RP from "./replay.js";
 import * as SYS from "./system.js";
 import * as LOCK from "./lock.js";
@@ -1992,6 +2007,7 @@ const TZ_KEY = "tradersdiary.tz";
 // an app you have deliberately emptied stays empty instead of filling itself
 // back up on the next reload.
 const SEED_KEY = "tradersdiary.seeded";
+const SHOW_TZ_KEY = "tradersdiary.showtz";
 
 /* ------------------------------------------------------------- storage */
 
@@ -2070,6 +2086,12 @@ async function plantSeed() {
     return false;
   }
 }
+
+/** New York unless you have said otherwise. */
+const displayZone = () => {
+  try { return localStorage.getItem(SHOW_TZ_KEY) || C.NY; }
+  catch { return C.NY; }
+};
 
 const tzOffset = () => {
   const v = parseFloat(localStorage.getItem(TZ_KEY));
@@ -2481,6 +2503,24 @@ tzSel.addEventListener("change", () => {
   localStorage.setItem(TZ_KEY, tzSel.value);
   E.setLocalOffset(parseFloat(tzSel.value));
   say("Saved. Re-import a session for the New York clock check to use it.");
+});
+
+/* Which clock the screen is read in, which is a different question from which
+   clock the export was written in. New York by default: it is what the
+   session is measured in and what TradingView prints. */
+const showSel = $("showtz");
+showSel.value = displayZone();
+showSel.addEventListener("change", () => {
+  try { localStorage.setItem(SHOW_TZ_KEY, showSel.value); } catch { /* fine */ }
+  C.setZone(showSel.value);
+  C.reset();
+  renderPanels();
+  DIARY.redraw();
+  DEMO.redraw();
+  RP.redraw();
+  say(showSel.value === "device"
+      ? "Times now follow this device."
+      : "Times now match your TradingView charts.");
 });
 
 /* --------------------------------------------------------------- learn */
@@ -2984,6 +3024,10 @@ if (STATE.broken)
     + "old data has not been deleted. Restore from a backup, or import again.", true);
 
 E.setLocalOffset(tzOffset());
+// The clock has to know both halves before anything is drawn: how to read a
+// stored stamp, and which zone to print it in.
+C.setExportOffset(tzOffset);
+C.setZone(displayZone());
 renderPanels();
 storeLine();
 lockState();

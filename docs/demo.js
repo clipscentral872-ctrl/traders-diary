@@ -15,6 +15,7 @@
  * result can sit beside a real one without flattering it.
  */
 import * as E from "./engine.js";
+import * as C from "./clock.js";
 import {levelsAt, FAMILY_COLOUR} from "./levels.js";
 import {createChart} from "./chart.js";
 import * as WL from "./watchlist.js";
@@ -215,7 +216,7 @@ function ohlc(b) {
   if (!b) { box.innerHTML = ""; return; }
   const up = b.c >= b.o;
   box.innerHTML = '<span class="pohlc">'
-    + `<span>${stamp(b.ms).slice(11, 16)}</span>`
+    + `<span>${C.hhmm(b.ms)}</span>`
     + `<span>O <b>${px(b.o)}</b></span><span>H <b>${px(b.h)}</b></span>`
     + `<span>L <b>${px(b.l)}</b></span>`
     + `<span class="${up ? "up" : "dn"}">C <b>${px(b.c)}</b></span></span>`;
@@ -245,7 +246,7 @@ function render() {
   const b = last();
   const d = delayMin();
   $("dread").innerHTML = b
-    ? `${stamp(b.ms).slice(0, 16)} &nbsp; `
+    ? `${C.full(b.ms)} ${C.zoneName(b.ms)} &nbsp; `
       + `<span class="${d > 90 ? "old" : ""}">${ageWords(d)}</span>`
     : "Loading the market...";
   if (b) {
@@ -277,7 +278,7 @@ function render() {
 
   $("dposline").textContent = p
     ? `In a ${p.side.toLowerCase()} of ${p.qty} from ${px(p.entry)}, opened `
-      + `${p.open_t.slice(11, 16)}. Stop ${px(p.stop)}, target ${px(p.target)}. `
+      + `${C.hhmm(p.ms)}. Stop ${px(p.stop)}, target ${px(p.target)}. `
       + `It settles by itself as new bars arrive.`
     : b ? "Flat. Set your size and stop, then take a side."
         : "Waiting for the market data to load.";
@@ -419,7 +420,7 @@ export function init(onSaveToDiary, onTradeClosed) {
   onClosed = onTradeClosed || (() => {});
 
   chart = createChart($("dc"), {
-    timeLabel: ms => stamp(ms).slice(5, 16),
+    timeLabel: ms => C.label(ms),
     onHover: b => ohlc(b || last()),
     onLevelMove: levelMoved,
     onLevelDrop: which => { recordMove(which); saveAccount(); render(); },

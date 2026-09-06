@@ -11,6 +11,7 @@
  * the data simply stops there, so there is no way to see the answer early.
  */
 import * as E from "./engine.js";
+import * as C from "./clock.js";
 import {levelsAt, FAMILY_COLOUR} from "./levels.js";
 import * as RV from "./revisit.js";
 import {createChart} from "./chart.js";
@@ -52,7 +53,9 @@ const stamp = ms => {
   return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} `
        + `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:00`;
 };
-const clock = ms => stamp(ms).slice(11, 16);
+// Shown in New York, because that is what the session is measured in and
+// what your TradingView charts print. Stored stamps stay in export time.
+const clock = ms => C.hhmm(ms);
 
 /* --------------------------------------------------------------- fills */
 
@@ -150,7 +153,7 @@ function ohlc(b) {
 function render() {
   const b = S.bars[S.i];
   $("rpread").textContent = b
-    ? `${S.sym} ${S.tf}   ${stamp(b.ms).slice(0, 16)}   `
+    ? `${S.sym} ${S.tf}   ${C.full(b.ms)} ${C.zoneName(b.ms)}   `
       + (S.mode === "browse"
          ? "the whole series. Press Cut, then click the chart where you "
            + "want the future to stop."
@@ -379,7 +382,10 @@ async function startFromDate() {
   const d = $("rdate").value;
   if (!d) { $("rpread").textContent = "Pick a date first."; return; }
   if (!S.bars.length && !(await browse())) return;
-  const want = Date.parse(d + "T00:00:00Z") - tzHours() * 3600e3;
+  // The date you type is a New York date, because that is the session you
+  // are picking. Read as your own local midnight it landed hours off.
+  const want = Date.parse(d + "T00:00:00Z") - C.zoneOffsetAt(
+    Date.parse(d + "T12:00:00Z")) * 60000;
   let i = S.bars.findIndex(b => b.ms >= want);
   if (i < 0) i = S.bars.length - 1;
   cutAt(i);
@@ -403,7 +409,7 @@ function restoreDraft() {
 
 export function init(onSave) {
   chart = createChart($("rc"), {
-    timeLabel: ms => stamp(ms).slice(5, 16),
+    timeLabel: ms => C.label(ms),
     onHover: b => ohlc(b || S.bars[S.i]),
     onLevelMove: levelMoved,
     onLevelDrop: which => { recordMove(which); render(); },

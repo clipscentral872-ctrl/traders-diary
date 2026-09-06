@@ -11,6 +11,7 @@
  * in a way that is invisible when wins are shuffled between them.
  */
 import {createChart} from "./chart.js";
+import * as C from "./clock.js";
 
 const $ = id => document.getElementById(id);
 
@@ -143,8 +144,9 @@ export function pick(i) {
   strip();
   $("dhead").innerHTML =
     `<span class="who">${esc(t.symbol)} ${esc(t.side)} &times;${t.qty}</span>`
-    + `<span class="when">${t.open_t.slice(0, 10)} &nbsp; ${t.open_t.slice(11, 16)}`
-    + ` &rarr; ${t.close_t.slice(11, 16)}</span>`
+    + `<span class="when">${C.day(C.msOf(t.open_t))} &nbsp; `
+    + `${C.hhmm(C.msOf(t.open_t))} &rarr; ${C.hhmm(C.msOf(t.close_t))}`
+    + `<i>${C.zoneName(C.msOf(t.open_t))}</i></span>`
     + `<span class="res ${won(t) ? "win" : "loss"}">${rr(t.got_r)}`
     + ` &nbsp; ${money(t.pnl)}</span>`;
   values(t);
@@ -182,7 +184,7 @@ export function setSource(src) {
 export function init() {
   if (!$("dchart")) return;
   chart = createChart($("dchart"), {
-    timeLabel: ms => new Date(ms + tzHours() * 3600e3).toISOString().slice(11, 16),
+    timeLabel: ms => C.hhmm(ms),
     onHover: b => {
       const box = $("dohlc2");
       if (!box) return;
