@@ -673,7 +673,7 @@ footer{
   <p class="sub"><span class="num"><span id="ntrades">0</span></span> Trades &nbsp;/&nbsp; TradingView Paper Account</p>
   <div class="sources"><div class="srcrow" id="srcrow"></div><div id="srcpanes"></div></div>
 </header>
-<nav class="tabs2" role="tablist" aria-label="Sections"><button class="tb" role="tab" data-go="diary" aria-selected="true">Diary</button><button class="tb" role="tab" data-go="replay" aria-selected="false">Replay</button><button class="tb" role="tab" data-go="system" aria-selected="false">System</button><button class="tb" role="tab" data-go="learn" aria-selected="false">Learn</button></nav>
+<nav class="tabs2" role="tablist" aria-label="Sections"><button class="tb" role="tab" data-go="diary" aria-selected="true">Diary</button><button class="tb" role="tab" data-go="demo" aria-selected="false">Demo</button><button class="tb" role="tab" data-go="replay" aria-selected="false">Replay</button><button class="tb" role="tab" data-go="system" aria-selected="false">System</button><button class="tb" role="tab" data-go="learn" aria-selected="false">Learn</button></nav>
 <section id="installbar" hidden>
   <div class="card hud install">
     <div class="insticon" aria-hidden="true"></div>
@@ -890,6 +890,64 @@ footer{
     passcode is gone the record is gone, and the only way back is a backup
     file. Nobody holds a spare key, including whoever made this.</p>
   </div>
+</div>
+
+<div class="tabpane" data-tab="demo" hidden>
+
+<section>
+  <h2>Demo account</h2>
+  <p class="lead">Place a trade on today's market and let it run. The account
+  starts at $100,000, the same as your TradingView paper account, so the
+  numbers are comparable. Trades settle by themselves as new bars arrive, on
+  the same fill rules the backtester uses.</p>
+  <p class="lead"><b>The price is not live.</b> A browser cannot hold a market
+  feed, so this is the last bar the site published and that refreshes every
+  fifteen minutes or so through the session. The age of the price is shown
+  above the chart, and it is worth reading before you click. That makes this
+  good for sizing and for letting a trade run, and no good for practising the
+  timing of an entry. <b>Replay</b> is the honest place for timing, because
+  there every bar arrives in order and nothing after it is visible.</p>
+
+  <div class="card hud rp">
+    <div class="rpbar">
+      <div class="rpgroup">
+        <label class="rpl" for="dsym">Contract</label>
+        <select id="dsym"></select>
+      </div>
+      <button class="rbtn" id="dlevels" aria-pressed="true">Session levels</button>
+    </div>
+    <div class="rpread" id="dread"></div>
+    <canvas id="dc"></canvas>
+  </div>
+
+  <div class="deck">
+    <div class="card hud">
+      <h3>Place a trade</h3>
+      <div class="sides">
+        <button class="sbtn buy" id="dbuy">Buy</button>
+        <button class="sbtn sell" id="dsell">Sell</button>
+      </div>
+      <div class="ticket">
+        <label class="rpl" for="dqty">Contracts<input type="number" id="dqty" min="1" step="1" value="1"></label>
+        <label class="rpl" for="drisk">Stop, points<input type="number" id="drisk" min="0.25" step="0.25" value="20"></label>
+        <label class="rpl" for="drr">Target, times the risk<input type="number" id="drr" min="0.1" step="0.1" value="2"></label>
+      </div>
+      <p class="risknote" id="drisknote"></p>
+      <p class="lead" id="dposline"></p>
+      <button class="bigbtn ghost" id="dflat" hidden>Close at the market</button>
+    </div>
+
+    <div class="card hud">
+      <h3>The account</h3>
+      <div class="stats hud" id="dstats"></div>
+      <ul class="rplist" id="dlist"></ul>
+      <div class="toolrow">
+        <button class="bigbtn" id="dsend" hidden>Send these to the Diary</button>
+        <button class="bigbtn ghost" id="dreset">Reset the account</button>
+      </div>
+    </div>
+  </div>
+</section>
 </div>
 
 <div class="tabpane" data-tab="replay" hidden>
@@ -1441,6 +1499,7 @@ import * as E from "./engine.js";
 import * as RP from "./replay.js";
 import * as SYS from "./system.js";
 import * as LOCK from "./lock.js";
+import * as DEMO from "./demo.js";
 
 const $ = id => document.getElementById(id);
 const KEY = "tradersdiary.v1";
@@ -1544,9 +1603,11 @@ const feedsFor = trades => trades.map(t => E.FEED[t.symbol]);
 
 /* ------------------------------------------------------------ panels */
 
-const SOURCES = [["live", "Live"], ["replay", "Replay"], ["all", "All"]];
+const SOURCES = [["live", "Live"], ["demo", "Demo"],
+                 ["replay", "Replay"], ["all", "All"]];
 const SOURCE_NOTE = {
   live: "Trades you actually placed.",
+  demo: "Placed on the Demo account at a delayed price. Kept out of your live figures.",
   replay: "Practice. Deliberately kept out of your live figures.",
   all: "Everything together. Useful for volume, misleading as a record.",
 };
@@ -2022,6 +2083,7 @@ function goTab(name, push) {
   // redrawn on the way in rather than on the way out.
   if (name === "diary") { try { window.drawEq(); window.draw(); } catch { /* nothing loaded */ } }
   if (name === "replay") RP.redraw();
+  if (name === "demo") DEMO.redraw();
   if (name === "system") SYS.show();
 }
 
@@ -2353,14 +2415,17 @@ if (STATE.sealed) showGate("");
 // on. This runs again after unlocking instead.
 if (!STATE.sealed) loadBars(feedsFor(window.TRADES)).then(fillCandles);
 
-RP.setClock(tzOffset);
-RP.init(practice => {
-  const byKey = new Map(window.TRADES.map(t => [t.source + "|" + t.symbol + "|" + t.open_t, t]));
+/** Take trades from Replay or Demo into the Diary, ignoring any already there.
+ *
+ *  Keyed on source as well as symbol and time, so a demo trade and a replay
+ *  trade on the same bar stay separate, and sending twice adds nothing. */
+function intoDiary(incoming, source) {
+  const key = t => (t.source || source) + "|" + t.symbol + "|" + t.open_t;
+  const byKey = new Map(window.TRADES.map(t => [key(t), t]));
   let added = 0;
-  for (const t of practice) {
-    const k = "replay|" + t.symbol + "|" + t.open_t;
-    if (byKey.has(k)) continue;
-    byKey.set(k, t);
+  for (const t of incoming) {
+    if (byKey.has(key(t))) continue;
+    byKey.set(key(t), t);
     added++;
   }
   window.TRADES = [...byKey.values()].sort((a, b) => (a.open_t < b.open_t ? -1 : 1));
@@ -2368,7 +2433,17 @@ RP.init(practice => {
   renderPanels();
   storeLine();
   return added;
-});
+}
+
+RP.setClock(tzOffset);
+RP.init(practice => intoDiary(practice, "replay"));
+
+DEMO.setClock(tzOffset);
+DEMO.init(
+  trades => intoDiary(trades, "demo"),
+  // A demo trade that settles while you are looking at another tab should
+  // still show up in the numbers when you come back to them.
+  () => { renderPanels(); storeLine(); });
 
 goTab(location.hash.slice(1) || "diary", false);
 
@@ -2400,6 +2475,7 @@ function busy() {
     if (box.value.trim() !== ((t && t.mine) || "").trim()) return "an unsaved note";
   }
   if (RP.inTrade()) return "a replay position still open";
+  if (DEMO.inTrade()) return "a demo position still open";
   if (document.getElementById("drop").classList.contains("busy")) return "an import";
   return null;
 }

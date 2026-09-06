@@ -15,6 +15,64 @@
   </div>
 </div>
 
+<div class="tabpane" data-tab="demo" hidden>
+
+<section>
+  <h2>Demo account</h2>
+  <p class="lead">Place a trade on today's market and let it run. The account
+  starts at $100,000, the same as your TradingView paper account, so the
+  numbers are comparable. Trades settle by themselves as new bars arrive, on
+  the same fill rules the backtester uses.</p>
+  <p class="lead"><b>The price is not live.</b> A browser cannot hold a market
+  feed, so this is the last bar the site published and that refreshes every
+  fifteen minutes or so through the session. The age of the price is shown
+  above the chart, and it is worth reading before you click. That makes this
+  good for sizing and for letting a trade run, and no good for practising the
+  timing of an entry. <b>Replay</b> is the honest place for timing, because
+  there every bar arrives in order and nothing after it is visible.</p>
+
+  <div class="card hud rp">
+    <div class="rpbar">
+      <div class="rpgroup">
+        <label class="rpl" for="dsym">Contract</label>
+        <select id="dsym"></select>
+      </div>
+      <button class="rbtn" id="dlevels" aria-pressed="true">Session levels</button>
+    </div>
+    <div class="rpread" id="dread"></div>
+    <canvas id="dc"></canvas>
+  </div>
+
+  <div class="deck">
+    <div class="card hud">
+      <h3>Place a trade</h3>
+      <div class="sides">
+        <button class="sbtn buy" id="dbuy">Buy</button>
+        <button class="sbtn sell" id="dsell">Sell</button>
+      </div>
+      <div class="ticket">
+        <label class="rpl" for="dqty">Contracts<input type="number" id="dqty" min="1" step="1" value="1"></label>
+        <label class="rpl" for="drisk">Stop, points<input type="number" id="drisk" min="0.25" step="0.25" value="20"></label>
+        <label class="rpl" for="drr">Target, times the risk<input type="number" id="drr" min="0.1" step="0.1" value="2"></label>
+      </div>
+      <p class="risknote" id="drisknote"></p>
+      <p class="lead" id="dposline"></p>
+      <button class="bigbtn ghost" id="dflat" hidden>Close at the market</button>
+    </div>
+
+    <div class="card hud">
+      <h3>The account</h3>
+      <div class="stats hud" id="dstats"></div>
+      <ul class="rplist" id="dlist"></ul>
+      <div class="toolrow">
+        <button class="bigbtn" id="dsend" hidden>Send these to the Diary</button>
+        <button class="bigbtn ghost" id="dreset">Reset the account</button>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
 <div class="tabpane" data-tab="replay" hidden>
 
 <section>

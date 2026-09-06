@@ -9,6 +9,7 @@ import * as E from "./engine.js";
 import * as RP from "./replay.js";
 import * as SYS from "./system.js";
 import * as LOCK from "./lock.js";
+import * as DEMO from "./demo.js";
 
 const $ = id => document.getElementById(id);
 const KEY = "tradersdiary.v1";
@@ -112,9 +113,11 @@ const feedsFor = trades => trades.map(t => E.FEED[t.symbol]);
 
 /* ------------------------------------------------------------ panels */
 
-const SOURCES = [["live", "Live"], ["replay", "Replay"], ["all", "All"]];
+const SOURCES = [["live", "Live"], ["demo", "Demo"],
+                 ["replay", "Replay"], ["all", "All"]];
 const SOURCE_NOTE = {
   live: "Trades you actually placed.",
+  demo: "Placed on the Demo account at a delayed price. Kept out of your live figures.",
   replay: "Practice. Deliberately kept out of your live figures.",
   all: "Everything together. Useful for volume, misleading as a record.",
 };
@@ -590,6 +593,7 @@ function goTab(name, push) {
   // redrawn on the way in rather than on the way out.
   if (name === "diary") { try { window.drawEq(); window.draw(); } catch { /* nothing loaded */ } }
   if (name === "replay") RP.redraw();
+  if (name === "demo") DEMO.redraw();
   if (name === "system") SYS.show();
 }
 
@@ -921,14 +925,17 @@ if (STATE.sealed) showGate("");
 // on. This runs again after unlocking instead.
 if (!STATE.sealed) loadBars(feedsFor(window.TRADES)).then(fillCandles);
 
-RP.setClock(tzOffset);
-RP.init(practice => {
-  const byKey = new Map(window.TRADES.map(t => [t.source + "|" + t.symbol + "|" + t.open_t, t]));
+/** Take trades from Replay or Demo into the Diary, ignoring any already there.
+ *
+ *  Keyed on source as well as symbol and time, so a demo trade and a replay
+ *  trade on the same bar stay separate, and sending twice adds nothing. */
+function intoDiary(incoming, source) {
+  const key = t => (t.source || source) + "|" + t.symbol + "|" + t.open_t;
+  const byKey = new Map(window.TRADES.map(t => [key(t), t]));
   let added = 0;
-  for (const t of practice) {
-    const k = "replay|" + t.symbol + "|" + t.open_t;
-    if (byKey.has(k)) continue;
-    byKey.set(k, t);
+  for (const t of incoming) {
+    if (byKey.has(key(t))) continue;
+    byKey.set(key(t), t);
     added++;
   }
   window.TRADES = [...byKey.values()].sort((a, b) => (a.open_t < b.open_t ? -1 : 1));
@@ -936,7 +943,17 @@ RP.init(practice => {
   renderPanels();
   storeLine();
   return added;
-});
+}
+
+RP.setClock(tzOffset);
+RP.init(practice => intoDiary(practice, "replay"));
+
+DEMO.setClock(tzOffset);
+DEMO.init(
+  trades => intoDiary(trades, "demo"),
+  // A demo trade that settles while you are looking at another tab should
+  // still show up in the numbers when you come back to them.
+  () => { renderPanels(); storeLine(); });
 
 goTab(location.hash.slice(1) || "diary", false);
 
@@ -968,6 +985,7 @@ function busy() {
     if (box.value.trim() !== ((t && t.mine) || "").trim()) return "an unsaved note";
   }
   if (RP.inTrade()) return "a replay position still open";
+  if (DEMO.inTrade()) return "a demo position still open";
   if (document.getElementById("drop").classList.contains("busy")) return "an import";
   return null;
 }

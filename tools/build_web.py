@@ -57,7 +57,7 @@ REPLAY_SECTION = re.compile(
 
 # One app, four tabs. The diary is the reason to open it, so it comes first
 # and it is what a fresh install lands on.
-TABS = [("diary", "Diary"), ("replay", "Replay"),
+TABS = [("diary", "Diary"), ("demo", "Demo"), ("replay", "Replay"),
         ("system", "System"), ("learn", "Learn")]
 
 NAV = ('<nav class="tabs2" role="tablist" aria-label="Sections">'
@@ -564,7 +564,7 @@ def stamp_worker(page):
     import hashlib
     parts = [page]
     for name in ("engine.js", "replay.js", "system.js", "levels.js",
-             "lock.js"):
+             "lock.js", "demo.js"):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())
