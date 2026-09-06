@@ -234,8 +234,16 @@ export function untappedNow(bars, atMs, model) {
 
   const todayBars = bars.slice(start, hi + 1);
   const close = bars[hi].c;
-  // Roughly how far through the session, by bar count against a normal day.
-  const elapsed = Math.min(1, todayBars.length / 78);
+
+  // How far through the session, measured in time rather than in bars.
+  // Counting bars against a fixed 78 assumed five-minute data; handed the
+  // minute series the count is nearer 1400, so it clamped to "session over"
+  // at every hour of the day and always answered from the last bucket.
+  // The previous day's own span is what a normal day looks like here.
+  const prevSpan = bars[start - 1].ms - bars[pstart].ms;
+  const span = prevSpan > 0 ? prevSpan : 6.5 * 3600e3;
+  const elapsed = Math.min(1, Math.max(0,
+    (bars[hi].ms - bars[start].ms) / span));
 
   for (const lv of levels) {
     const tapped = todayBars.some(b =>
