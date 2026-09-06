@@ -1,0 +1,71 @@
+name: Publish the site
+
+# Deployed straight from the workflow rather than from files committed to the
+# repo, because the candles are refreshed through the day and committing them
+# would be ruinous. Each refresh rewrites a whole file, so a fresh copy of
+# every symbol lands in git history several times an hour: roughly half a
+# gigabyte a month, against GitHub's one-gigabyte soft limit. Building the
+# site here instead means the bars are never committed at all.
+#
+# The copies in docs/bars are a seed. They are what gets served if a fetch
+# fails, and they are what a fresh clone starts from. They are not updated.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Every fifteen minutes through the US session and the hours after it,
+    # weekdays only. GitHub runs scheduled jobs late when it is busy, so the
+    # real gap is nearer twenty to forty minutes. That is the honest figure.
+    - cron: "*/15 13-22 * * 1-5"
+    # Once before the open, with every timeframe, so the deeper history for
+    # the replay stays current too.
+    - cron: "40 11 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never two deploys at once, and a queued one can be dropped: the next run is
+# only minutes away and will fetch newer bars anyway.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch the candles
+        # The quarter-hourly run only needs the minute bars, which are the ones
+        # that go stale. Refetching two years of hourly history every fifteen
+        # minutes would be four times the work for nothing.
+        run: |
+          if [ "${{ github.event.schedule }}" = "*/15 13-22 * * 1-5" ]; then
+            python tools/publish_bars.py --only 1m
+          else
+            python tools/publish_bars.py
+          fi
+
+      - name: Build the page
+        # The published HTML is generated, so it is built here rather than
+        # trusted to be in step with the modules beside it.
+        run: python tools/build_web.py
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

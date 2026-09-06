@@ -18,6 +18,7 @@ squeezed out so the grid stays fixed and a bar's time is its position.
 
     python tools/publish_bars.py
 """
+import argparse
 import functools
 import io
 import json
@@ -70,12 +71,20 @@ def pack(res, step):
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--only", default="", help="just these timeframes, eg 1m")
+    a = ap.parse_args()
+    wanted_tf = [t for t in TIMEFRAMES
+                 if not a.only or t[0] in a.only.split(",")]
+    if not wanted_tf:
+        raise SystemExit(f"no timeframe matches --only {a.only!r}")
+
     os.makedirs(OUT, exist_ok=True)
     index = {"updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
              "series": []}
     failed = wanted = 0
     for name, feed in SYMBOLS.items():
-        for tf, rng, step in TIMEFRAMES:
+        for tf, rng, step in wanted_tf:
             wanted += 1
             path = os.path.join(OUT, f"{name}_{tf}.json")
             try:
@@ -98,8 +107,20 @@ def main():
             index["series"].append({"symbol": name, "tf": tf, "bars": kept,
                                     "from": first})
 
-    io.open(os.path.join(OUT, "index.json"), "w", encoding="utf-8").write(
-        json.dumps(index, indent=1))
+    # A partial run only knows about what it fetched, so the rest of the index
+    # is carried across rather than dropped. Otherwise a 1m-only refresh would
+    # report that the 5m and 1h series had vanished.
+    prev_path = os.path.join(OUT, "index.json")
+    if a.only and os.path.exists(prev_path):
+        try:
+            prev = json.load(io.open(prev_path, encoding="utf-8"))
+            fresh = {(x["symbol"], x["tf"]) for x in index["series"]}
+            index["series"] += [x for x in prev.get("series", [])
+                                if (x["symbol"], x["tf"]) not in fresh]
+        except (ValueError, KeyError, TypeError):
+            pass
+    index["series"].sort(key=lambda x: (x["symbol"], x["tf"]))
+    io.open(prev_path, "w", encoding="utf-8").write(json.dumps(index, indent=1))
 
     if failed == wanted:
         raise SystemExit("every feed failed, so nothing was published")
