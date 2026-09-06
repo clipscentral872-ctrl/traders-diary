@@ -86,6 +86,29 @@ function ageWords(m) {
   return `${d} day${d === 1 ? "" : "s"} old`;
 }
 
+/** Bars for the revisit model, which is not the series being drawn.
+ *
+ *  The chart shows minute bars, and those only reach back about a week. Seven
+ *  days is not a sample: built on it the base rate came out at 13% against the
+ *  25% that sixty days gives, so the model would have been quietly wrong on
+ *  the tab where a trade actually gets placed. The five-minute series covers
+ *  sixty days and answers the same question, because the question is about
+ *  daily levels rather than about minutes.
+ */
+async function loadModel(sym) {
+  try {
+    const r = await fetch(`bars/${sym}_5m.json`, {cache: "no-cache"});
+    if (!r.ok) return null;
+    const j = await r.json();
+    const out = [];
+    j.bars.forEach((b, i) => {
+      if (b) out.push({ms: (j.t0 + i * j.step) * 1000,
+                       o: b[0], h: b[1], l: b[2], c: b[3]});
+    });
+    return RV.build(out);
+  } catch { return null; }
+}
+
 async function loadSymbol(sym) {
   const r = await fetch(`bars/${sym}_1m.json`, {cache: "no-cache"});
   if (!r.ok) throw new Error("no published bars for " + sym);
@@ -202,7 +225,8 @@ function draw() {
     x.font = '10px "JetBrains Mono", monospace';
     x.textBaseline = "middle";
     const atMs = last() ? last().ms : null;
-    if (D.modelKey !== D.sym) { D.model = RV.build(D.bars); D.modelKey = D.sym; }
+    // The model comes from the five-minute history; whether a level has been
+    // tapped TODAY is read off the minute bars on screen.
     const odds = RV.untappedNow(D.bars, atMs, D.model);
     const marks = levelsAt(D.bars, atMs).filter(m => m.price >= lo && m.price <= up);
     for (const m of marks) {
@@ -362,10 +386,15 @@ function open_(side) {
 }
 
 export async function refresh() {
+  const sym = D.pos ? D.pos.symbol : D.sym;
   try {
-    D.bars = await loadSymbol(D.pos ? D.pos.symbol : D.sym);
+    D.bars = await loadSymbol(sym);
     settle();
   } catch { /* offline: whatever was loaded stays on screen */ }
+  if (D.modelKey !== sym) {
+    D.model = await loadModel(sym);
+    D.modelKey = sym;
+  }
   render();
 }
 
