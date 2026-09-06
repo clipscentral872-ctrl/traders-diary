@@ -582,6 +582,7 @@ EXTRA_CSS = """
 }
 .trisk b{font-family:"JetBrains Mono",monospace}
 .rrwarn{display:block; margin-top:4px; color:var(--loss); font-weight:600}
+.okmove{display:block; margin-top:4px; color:var(--win); font-weight:600}
 .pstatus{
   margin:0; background:var(--raised); border:1px solid var(--line);
   border-top:none; padding:9px 12px; color:var(--muted); font-size:12.5px;

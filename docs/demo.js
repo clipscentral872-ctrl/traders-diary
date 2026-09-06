@@ -152,14 +152,16 @@ function close(price, ms, how) {
   const pts = p.side === "Long" ? price - p.entry : p.entry - price;
   const pv = E.POINT[p.symbol] ?? 1;
   const pnl = Math.round(pts * pv * p.qty * 100) / 100;
-  const risk = Math.abs(p.entry - p.stop);
+  const risk = p.risk0 ?? Math.abs(p.entry - p.stop);
 
   const trade = {
     source: "demo",
     symbol: p.symbol, side: p.side, qty: p.qty,
     open_t: p.open_t, close_t: stamp(ms),
     entry: p.entry, exit: Math.round(price * 100) / 100,
-    stop: p.stop, target: p.target,
+    stop: p.stop0 ?? p.stop, target: p.target,
+    final_stop: p.stop,
+    stop_moved: p.stop0 != null && Math.abs(p.stop - p.stop0) > 0.01,
     risk_pts: Math.round(risk * 100) / 100,
     reward_pts: Math.round(Math.abs(p.target - p.entry) * 100) / 100,
     planned_rr: Math.round(Math.abs(p.target - p.entry) / risk * 100) / 100,
@@ -167,7 +169,7 @@ function close(price, ms, how) {
     got_pts: Math.round(pts * 100) / 100,
     pnl,
     held_min: Math.max(0, Math.round((ms - p.ms) / 60000)),
-    exit_type: how, flags: [], trail: [],
+    exit_type: how, flags: [], trail: p.trail || [],
     note: "Placed on the Demo account at a delayed price. Kept out of your "
         + "live figures.",
     note_base: "Placed on the Demo account at a delayed price. Kept out of "
@@ -299,8 +301,75 @@ function render() {
     + `<span class="rpt">${t.exit_type}</span></li>`).join("");
   $("dsend").hidden = !D.account.trades.length;
 
-  ticket();
+  if (D.pos) dragNote(); else ticket();
   paint();
+}
+
+
+/* ------------------------------------------------------------ dragging */
+
+/* Moving the stop is the most consequential thing you do inside a trade, and
+ * your own record says it is what you get wrong most. So the app says so while
+ * your finger is still on the line, not in a review a week later. It never
+ * blocks the move: it is your trade. */
+const BE_AT_R = 2;
+
+function levelMoved(which, price) {
+  const p = D.pos, b = last();
+  if (!p || !b) return;
+  const long = p.side === "Long";
+  const tick = 0.25;
+  const v = Math.round(price / tick) * tick;
+  if (which === "stop") {
+    // A stop the wrong side of the market is not a stop, it is an exit.
+    p.stop = long ? Math.min(v, b.c - tick) : Math.max(v, b.c + tick);
+  } else {
+    p.target = long ? Math.max(v, b.c + tick) : Math.min(v, b.c - tick);
+  }
+  dragNote();
+  paint();
+}
+
+function dragNote() {
+  const p = D.pos, b = last();
+  if (!p || !b) { ticket(); return; }
+  const long = p.side === "Long";
+  const risk = Math.abs(p.entry - p.stop);
+  const reward = Math.abs(p.target - p.entry);
+  const pv = E.POINT[p.symbol] ?? 1;
+  const run = long ? b.c - p.entry : p.entry - b.c;
+  const openR = p.risk0 ? run / p.risk0 : 0;
+  const tighter = p.risk0 && risk < p.risk0 - 1e-9;
+  $("drisknote").innerHTML =
+    `Risk <b class="loss">${money(-risk * pv * p.qty)}</b> to make `
+    + `<b class="win">${money(reward * pv * p.qty)}</b><br>`
+    + `${(reward / risk).toFixed(2)} times your risk`
+    + (reward < risk ? '<span class="rrwarn">Risking more than you stand to make</span>' : "")
+    + (tighter && openR < BE_AT_R
+        ? `<span class="rrwarn">Price has run ${openR.toFixed(2)}R. `
+          + `Your rule holds the stop until ${BE_AT_R}R.</span>` : "")
+    + (tighter && openR >= BE_AT_R
+        ? '<span class="okmove">Past 2R, so this is the move your rule allows.</span>' : "");
+}
+
+/** Write a finished drag into the trail, once, the way an activity log would. */
+function recordMove(which) {
+  const p = D.pos, b = last();
+  if (!p || !b || which !== "stop") return;
+  p.trail = p.trail || [];
+  const long = p.side === "Long";
+  const run = long ? b.c - p.entry : p.entry - b.c;
+  const step = {
+    t: stamp(b.ms).slice(11),
+    sl: p.stop,
+    fav_r: p.risk0 ? Math.round(run / p.risk0 * 100) / 100 : null,
+    kind: !p.trail.length ? "initial"
+        : (long ? p.stop > p.entry : p.stop < p.entry) ? "wrong side"
+        : Math.abs(p.stop - p.entry) < 0.01 ? "breakeven" : "tighten",
+  };
+  const lastStep = p.trail[p.trail.length - 1];
+  if (lastStep && Math.abs(lastStep.sl - step.sl) < 1e-9) return;
+  p.trail.push(step);
 }
 
 /* ------------------------------------------------------------ controls */
@@ -316,6 +385,11 @@ function open_(side) {
     symbol: D.sym, side, qty, entry, ms: b.ms, open_t: stamp(b.ms), seen: b.ms,
     stop: Math.round((long ? entry - risk : entry + risk) * 100) / 100,
     target: Math.round((long ? entry + risk * rr : entry - risk * rr) * 100) / 100,
+    // R is the risk taken AT ENTRY. Dragging the stop must not change the
+    // denominator, and the diary reads `stop` as the one you set.
+    risk0: risk,
+    stop0: Math.round((long ? entry - risk : entry + risk) * 100) / 100,
+    trail: [],
   };
   saveAccount();
   render();
@@ -342,6 +416,8 @@ export function init(onSaveToDiary, onTradeClosed) {
   chart = createChart($("dc"), {
     timeLabel: ms => stamp(ms).slice(5, 16),
     onHover: b => ohlc(b || last()),
+    onLevelMove: levelMoved,
+    onLevelDrop: which => { recordMove(which); saveAccount(); render(); },
   });
   $("dzin").addEventListener("click", () => chart.zoomIn());
   $("dzout").addEventListener("click", () => chart.zoomOut());

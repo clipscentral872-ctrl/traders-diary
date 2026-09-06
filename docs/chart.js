@@ -43,6 +43,8 @@ export function createChart(canvas, opts = {}) {
     trade: null,
     cross: null,
     hoverIndex: null,
+    grab: null,          // "stop" or "target" while one is being dragged
+    nearLevel: null,     // and which one the cursor is hovering
   };
 
   let W = 0, H = 0, plot = {x: 0, y: 0, w: 0, h: 0}, scale = null;
@@ -138,18 +140,35 @@ export function createChart(canvas, opts = {}) {
     };
     box(src.entry, src.stop, css("--loss-zone"));
     box(src.entry, src.target, css("--win-zone"));
-    for (const [v, col, dash] of [
-      [src.stop, css("--loss-faded"), [5, 4]],
-      [src.target, css("--win-faded"), [5, 4]],
-      [src.entry, css("--text"), []],
+    const live = state.position && opts.onLevelMove;
+    for (const [key, v, col, dash] of [
+      ["stop", src.stop, css("--loss-faded"), [5, 4]],
+      ["target", src.target, css("--win-faded"), [5, 4]],
+      ["entry", src.entry, css("--text"), []],
     ]) {
       if (typeof v !== "number") continue;
-      x.strokeStyle = col;
+      const hot = live && key !== "entry"
+        && (state.grab === key || state.nearLevel === key);
+      x.strokeStyle = hot ? css(key === "stop" ? "--loss" : "--win") : col;
+      x.lineWidth = hot ? 2 : 1;
       x.setLineDash(dash);
       x.beginPath();
       x.moveTo(plot.x, Y(v) + 0.5); x.lineTo(plot.x + plot.w, Y(v) + 0.5);
       x.stroke();
       x.setLineDash([]);
+      x.lineWidth = 1;
+
+      // A line you can move should look like one. The grip only appears on
+      // the two that are actually draggable, so the entry does not invite a
+      // drag that would do nothing.
+      if (live && key !== "entry") {
+        const gy = Math.round(Y(v));
+        x.fillStyle = hot ? css(key === "stop" ? "--loss" : "--win") : col;
+        x.fillRect(plot.x + plot.w - 26, gy - 5, 20, 10);
+        x.fillStyle = css("--ground");
+        for (let g = 0; g < 3; g++)
+          x.fillRect(plot.x + plot.w - 22 + g * 5, gy - 2, 1.5, 4);
+      }
     }
   }
 
@@ -299,6 +318,32 @@ export function createChart(canvas, opts = {}) {
 
   const onAxis = px => px > plot.x + plot.w;
 
+  /** Which draggable level is under this point, if any.
+   *
+   *  Only when a position is actually open: dragging a line that belongs to a
+   *  finished trade would be editing history. */
+  function levelAt(p) {
+    const src = state.position;
+    if (!src || !opts.onLevelMove || !scale) return null;
+    if (p.x < plot.x || p.x > plot.x + plot.w) return null;
+    const {r} = scale;
+    const Y = v => plot.y + plot.h - (v - r.lo) / (r.hi - r.lo) * plot.h;
+    let best = null, bestD = 9;      // a fat enough target for a fingertip
+    for (const key of ["stop", "target"]) {
+      const v = src[key];
+      if (typeof v !== "number") continue;
+      const d = Math.abs(Y(v) - p.y);
+      if (d < bestD) { best = key; bestD = d; }
+    }
+    return best;
+  }
+
+  const priceAt = y => {
+    if (!scale) return null;
+    const {r} = scale;
+    return r.hi - (y - plot.y) / plot.h * (r.hi - r.lo);
+  };
+
   let drag = null;
   const pos = e => {
     const r = canvas.getBoundingClientRect();
@@ -308,6 +353,15 @@ export function createChart(canvas, opts = {}) {
 
   function down(e) {
     const p = pos(e);
+    const grab = levelAt(p);
+    if (grab) {
+      // Dragging a level must not also pan the chart underneath it.
+      state.grab = grab;
+      drag = {...p, level: grab};
+      canvas.style.cursor = "ns-resize";
+      if (e.preventDefault) e.preventDefault();
+      return;
+    }
     drag = {...p, count: state.count, right: state.right,
             zoom: state.zoom, shift: state.shift, axis: onAxis(p.x), moved: false};
     canvas.style.cursor = drag.axis ? "ns-resize" : "grabbing";
@@ -316,10 +370,23 @@ export function createChart(canvas, opts = {}) {
   function move(e) {
     const p = pos(e);
     if (!drag) {
+      const near = levelAt(p);
+      if (near !== state.nearLevel) {
+        state.nearLevel = near;
+        canvas.style.cursor = near ? "ns-resize" : "crosshair";
+      }
       state.cross = p.x < plot.x + plot.w ? p : null;
       draw();
       return;
     }
+
+    if (drag.level) {
+      const price = priceAt(p.y);
+      if (price != null) opts.onLevelMove(drag.level, price);
+      draw();
+      return;
+    }
+
     const dx = p.x - drag.x, dy = p.y - drag.y;
     if (Math.abs(dx) > 2 || Math.abs(dy) > 2) drag.moved = true;
 
@@ -336,8 +403,11 @@ export function createChart(canvas, opts = {}) {
   }
 
   function up() {
+    if (drag && drag.level && opts.onLevelDrop) opts.onLevelDrop(drag.level);
     drag = null;
-    canvas.style.cursor = "crosshair";
+    state.grab = null;
+    canvas.style.cursor = state.nearLevel ? "ns-resize" : "crosshair";
+    draw();
   }
 
   function wheel(e) {
@@ -354,6 +424,12 @@ export function createChart(canvas, opts = {}) {
     pinch = null;
     down(e);
   }
+
+  // A fingertip is bigger than a cursor, so the grip is met halfway: a tap
+  // near a level arms it before the drag begins.
+  canvas.addEventListener("touchstart", e => {
+    if (e.touches.length === 1) state.nearLevel = levelAt(pos(e));
+  }, {passive: true});
   function touchMove(e) {
     if (pinch && e.touches.length === 2) {
       e.preventDefault();

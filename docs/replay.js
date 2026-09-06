@@ -97,16 +97,18 @@ function closeAt(price, ms, how) {
     symbol: S.sym, side: p.side, qty: p.qty,
     open_t: p.open_t, close_t: stamp(ms),
     entry: p.entry, exit: Math.round(price * 100) / 100,
-    stop: p.stop, target: p.target,
-    risk_pts: Math.round(Math.abs(p.entry - p.stop) * 100) / 100,
+    stop: p.stop0 ?? p.stop, target: p.target,
+    final_stop: p.stop,
+    stop_moved: p.stop0 != null && Math.abs(p.stop - p.stop0) > 0.01,
+    risk_pts: Math.round((p.risk0 ?? Math.abs(p.entry - p.stop)) * 100) / 100,
     reward_pts: Math.round(Math.abs(p.target - p.entry) * 100) / 100,
     planned_rr: Math.round(Math.abs(p.target - p.entry)
-                         / Math.abs(p.entry - p.stop) * 100) / 100,
-    got_r: Math.round(pts / Math.abs(p.entry - p.stop) * 100) / 100,
+                         / (p.risk0 ?? Math.abs(p.entry - p.stop)) * 100) / 100,
+    got_r: Math.round(pts / (p.risk0 ?? Math.abs(p.entry - p.stop)) * 100) / 100,
     got_pts: Math.round(pts * 100) / 100,
     pnl: Math.round(pts * pv * p.qty * 100) / 100,
     held_min: Math.max(0, Math.round((ms - p.ms) / 60000)),
-    exit_type: how, flags: [], trail: [],
+    exit_type: how, flags: [], trail: p.trail || [],
     note: "Practice on replayed bars. Not part of your live record.",
     note_base: "Practice on replayed bars. Not part of your live record.",
     flags_base: [],
@@ -185,7 +187,7 @@ function render() {
     ohlc(b);
   }
 
-  riskNote();
+  if (p) dragNote(); else riskNote();
   results();
   paint();
 }
@@ -226,6 +228,80 @@ function results() {
   $("rsave").hidden = $("rclear").hidden = !S.done.length;
 }
 
+
+/* ------------------------------------------------------------ dragging */
+
+/* Moving the stop on the chart is the single most consequential thing you do
+ * in a trade, and it is the thing your own record says you get wrong most:
+ * eleven of your stops were tightened before your rule said to. So the app
+ * says so while your finger is still on it, rather than in a review a week
+ * later. The move is never blocked. It is your trade. */
+function levelMoved(which, price) {
+  const p = S.pos, b = S.bars[S.i];
+  if (!p || !b) return;
+  const long = p.side === "Long";
+  const tick = 0.25;
+  const v = Math.round(price / tick) * tick;
+
+  if (which === "stop") {
+    // A stop the wrong side of the market is not a stop, it is an exit.
+    p.stop = long ? Math.min(v, b.c - tick) : Math.max(v, b.c + tick);
+  } else {
+    p.target = long ? Math.max(v, b.c + tick) : Math.min(v, b.c - tick);
+  }
+  dragNote();
+  paint();
+}
+
+function dragNote() {
+  const p = S.pos, b = S.bars[S.i];
+  if (!p || !b) { riskNote(); return; }
+  const long = p.side === "Long";
+  const risk = Math.abs(p.entry - p.stop);
+  const reward = Math.abs(p.target - p.entry);
+  const pv = E.POINT[S.sym] ?? 1;
+  const run = long ? b.c - p.entry : p.entry - b.c;
+  // R here is the risk you took AT ENTRY, not the one you are dragging to.
+  const openR = p.risk0 ? run / p.risk0 : 0;
+  const tighter = p.risk0 && risk < p.risk0 - 1e-9;
+
+  $("rrisknote").innerHTML =
+    `Risk <b class="loss">${money(-risk * pv * p.qty)}</b> to make `
+    + `<b class="win">${money(reward * pv * p.qty)}</b>`
+    + `<br>${(reward / risk).toFixed(2)} times your risk`
+    + (reward < risk ? '<span class="rrwarn">Risking more than you stand to make</span>' : "")
+    + (tighter && openR < BE_AT_R
+        ? `<span class="rrwarn">Price has run ${openR.toFixed(2)}R. `
+          + `Your rule holds the stop until ${BE_AT_R}R.</span>` : "")
+    + (tighter && openR >= BE_AT_R
+        ? '<span class="okmove">Past 2R, so this is the move your rule allows.</span>' : "");
+}
+
+const BE_AT_R = 2;
+
+/** Write a finished drag into the trail, once, the way an activity log would.
+ *
+ *  Recorded on release rather than on every frame of the drag, or one move of
+ *  the mouse would land in the record as forty. */
+function recordMove(which) {
+  const p = S.pos, b = S.bars[S.i];
+  if (!p || !b || which !== "stop") return;
+  p.trail = p.trail || [];
+  const long = p.side === "Long";
+  const run = long ? b.c - p.entry : p.entry - b.c;
+  const step = {
+    t: stamp(b.ms).slice(11),
+    sl: p.stop,
+    fav_r: p.risk0 ? Math.round(run / p.risk0 * 100) / 100 : null,
+    kind: !p.trail.length ? "initial"
+        : (long ? p.stop > p.entry : p.stop < p.entry) ? "wrong side"
+        : Math.abs(p.stop - p.entry) < 0.01 ? "breakeven" : "tighten",
+  };
+  const last = p.trail[p.trail.length - 1];
+  if (last && Math.abs(last.sl - step.sl) < 1e-9) return;
+  p.trail.push(step);
+}
+
 /* ------------------------------------------------------------ controls */
 
 function open_(side) {
@@ -239,6 +315,12 @@ function open_(side) {
     side, qty, entry, ms: b.ms, open_t: stamp(b.ms),
     stop: Math.round((long ? entry - risk : entry + risk) * 100) / 100,
     target: Math.round((long ? entry + risk * rr : entry - risk * rr) * 100) / 100,
+    // R is the risk taken AT ENTRY. Dragging the stop later must not quietly
+    // change the denominator, so the original is kept, and so is the price it
+    // sat at: the diary reads `stop` as the stop you SET, with the trail
+    // holding where it went afterwards.
+    risk0: risk,
+    stop0: Math.round((long ? entry - risk : entry + risk) * 100) / 100,
   };
   render();
 }
@@ -304,6 +386,8 @@ export function init(onSave) {
   chart = createChart($("rc"), {
     timeLabel: ms => stamp(ms).slice(5, 16),
     onHover: b => ohlc(b || S.bars[S.i]),
+    onLevelMove: levelMoved,
+    onLevelDrop: which => { recordMove(which); render(); },
   });
 
   $("rsym").innerHTML = SYMS.map(s => `<option value="${s}">${s}</option>`).join("");
