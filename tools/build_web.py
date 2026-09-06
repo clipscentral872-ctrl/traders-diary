@@ -564,7 +564,7 @@ def stamp_worker(page):
     import hashlib
     parts = [page]
     for name in ("engine.js", "replay.js", "system.js", "levels.js",
-             "lock.js", "demo.js"):
+             "lock.js", "demo.js", "revisit.js"):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())

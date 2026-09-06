@@ -16,6 +16,7 @@
  */
 import * as E from "./engine.js";
 import {levelsAt, FAMILY_COLOUR} from "./levels.js";
+import * as RV from "./revisit.js";
 
 const $ = id => document.getElementById(id);
 const KEY = "tradersdiary.demo";
@@ -23,7 +24,7 @@ const SYMS = ["NQ", "ES", "YM", "RTY"];
 const START_BALANCE = 100000;
 
 const D = {
-  sym: "NQ", bars: [], pos: null, levels: true,
+  sym: "NQ", bars: [], pos: null, levels: true, model: null, modelKey: null,
   account: {balance: START_BALANCE, trades: []},
 };
 
@@ -167,8 +168,13 @@ function draw() {
   const x = cv.getContext("2d");
   x.scale(dpr, dpr);
   x.clearRect(0, 0, W, H);
-  const css = n => getComputedStyle(document.documentElement)
-    .getPropertyValue(n).trim();
+  // Read once per draw. This used to be called per candle and per level, and
+  // every call forces the browser to recompute style, which was most of the
+  // cost of stepping the chart.
+  const _cs = getComputedStyle(document.documentElement);
+  const _pal = {};
+  const css = n => (_pal[n] !== undefined ? _pal[n]
+                    : (_pal[n] = _cs.getPropertyValue(n).trim()));
 
   const N = Math.max(30, Math.floor(W / 6));
   const view = D.bars.slice(-N);
@@ -195,8 +201,16 @@ function draw() {
   if (D.levels) {
     x.font = '10px "JetBrains Mono", monospace';
     x.textBaseline = "middle";
-    for (const m of levelsAt(D.bars, last() ? last().ms : null)
-                      .filter(m => m.price >= lo && m.price <= up)) {
+    const atMs = last() ? last().ms : null;
+    if (D.modelKey !== D.sym) { D.model = RV.build(D.bars); D.modelKey = D.sym; }
+    const odds = RV.untappedNow(D.bars, atMs, D.model);
+    const marks = levelsAt(D.bars, atMs).filter(m => m.price >= lo && m.price <= up);
+    for (const m of marks) {
+      const o = m.label.includes("High") ? odds.get("above") : odds.get("below");
+      if (m.family === "day" && o && Math.abs(o.price - m.price) < 1e-6)
+        m.label += "  " + RV.pct(o.p) + " revisit" + (o.thin ? " ?" : "");
+    }
+    for (const m of marks) {
       const y = Math.round(Y(m.price)) + 0.5;
       x.strokeStyle = x.fillStyle = FAMILY_COLOUR[m.family] || css("--faint");
       x.globalAlpha = 0.5;

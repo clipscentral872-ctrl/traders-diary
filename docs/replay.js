@@ -8,6 +8,7 @@
  */
 import * as E from "./engine.js";
 import {levelsAt, FAMILY_COLOUR} from "./levels.js";
+import * as RV from "./revisit.js";
 
 const $ = id => document.getElementById(id);
 const PRACTICE_KEY = "tradersdiary.replay";
@@ -44,7 +45,15 @@ async function load(sym, tf) {
 const S = {
   sym: "NQ", tf: "5m", bars: [], i: 0, mode: "browse",
   pos: null, done: [], timer: null, levels: true,
+  model: null, modelKey: null,
 };
+
+/** Build the revisit model once per contract and timeframe, not per frame. */
+function modelFor() {
+  const k = S.sym + "_" + S.tf;
+  if (S.modelKey !== k) { S.model = RV.build(S.bars); S.modelKey = k; }
+  return S.model;
+}
 
 const money = v => (v < 0 ? "-" : "+") + "$"
   + Math.abs(v).toLocaleString("en-US", {maximumFractionDigits: 0});
@@ -116,8 +125,13 @@ function draw() {
   const x = cv.getContext("2d");
   x.scale(dpr, dpr);
   x.clearRect(0, 0, W, H);
-  const css = n => getComputedStyle(document.documentElement)
-    .getPropertyValue(n).trim();
+  // Read once per draw. This used to be called per candle and per level, and
+  // every call forces the browser to recompute style, which was most of the
+  // cost of stepping the chart.
+  const _cs = getComputedStyle(document.documentElement);
+  const _pal = {};
+  const css = n => (_pal[n] !== undefined ? _pal[n]
+                    : (_pal[n] = _cs.getPropertyValue(n).trim()));
 
   const N = Math.max(30, Math.floor(W / 7));
   const hi = Math.min(S.bars.length, S.i + 1);
@@ -148,8 +162,17 @@ function draw() {
   // than the trade. Only sessions that have closed by the playhead appear.
   let marks = [];
   if (S.levels) {
-    marks = levelsAt(S.bars, S.bars[S.i] ? S.bars[S.i].ms : null)
-      .filter(m => m.price >= lo && m.price <= up);
+    const atMs = S.bars[S.i] ? S.bars[S.i].ms : null;
+    marks = levelsAt(S.bars, atMs).filter(m => m.price >= lo && m.price <= up);
+    // How often a level like this one actually got tapped before the close,
+    // measured over the published history. Only on the previous day's high
+    // and low, which is what the model was built from.
+    const odds = RV.untappedNow(S.bars, atMs, modelFor());
+    for (const m of marks) {
+      const o = m.label.includes("High") ? odds.get("above") : odds.get("below");
+      if (m.family === "day" && o && Math.abs(o.price - m.price) < 1e-6)
+        m.label += "  " + RV.pct(o.p) + " revisit" + (o.thin ? " ?" : "");
+    }
     x.font = '10px "JetBrains Mono", monospace';
     x.textBaseline = "middle";
     for (const m of marks) {

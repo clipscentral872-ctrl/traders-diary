@@ -234,6 +234,34 @@
 </section>
 
 <section>
+  <h2>The revisit number on the chart</h2>
+  <p class="lead">Next to the previous day's high and low, while they are
+  still untapped, the chart shows how often a level like that one actually got
+  tapped before the day closed. It is measured from the published bars, in
+  your browser, not asserted.</p>
+  <p class="lead">Every bar in the history where a previous-day level was
+  still untapped is one observation, filed by two things: how far price was
+  from it as a share of the average daily range, and how much of the session
+  had gone. At the close each observation is settled as tapped or not. The
+  number you see is simply how often that bucket got tapped.</p>
+  <p class="lead">Three things keep it honest. A bucket with few observations
+  is pulled toward the overall base rate rather than believed, because three
+  out of three is not a certainty and printing 100% would be a lie with a
+  number on it. A thin bucket is marked with a <b>?</b> so you can see the
+  sample is small. And nothing looks ahead: the range used to measure distance
+  comes from the days before, never from the whole history.</p>
+  <p class="lead"><b>What it is not.</b> It does not know about news, it does
+  not know what you are looking at, and it is built from about sixty days.
+  A high number is not a trade and a low one is not a reason to fade
+  something. It is background: whether you are in a market that usually goes
+  back for these, or one that usually does not.</p>
+  <div class="card hud">
+    <div class="stats hud" id="rvstats"></div>
+    <p class="srcnote" id="rvnote"></p>
+  </div>
+</section>
+
+<section>
   <h2>Two rules this will not bend</h2>
   <ul class="stands">
     <li class="stand no">

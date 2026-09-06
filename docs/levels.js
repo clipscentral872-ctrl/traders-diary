@@ -23,6 +23,10 @@ export const SESSIONS = [
   {key: "ny", label: "New York", from: 9 * 60 + 30, to: 16 * 60},
 ];
 
+// Days of history to look at. Asia opens the evening before, and the
+// previous day's range is wanted, so three covers every level drawn here.
+const DAYS_BACK = 3;
+
 export const FAMILY_COLOUR = {
   asia: "#8B7BE8", london: "#E8A33D", ny: "#35E0F0", day: "#7E90A8",
 };
@@ -33,14 +37,39 @@ const NY = new Intl.DateTimeFormat("en-CA", {
   hour: "2-digit", minute: "2-digit",
 });
 
-/** A timestamp as New York calendar date and minutes past midnight. */
+/** A timestamp as New York calendar date and minutes past midnight.
+ *
+ *  Memoised, because this is called once per bar and the replay redraws on
+ *  every step. Over a two-month series that is tens of thousands of Intl
+ *  formats per frame, which was enough to lock the tab up while stepping. */
+const _parts = new Map();
 function nyParts(ms) {
+  let v = _parts.get(ms);
+  if (v !== undefined) return v;
   const p = NY.formatToParts(new Date(ms));
   const g = k => p.find(x => x.type === k).value;
   const hour = parseInt(g("hour"), 10) % 24;
-  return {date: `${g("year")}-${g("month")}-${g("day")}`,
-          mins: hour * 60 + parseInt(g("minute"), 10)};
+  v = {date: `${g("year")}-${g("month")}-${g("day")}`,
+       mins: hour * 60 + parseInt(g("minute"), 10)};
+  if (_parts.size > 200000) _parts.clear();
+  _parts.set(ms, v);
+  return v;
 }
+
+/** Index of the last bar at or before `ms`, or -1. */
+function upTo(bars, ms) {
+  if (ms == null) return bars.length - 1;
+  let lo = 0, hi = bars.length - 1, best = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (bars[mid].ms <= ms) { best = mid; lo = mid + 1; } else hi = mid - 1;
+  }
+  return best;
+}
+
+// Redraws land on the same bar again and again, so the whole answer is kept
+// against it rather than rebuilt per frame.
+let _cache = {key: null, val: []};
 
 /** Which trading day a bar belongs to for a session that wraps midnight.
  *  A bar at 19:00 belongs to the NEXT day's Asia session, the way a trader
@@ -61,21 +90,33 @@ export function levelsAt(bars, atMs) {
   if (!bars || !bars.length) return [];
 
   // Only bars up to the playhead. Everything after it is the future.
-  let hi = bars.length - 1;
-  if (atMs != null) {
-    hi = -1;
-    for (let i = 0; i < bars.length; i++) {
-      if (bars[i].ms > atMs) break;
-      hi = i;
-    }
-    if (hi < 0) return [];
-  }
+  const hi = upTo(bars, atMs);
+  if (hi < 0) return [];
+
+  const ck = bars.length + "@" + bars[hi].ms;
+  if (_cache.key === ck) return _cache.val;
 
   const now = nyParts(bars[hi].ms);
   const sessions = new Map();     // "asia|2026-09-04" -> {h, l, closed}
   const days = new Map();         // "2026-09-04" -> {h, l}
 
-  for (let i = 0; i <= hi; i++) {
+  // Only the last few days are ever needed: the previous day's range, and
+  // sessions that reach back to the evening before. Rescanning two months of
+  // bars on every step was the whole cost, and none of it was used.
+  let from = hi;
+  {
+    const seen = new Set([now.date]);
+    while (from > 0 && seen.size <= DAYS_BACK) {
+      const d = nyParts(bars[from - 1].ms).date;
+      if (!seen.has(d)) {
+        if (seen.size === DAYS_BACK) break;
+        seen.add(d);
+      }
+      from--;
+    }
+  }
+
+  for (let i = from; i <= hi; i++) {
     const b = bars[i];
     const {date, mins} = nyParts(b.ms);
 
@@ -127,5 +168,6 @@ export function levelsAt(bars, atMs) {
     out.push({family: "day", label: "Prev Day High", price: d.h},
              {family: "day", label: "Prev Day Low", price: d.l});
   }
+  _cache = {key: ck, val: out};
   return out;
 }

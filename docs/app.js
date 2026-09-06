@@ -10,6 +10,7 @@ import * as RP from "./replay.js";
 import * as SYS from "./system.js";
 import * as LOCK from "./lock.js";
 import * as DEMO from "./demo.js";
+import * as RV from "./revisit.js";
 
 const $ = id => document.getElementById(id);
 const KEY = "tradersdiary.v1";
@@ -571,6 +572,39 @@ function renderLearn() {
   $("proof").innerHTML = rows.join("");
 }
 
+/** What the revisit model is actually built on, stated rather than implied. */
+async function showRevisitFacts() {
+  const el = $("rvstats");
+  if (!el || el.dataset.done) return;
+  el.dataset.done = "1";
+  try {
+    const r = await fetch("bars/NQ_5m.json", {cache: "no-cache"});
+    if (!r.ok) throw new Error("no bars");
+    const j = await r.json();
+    const bars = [];
+    j.bars.forEach((b, i) => {
+      if (b) bars.push({ms: (j.t0 + i * j.step) * 1000,
+                        o: b[0], h: b[1], l: b[2], c: b[3]});
+    });
+    const m = RV.build(bars);
+    if (!m.obs) throw new Error("not enough history");
+    el.innerHTML = [
+      stat("days of history", String(m.days)),
+      stat("observations", m.obs.toLocaleString("en-US")),
+      stat("base rate", RV.pct(m.base)),
+      stat("average daily range", Math.round(m.adr).toLocaleString("en-US")),
+    ].join("");
+    $("rvnote").textContent = `Measured on NQ five-minute bars. Across the whole `
+      + `history, an untapped previous-day level was tapped before the close `
+      + `${RV.pct(m.base)} of the time. That is the number every estimate is `
+      + `pulled toward when its own bucket is thin.`;
+  } catch (e) {
+    el.innerHTML = stat("history", "not loaded");
+    $("rvnote").textContent = "The published bars could not be read, so there "
+      + "is nothing to measure this from yet.";
+  }
+}
+
 /* ---------------------------------------------------------------- tabs */
 
 /* One app, several tabs. The tab is kept in the URL hash so the back button
@@ -599,6 +633,7 @@ function goTab(name, push) {
   if (name === "replay") RP.redraw();
   if (name === "demo") DEMO.redraw();
   if (name === "system") SYS.show();
+  if (name === "learn") showRevisitFacts();
 }
 
 document.querySelector(".tabs2").addEventListener("click", e => {
