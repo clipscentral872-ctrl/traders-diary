@@ -82,7 +82,7 @@ function ageWords(m) {
   const h = Math.round(m / 60);
   if (h < 36) return `${h} hour${h === 1 ? "" : "s"} old`;
   const d = Math.round(h / 24);
-  return `${d} day${d === 1 ? "" : "s"} old, the market has been closed`;
+  return `${d} day${d === 1 ? "" : "s"} old`;
 }
 
 async function loadSymbol(sym) {
@@ -312,9 +312,10 @@ function render() {
   const stale = d != null && d > 240;
   $("dbuy").disabled = $("dsell").disabled = !!p || !b || stale;
   if (stale && !p)
-    $("dposline").textContent = "The market is closed, so the last price is "
-      + ageWords(d) + ". Taking a trade on it would be a bet on where it opens "
-      + "again, not a trade. Come back when it is running, or use Replay.";
+    $("dposline").textContent = `The market is shut. The last price is `
+      + `${ageWords(d)}, so taking a trade on it would be a bet on where it `
+      + `opens again rather than a trade. Come back when it is running, or `
+      + `use Replay, where the delay does not matter.`;
 
   $("dlist").innerHTML = D.account.trades.slice().reverse().slice(0, 12).map(t =>
     `<li class="rpi"><span class="rpw">${t.symbol} ${t.side}</span>`

@@ -2063,10 +2063,14 @@ function renderLearn() {
 
 /* ---------------------------------------------------------------- tabs */
 
-/* Four tabs, one app. The tab is kept in the URL hash so the back button
+/* One app, several tabs. The tab is kept in the URL hash so the back button
    works and so a tab can be linked to, which matters once this is on a home
-   screen and reopening should land where it was left. */
-const TABNAMES = ["diary", "replay", "system", "learn"];
+   screen and reopening should land where it was left.
+
+   Read from the buttons rather than written out here. A hand-kept list drifts:
+   adding the Demo tab left it off, so clicking Demo silently fell back to the
+   Diary and the pane never opened. */
+const TABNAMES = [...document.querySelectorAll(".tb")].map(b => b.dataset.go);
 
 function goTab(name, push) {
   if (!TABNAMES.includes(name)) name = "diary";
