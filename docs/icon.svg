@@ -1,19 +1,40 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img"
      aria-label="Traders Diary">
   <rect width="512" height="512" fill="#05070C"/>
-  <!-- The corner brackets are the same HUD frame the diary draws round every
-       card, so the icon on the home screen reads as the same thing. -->
+
+  <!-- The HUD corner brackets, the same frame the app draws round every card,
+       so the icon on a home screen reads as the same thing. -->
   <g stroke="#35E0F0" stroke-width="14" fill="none" stroke-linecap="square">
-    <path d="M56 128V56h72"/>
-    <path d="M456 128V56h-72"/>
-    <path d="M56 384v72h72"/>
-    <path d="M456 384v72h-72"/>
+    <path d="M52 124V52h72"/>
+    <path d="M460 124V52h-72"/>
+    <path d="M52 388v72h72"/>
+    <path d="M460 388v72h-72"/>
   </g>
-  <!-- One losing candle, one winning candle: the whole point of the thing. -->
-  <g stroke-linecap="butt">
-    <line x1="196" y1="146" x2="196" y2="366" stroke="#C4485A" stroke-width="12"/>
-    <rect x="166" y="196" width="60" height="130" fill="#C4485A"/>
-    <line x1="316" y1="146" x2="316" y2="366" stroke="#2BE08A" stroke-width="12"/>
-    <rect x="286" y="186" width="60" height="130" fill="#2BE08A"/>
+
+  <!-- Candles sit behind, dimmed: they are the ground the move happens on,
+       not the subject. -->
+  <g opacity="0.5" stroke-linecap="butt">
+    <line x1="140" y1="286" x2="140" y2="376" stroke="#C4485A" stroke-width="10"/>
+    <rect x="124" y="304" width="32" height="56" fill="#C4485A"/>
+
+    <line x1="205" y1="252" x2="205" y2="352" stroke="#22B877" stroke-width="10"/>
+    <rect x="189" y="272" width="32" height="62" fill="#22B877"/>
+
+    <line x1="270" y1="272" x2="270" y2="360" stroke="#C4485A" stroke-width="10"/>
+    <rect x="254" y="288" width="32" height="54" fill="#C4485A"/>
+
+    <line x1="335" y1="180" x2="335" y2="300" stroke="#22B877" stroke-width="10"/>
+    <rect x="319" y="198" width="32" height="80" fill="#22B877"/>
   </g>
+
+  <!-- The zigzag, cutting up through them. Higher lows and a higher high:
+       the shape of the thing the whole app is about. -->
+  <path d="M118 366 L188 300 L262 336 L344 208 L400 158"
+        fill="none" stroke="#2BE08A" stroke-width="22"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Arrowhead on the end, pointing the way it went. -->
+  <path d="M340 152 L406 152 L406 218"
+        fill="none" stroke="#2BE08A" stroke-width="22"
+        stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

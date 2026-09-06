@@ -15,36 +15,18 @@ import {levelsAt, FAMILY_COLOUR} from "./levels.js";
 import * as RV from "./revisit.js";
 import {createChart} from "./chart.js";
 import * as WL from "./watchlist.js";
+import * as SER from "./series.js";
 
 const $ = id => document.getElementById(id);
 const PRACTICE_KEY = "tradersdiary.replay";
 
-export const TF = [["1m", "1m"], ["5m", "5m"], ["1h", "1h"]];
+export const TF = SER.TIMEFRAMES.map(t => [t.key, t.label]);
 const SYMS = ["NQ", "ES", "YM", "RTY"];
 
-const series = new Map();
-const loading = new Map();
-
-async function load(sym, tf) {
-  const key = sym + "_" + tf;
-  if (series.has(key)) return series.get(key);
-  if (loading.has(key)) return loading.get(key);
-  const p = (async () => {
-    const r = await fetch(`bars/${key}.json`, {cache: "no-cache"});
-    if (!r.ok) throw new Error(`no published bars for ${sym} ${tf}`);
-    const j = await r.json();
-    const out = [];
-    j.bars.forEach((b, i) => {
-      if (b) out.push({ms: (j.t0 + i * j.step) * 1000,
-                       o: b[0], h: b[1], l: b[2], c: b[3]});
-    });
-    series.set(key, out);
-    loading.delete(key);
-    return out;
-  })();
-  loading.set(key, p);
-  return p;
-}
+// Loading and any resampling live in series.js, so the replay and the demo
+// build 15m and 4h the same way rather than each having its own idea of where
+// a bar starts.
+const load = SER.load;
 
 /* --------------------------------------------------------------- state */
 

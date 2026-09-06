@@ -1203,7 +1203,8 @@ def stamp_worker(page):
     parts = [page]
     for name in ("engine.js", "chart.js", "levels.js", "revisit.js",
                  "replay.js", "demo.js", "diary.js", "videos.js",
-                 "system.js", "dashboard.js", "lock.js", "watchlist.js"):
+                 "system.js", "dashboard.js", "lock.js", "watchlist.js",
+                 "series.js"):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())

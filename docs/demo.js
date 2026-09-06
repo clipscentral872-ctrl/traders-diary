@@ -18,6 +18,7 @@ import * as E from "./engine.js";
 import {levelsAt, FAMILY_COLOUR} from "./levels.js";
 import {createChart} from "./chart.js";
 import * as WL from "./watchlist.js";
+import * as SER from "./series.js";
 import * as RV from "./revisit.js";
 
 const $ = id => document.getElementById(id);
@@ -26,7 +27,8 @@ const SYMS = ["NQ", "ES", "YM", "RTY"];
 const START_BALANCE = 100000;
 
 const D = {
-  sym: "NQ", bars: [], pos: null, levels: true, model: null, modelKey: null,
+  sym: "NQ", tf: "5m", bars: [], pos: null, levels: true,
+  model: null, modelKey: null,
   account: {balance: START_BALANCE, trades: []},
 };
 
@@ -111,17 +113,7 @@ async function loadModel(sym) {
   } catch { return null; }
 }
 
-async function loadSymbol(sym) {
-  const r = await fetch(`bars/${sym}_1m.json`, {cache: "no-cache"});
-  if (!r.ok) throw new Error("no published bars for " + sym);
-  const j = await r.json();
-  const out = [];
-  j.bars.forEach((b, i) => {
-    if (b) out.push({ms: (j.t0 + i * j.step) * 1000,
-                     o: b[0], h: b[1], l: b[2], c: b[3]});
-  });
-  return out;
-}
+const loadSymbol = (sym, tf) => SER.load(sym, tf || D.tf);
 
 /* --------------------------------------------------------------- fills */
 
@@ -138,7 +130,7 @@ function settle() {
   const p = D.pos;
   if (!p) return;
   const long = p.side === "Long";
-  for (const b of D.bars) {
+  for (const b of (D.fine || D.bars)) {
     if (b.ms <= p.seen) continue;
     p.seen = b.ms;
     const hitStop = long ? b.l <= p.stop : b.h >= p.stop;
@@ -399,7 +391,12 @@ function open_(side) {
 export async function refresh() {
   const sym = D.pos ? D.pos.symbol : D.sym;
   try {
-    D.bars = await loadSymbol(sym);
+    D.bars = await loadSymbol(sym, D.tf);
+    // A stop is hit on the market, not on the timeframe you happen to be
+    // looking at. Fills are always resolved on the one-minute bars, or a
+    // trade could survive on the 4h chart that a 4h low went straight
+    // through.
+    D.fine = await SER.load(sym, "1m").catch(() => D.bars);
     settle();
   } catch { /* offline: whatever was loaded stays on screen */ }
   if (D.modelKey !== sym) {
@@ -419,6 +416,18 @@ export function init(onSaveToDiary, onTradeClosed) {
     onHover: b => ohlc(b || last()),
     onLevelMove: levelMoved,
     onLevelDrop: which => { recordMove(which); saveAccount(); render(); },
+  });
+  $("dtf").innerHTML = SER.TIMEFRAMES.map(t =>
+    `<button class="ptool tfb" data-tf="${t.key}" `
+    + `aria-pressed="${t.key === D.tf}">${t.label}</button>`).join("");
+  $("dtf").addEventListener("click", async e => {
+    const b = e.target.closest(".tfb");
+    if (!b) return;
+    D.tf = b.dataset.tf;
+    [...$("dtf").children].forEach(c =>
+      c.setAttribute("aria-pressed", String(c.dataset.tf === D.tf)));
+    await refresh();
+    if (chart) chart.fit(160);
   });
   $("dzin").addEventListener("click", () => chart.zoomIn());
   $("dzout").addEventListener("click", () => chart.zoomOut());
