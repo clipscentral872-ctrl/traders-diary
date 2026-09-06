@@ -137,5 +137,32 @@ console.log("\nthe model never looks ahead");
   check("both answer", qa !== null && qb !== null);
 }
 
+console.log("\nthe answer does not depend on the bar size");
+{
+  // The same day and the same moment, given minute bars and five-minute bars.
+  // The question is about the day, so the answer has to be the same. It was
+  // not: how far through the session had been counted in bars against a fixed
+  // 78, which is right for five-minute data and puts minute data permanently
+  // at "session over".
+  const shape = k => {
+    const mid = 100 + Math.sin(k / 9) * 6;
+    return {o: mid, h: mid + 0.6, l: mid - 0.6, c: mid};
+  };
+  const five = [], one = [];
+  for (let d = 2; d <= 30; d++) {
+    const base = DAY0 + (d - 2) * 86400000;
+    for (let k = 0; k < 78; k++) five.push({ms: base + k * 300000, ...shape(k)});
+    for (let k = 0; k < 390; k++) one.push({ms: base + k * 60000, ...shape(k / 5)});
+  }
+  const model = R.build(five);
+  // A third of the way into the last day, by the clock, on both series.
+  const at = DAY0 + 28 * 86400000 + Math.round(78 * 300000 / 3);
+  const say = m => [...m.entries()].map(([k, v]) => k + ":" + v.n).sort().join(",");
+  const a = say(R.untappedNow(five, at, model));
+  const b = say(R.untappedNow(one, at, model));
+  check("minute and five-minute bars agree", a === b, `5m ${a} vs 1m ${b}`);
+  check("something was actually compared", a.length > 0, "both came back empty");
+}
+
 console.log(failed ? `\n${failed} check(s) failed` : "\nall checks passed");
 process.exit(failed ? 1 : 0);
