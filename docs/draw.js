@@ -291,10 +291,16 @@ export function down(px, py, chart) {
   if (!live) {
     live = {tool, a: {ms, price}, b: spec.pts === 2 ? {ms, price} : null};
     if (spec.pts === 1) finish();
+    // The chart stops handling a press the moment this takes it, so nothing
+    // else is going to repaint. A two point tool got away with it because
+    // the drag repaints; a one click tool drew nothing at all until you
+    // happened to touch the chart again.
+    chart.repaint();
     return true;
   }
   live.b = {ms, price};
   finish();
+  chart.repaint();
   return true;
 }
 
