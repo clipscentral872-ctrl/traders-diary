@@ -17,6 +17,7 @@ import * as RV from "./revisit.js";
 import {createChart} from "./chart.js";
 import * as WL from "./watchlist.js";
 import * as SER from "./series.js";
+import * as DRAW from "./draw.js";
 
 const $ = id => document.getElementById(id);
 const PRACTICE_KEY = "tradersdiary.replay";
@@ -458,6 +459,9 @@ export function init(onSave) {
     onLevelMove: levelMoved,
     onLevelDrop: which => { recordMove(which); render(); },
     onPick: i => { armed(false); cutAt(i); },
+    overlay: c => DRAW.paint(c),
+    onPress: (px, py) => DRAW.down(px, py, chart),
+    onDrag: (px, py) => DRAW.move(px, py, chart),
   });
 
   $("rsym").innerHTML = SYMS.map(s => `<option value="${s}">${s}</option>`).join("");
@@ -467,6 +471,7 @@ export function init(onSave) {
 
   $("rsym").addEventListener("change", () => {
     S.sym = $("rsym").value;
+    DRAW.setSymbol(S.sym);
     // A different contract is a different market, so the replay starts over.
     S.mode = "browse";
     S.bars = [];
@@ -491,6 +496,49 @@ export function init(onSave) {
     S.timer = setInterval(() => step(1), 420);
     $("rplay").textContent = "Stop";
   });
+  /* The drawing rail, the way a platform puts it: down the left, one icon a
+     tool, the armed one lit. */
+  $("rtools").innerHTML = DRAW.TOOLS.map(t =>
+    `<button class="rtool" data-tool="${t.id}" title="${t.name}"`
+    + ` aria-pressed="${t.id === "cursor"}">`
+    + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${t.icon}"/></svg>`
+    + "</button>").join("");
+  const litTools = () => {
+    const on = DRAW.getTool();
+    [...$("rtools").children].forEach(b =>
+      b.setAttribute("aria-pressed", String(b.dataset.tool === on)));
+    $("rwipe").disabled = !DRAW.count();
+  };
+  DRAW.setOnChange(litTools);
+  $("rtools").addEventListener("click", e => {
+    const b = e.target.closest(".rtool");
+    if (!b) return;
+    DRAW.setTool(b.dataset.tool);
+    litTools();
+    paint();
+  });
+  $("rwipe").addEventListener("click", () => {
+    if (!DRAW.count()) return;
+    if (!confirm(`Remove all ${DRAW.count()} drawings on ${S.sym}?`)) return;
+    DRAW.clear();
+    paint();
+  });
+  // Escape drops the tool, Delete removes what is selected. Both are what a
+  // hand already trained on TradingView will reach for.
+  addEventListener("keydown", e => {
+    const pane = document.querySelector('.tabpane[data-tab="replay"]');
+    if (!pane || pane.hidden) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+    if (e.key === "Escape" && DRAW.cancel()) { litTools(); paint(); }
+    if ((e.key === "Delete" || e.key === "Backspace") && DRAW.hasSelection()) {
+      e.preventDefault();
+      DRAW.removeSelected();
+      litTools();
+      paint();
+    }
+  });
+  litTools();
+
   $("rback").addEventListener("click", reset);
   $("rbuy").addEventListener("click", () => open_("Long"));
   $("rsell").addEventListener("click", () => open_("Short"));

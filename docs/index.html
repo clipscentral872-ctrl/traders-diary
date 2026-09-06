@@ -616,6 +616,23 @@ body{overflow:hidden}
 .rbtn2[aria-pressed="true"]{color:var(--accent); background:var(--accent-dim)}
 .rbtn2:focus-visible{outline:2px solid var(--accent); outline-offset:-1px}
 .railgap{flex:1}
+/* The drawing rail, the way TradingView has it: a column of icon buttons down
+   the left edge, the armed one lit, a hairline between the groups. */
+.drawrail{display:flex; flex-direction:column; gap:2px}
+.raildiv{height:1px; background:var(--line); margin:5px 3px}
+.rtool{
+  width:36px; height:36px; display:grid; place-items:center; cursor:pointer;
+  background:none; border:1px solid transparent; border-radius:4px;
+  color:var(--muted);
+}
+.rtool svg{width:17px; height:17px; fill:none; stroke:currentColor;
+  stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
+.rtool:hover{background:var(--lift); color:var(--text)}
+.rtool[aria-pressed="true"]{background:var(--accent-dim); color:var(--accent)}
+.rtool:focus-visible{outline:2px solid var(--accent); outline-offset:-1px}
+.rbtn2:disabled{opacity:.35; cursor:default}
+.rbtn2:disabled:hover{background:none; color:var(--muted)}
+@media (max-width:900px){ .rtool{width:44px; height:44px} }
 
 .wsmain{display:flex; flex-direction:column; min-width:0; min-height:0}
 .wstop{
@@ -1537,6 +1554,9 @@ body{overflow:hidden}
 <div class="tabpane" data-tab="demo" hidden>
 <div class="ws">
   <div class="wsrail">
+    <div class="drawrail" id="dtools" role="group" aria-label="Drawing tools"></div>
+    <button class="rbtn2" id="dwipe" title="Remove every drawing on this contract">Clr</button>
+    <span class="raildiv"></span>
     <button class="rbtn2" id="dlevels" aria-pressed="true" title="Session highs and lows">Lv</button>
     <button class="rbtn2" id="dzin" title="Zoom in">+</button>
     <button class="rbtn2" id="dzout" title="Zoom out">&minus;</button>
@@ -1589,6 +1609,9 @@ body{overflow:hidden}
 <div class="tabpane" data-tab="replay" hidden>
 <div class="ws">
   <div class="wsrail">
+    <div class="drawrail" id="rtools" role="group" aria-label="Drawing tools"></div>
+    <button class="rbtn2" id="rwipe" title="Remove every drawing on this contract">Clr</button>
+    <span class="raildiv"></span>
     <button class="rbtn2" id="rlevels" aria-pressed="true" title="Session highs and lows">Lv</button>
     <button class="rbtn2" id="rzin" title="Zoom in">+</button>
     <button class="rbtn2" id="rzout" title="Zoom out">&minus;</button>
@@ -1994,7 +2017,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=6560a5f9c55c","./chart.js":"./chart.js?v=6560a5f9c55c","./levels.js":"./levels.js?v=6560a5f9c55c","./revisit.js":"./revisit.js?v=6560a5f9c55c","./series.js":"./series.js?v=6560a5f9c55c","./clock.js":"./clock.js?v=6560a5f9c55c","./vault.js":"./vault.js?v=6560a5f9c55c","./watchlist.js":"./watchlist.js?v=6560a5f9c55c","./lock.js":"./lock.js?v=6560a5f9c55c","./replay.js":"./replay.js?v=6560a5f9c55c","./demo.js":"./demo.js?v=6560a5f9c55c","./diary.js":"./diary.js?v=6560a5f9c55c","./videos.js":"./videos.js?v=6560a5f9c55c","./system.js":"./system.js?v=6560a5f9c55c","./dashboard.js":"./dashboard.js?v=6560a5f9c55c"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=6a506614a3b0","./chart.js":"./chart.js?v=6a506614a3b0","./levels.js":"./levels.js?v=6a506614a3b0","./revisit.js":"./revisit.js?v=6a506614a3b0","./series.js":"./series.js?v=6a506614a3b0","./clock.js":"./clock.js?v=6a506614a3b0","./vault.js":"./vault.js?v=6a506614a3b0","./draw.js":"./draw.js?v=6a506614a3b0","./watchlist.js":"./watchlist.js?v=6a506614a3b0","./lock.js":"./lock.js?v=6a506614a3b0","./replay.js":"./replay.js?v=6a506614a3b0","./demo.js":"./demo.js?v=6a506614a3b0","./diary.js":"./diary.js?v=6a506614a3b0","./videos.js":"./videos.js?v=6a506614a3b0","./system.js":"./system.js?v=6a506614a3b0","./dashboard.js":"./dashboard.js?v=6a506614a3b0"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.

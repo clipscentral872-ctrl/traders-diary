@@ -21,6 +21,7 @@ import {createChart} from "./chart.js";
 import * as WL from "./watchlist.js";
 import * as SER from "./series.js";
 import * as RV from "./revisit.js";
+import * as DRAW from "./draw.js";
 
 const $ = id => document.getElementById(id);
 const KEY = "tradersdiary.demo";
@@ -421,6 +422,9 @@ export function init(onSaveToDiary, onTradeClosed) {
 
   chart = createChart($("dc"), {
     timeLabel: ms => C.label(ms),
+    overlay: c => DRAW.paint(c),
+    onPress: (px, py) => DRAW.down(px, py, chart),
+    onDrag: (px, py) => DRAW.move(px, py, chart),
     onHover: b => ohlc(b || last()),
     onLevelMove: levelMoved,
     onLevelDrop: which => { recordMove(which); saveAccount(); render(); },
@@ -447,6 +451,7 @@ export function init(onSaveToDiary, onTradeClosed) {
     // does not belong to, so it is simply not offered.
     if (D.pos) return;
     D.sym = sym;
+    DRAW.setSymbol(sym);
     $("dsym").value = sym;
     refresh().then(paintWatch);
   });
@@ -456,6 +461,7 @@ export function init(onSaveToDiary, onTradeClosed) {
     // on a chart it does not belong to.
     if (D.pos) { $("dsym").value = D.pos.symbol; return; }
     D.sym = $("dsym").value;
+    DRAW.setSymbol(D.sym);
     await refresh();
   });
 
@@ -490,6 +496,47 @@ export function init(onSaveToDiary, onTradeClosed) {
     saveAccount();
     render();
   });
+
+  /* The same drawing tools as the replay, on the same rail, because a chart
+     you cannot mark up is half a chart wherever it is. */
+  $("dtools").innerHTML = DRAW.TOOLS.map(t =>
+    `<button class="rtool" data-tool="${t.id}" title="${t.name}"`
+    + ` aria-pressed="${t.id === "cursor"}">`
+    + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${t.icon}"/></svg>`
+    + "</button>").join("");
+  const litTools = () => {
+    const on = DRAW.getTool();
+    [...$("dtools").children].forEach(b =>
+      b.setAttribute("aria-pressed", String(b.dataset.tool === on)));
+    $("dwipe").disabled = !DRAW.count();
+  };
+  $("dtools").addEventListener("click", e => {
+    const b = e.target.closest(".rtool");
+    if (!b) return;
+    DRAW.setTool(b.dataset.tool);
+    litTools();
+    if (chart) chart.draw();
+  });
+  $("dwipe").addEventListener("click", () => {
+    if (!DRAW.count()) return;
+    if (!confirm(`Remove all ${DRAW.count()} drawings on ${D.sym}?`)) return;
+    DRAW.clear();
+    litTools();
+    if (chart) chart.draw();
+  });
+  addEventListener("keydown", e => {
+    const pane = document.querySelector('.tabpane[data-tab="demo"]');
+    if (!pane || pane.hidden) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+    if (e.key === "Escape" && DRAW.cancel()) { litTools(); chart.draw(); }
+    if ((e.key === "Delete" || e.key === "Backspace") && DRAW.hasSelection()) {
+      e.preventDefault();
+      DRAW.removeSelected();
+      litTools();
+      chart.draw();
+    }
+  });
+  litTools();
 
   render();
   refresh();

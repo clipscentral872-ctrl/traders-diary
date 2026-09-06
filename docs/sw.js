@@ -16,12 +16,22 @@
 // Stamped by tools/build_web.py from the content of the files below. A
 // fixed version meant a cache-first shell served the old page forever:
 // once installed, no update could reach anyone.
-const VERSION = "6560a5f9c55c";
+const VERSION = "6a506614a3b0";
 const SHELL = "diary-shell-" + VERSION;
 const DATA = "diary-bars-" + VERSION;
 
+// The modules the page imports, cached at the exact URLs it asks for.
+//
+// The page loads them through an import map that pins each one to the build,
+// so it requests "./chart.js?v=abc". Precaching "./chart.js" and matching
+// with ignoreSearch looked equivalent and was not: a stale entry answered
+// the new version's request, and the app came up half old and half new.
+// Stamped by tools/build_web.py, the same way VERSION is.
+const MODULES = ["engine.js", "chart.js", "levels.js", "revisit.js", "series.js", "clock.js", "vault.js", "draw.js", "watchlist.js", "lock.js", "replay.js", "demo.js", "diary.js", "videos.js", "system.js", "dashboard.js"];
+
 const FILES = [
-  "./", "./index.html", "./engine.js", "./replay.js", "./system.js", "./levels.js", "./lock.js", "./demo.js", "./revisit.js", "./dashboard.js", "./chart.js", "./watchlist.js", "./series.js", "./videos.js", "./diary.js", "./clock.js", "./vault.js",
+  "./", "./index.html",
+  ...MODULES.map(m => `./${m}?v=${VERSION}`),
   "./seed.json",
   "./manifest.webmanifest", "./icon.svg",
   "./icon-180.png", "./icon-192.png", "./icon-512.png",

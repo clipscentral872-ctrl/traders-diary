@@ -515,6 +515,23 @@ body{overflow:hidden}
 .rbtn2[aria-pressed="true"]{color:var(--accent); background:var(--accent-dim)}
 .rbtn2:focus-visible{outline:2px solid var(--accent); outline-offset:-1px}
 .railgap{flex:1}
+/* The drawing rail, the way TradingView has it: a column of icon buttons down
+   the left edge, the armed one lit, a hairline between the groups. */
+.drawrail{display:flex; flex-direction:column; gap:2px}
+.raildiv{height:1px; background:var(--line); margin:5px 3px}
+.rtool{
+  width:36px; height:36px; display:grid; place-items:center; cursor:pointer;
+  background:none; border:1px solid transparent; border-radius:4px;
+  color:var(--muted);
+}
+.rtool svg{width:17px; height:17px; fill:none; stroke:currentColor;
+  stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
+.rtool:hover{background:var(--lift); color:var(--text)}
+.rtool[aria-pressed="true"]{background:var(--accent-dim); color:var(--accent)}
+.rtool:focus-visible{outline:2px solid var(--accent); outline-offset:-1px}
+.rbtn2:disabled{opacity:.35; cursor:default}
+.rbtn2:disabled:hover{background:none; color:var(--muted)}
+@media (max-width:900px){ .rtool{width:44px; height:44px} }
 
 .wsmain{display:flex; flex-direction:column; min-width:0; min-height:0}
 .wstop{
@@ -1331,7 +1348,7 @@ def main():
 # and it would not show up until a deploy went out half old and half new.
 MODULES = [
     "engine.js", "chart.js", "levels.js", "revisit.js", "series.js",
-    "clock.js", "vault.js", "watchlist.js", "lock.js",
+    "clock.js", "vault.js", "draw.js", "watchlist.js", "lock.js",
     "replay.js", "demo.js", "diary.js", "videos.js", "system.js",
     "dashboard.js",
 ]
@@ -1378,7 +1395,7 @@ def stamp_worker(page):
     for name in ("engine.js", "chart.js", "levels.js", "revisit.js",
                  "replay.js", "demo.js", "diary.js", "videos.js",
                  "system.js", "dashboard.js", "lock.js", "watchlist.js",
-                 "series.js", "clock.js", "vault.js", "seed.json"):
+                 "series.js", "clock.js", "vault.js", "draw.js", "seed.json"):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())
@@ -1391,6 +1408,11 @@ def stamp_worker(page):
     build = hashlib.sha256("".join(parts).encode("utf-8")).hexdigest()[:12]
     new = re.sub(r'const VERSION = "[^"]*";',
                  f'const VERSION = "{build}";', sw, count=1)
+    # The same list the import map uses, so the worker caches exactly the
+    # URLs the page will ask for rather than something that looks like them.
+    new = re.sub(r"const MODULES = .*?;",
+                 "const MODULES = " + json.dumps(MODULES) + ";",
+                 new, count=1, flags=re.S)
     if new == sw and f'"{build}"' not in sw:
         raise SystemExit("could not stamp sw.js; the VERSION line moved")
     io.open(p, "w", encoding="utf-8").write(new)

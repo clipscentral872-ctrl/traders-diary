@@ -161,6 +161,11 @@ export function createChart(canvas, opts = {}) {
     levels(x, Y);
     candles(x, Y, v);
     tradeMarks(x, Y, v);
+    // Anything drawn ON the chart rather than under it: the boxes, lines and
+    // levels you put there yourself. Above the candles because they are
+    // notes about the candles, below the crosshair because the crosshair is
+    // where the cursor is and must never be hidden.
+    if (opts.overlay) opts.overlay(api);
     axes(x, r, Y, v);
     crosshair(x, Y, v, r);
     cutter(x, v);
@@ -464,8 +469,14 @@ export function createChart(canvas, opts = {}) {
 
   function down(e) {
     const p = pos(e);
-    // Nothing on a chart with no size can be pointed at meaningfully.
-    if (!plot.w || !plot.h) return;
+    // No size check here on purpose. A browser can report a zero-width
+    // viewport for a moment, and refusing every press in that state means
+    // the chart quietly stops responding. The NaN this was guarding against
+    // is caught where it was produced instead, in indexAt and in cutAt.
+    // The drawing layer gets first refusal. It takes the press when a tool is
+    // armed or when one of its own shapes was hit, and declines otherwise so
+    // the chart still pans normally.
+    if (opts.onPress && opts.onPress(p.x, p.y)) return;
     if (state.picking) {
       const v = visible();
       const k = Math.max(0, Math.min(v.bars.length - 1, indexAt(p.x)));
@@ -491,6 +502,11 @@ export function createChart(canvas, opts = {}) {
 
   function move(e) {
     const p = pos(e);
+    if (opts.onDrag && opts.onDrag(p.x, p.y)) {
+      state.cross = p.x < plot.x + plot.w ? p : null;
+      draw();
+      return;
+    }
     if (!drag) {
       const near = levelAt(p);
       if (near !== state.nearLevel) {
@@ -589,6 +605,41 @@ export function createChart(canvas, opts = {}) {
 
   /* ----------------------------------------------------------------- api */
 
+  /* Time and price to pixels, and back.
+   *
+   * Drawings are held in time and price, never in pixels, so they stay where
+   * you put them through a zoom, a pan, and a change of timeframe. A box
+   * pinned to pixels is a box that moves when you scroll, which is worse
+   * than no box.
+   */
+  function msToX(ms) {
+    const v = visible();
+    if (!v.bars.length) return null;
+    // Between bars as well as on them, so a line does not snap to the open.
+    const first = v.bars[0].ms, last = v.bars[v.bars.length - 1].ms;
+    if (v.bars.length === 1) return xOf(0);
+    const step = (last - first) / (v.bars.length - 1);
+    return xOf((ms - first) / (step || 1));
+  }
+
+  function xToMs(px) {
+    const v = visible();
+    if (!v.bars.length) return null;
+    const first = v.bars[0].ms, last = v.bars[v.bars.length - 1].ms;
+    const step = v.bars.length > 1
+      ? (last - first) / (v.bars.length - 1) : 60000;
+    const i = (px - plot.x) / Math.max(1e-6, barWidth()) - 0.5;
+    return first + i * step;
+  }
+
+  const priceToY = p => scale
+    ? plot.y + plot.h - (p - scale.r.lo) / (scale.r.hi - scale.r.lo) * plot.h
+    : null;
+
+  const yToPrice = y => scale
+    ? scale.r.hi - (y - plot.y) / plot.h * (scale.r.hi - scale.r.lo)
+    : null;
+
   const api = {
     setData(bars, {keepView = false} = {}) {
       const wasFollowing = state.follow;
@@ -620,6 +671,21 @@ export function createChart(canvas, opts = {}) {
       return api;
     },
     get picking() { return state.picking; },
+
+    /* What a drawing layer needs and nothing more: where a time and a price
+       land on screen, where a click lands in time and price, the canvas to
+       paint on, and the box it is allowed to paint in. */
+    get surface() {
+      return {
+        ctx: ctx || (ctx = canvas.getContext("2d")),
+        plot, css,
+        xOfMs: msToX, yOfPrice: priceToY,
+        msOfX: xToMs, priceOfY: yToPrice,
+        span: (() => { const v = visible(); return v.bars.length
+          ? {from: v.bars[0].ms, to: v.bars[v.bars.length - 1].ms} : null; })(),
+      };
+    },
+    repaint() { draw(); return api; },
     setPosition(p) { state.position = p || null; draw(); return api; },
     setTrade(t) { state.trade = t || null; draw(); return api; },
     /** Fit everything again, which is what double-click and reset do. */
