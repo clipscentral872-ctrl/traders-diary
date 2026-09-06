@@ -58,7 +58,8 @@ REPLAY_SECTION = re.compile(
 # One app, four tabs. The diary is the reason to open it, so it comes first
 # and it is what a fresh install lands on.
 TABS = [("home", "Home"), ("diary", "Diary"), ("demo", "Demo"),
-        ("replay", "Replay"), ("system", "System"), ("learn", "Learn")]
+        ("replay", "Replay"), ("videos", "Videos"), ("system", "System"),
+        ("learn", "Learn")]
 
 NAV = ('<nav class="tabs2" role="tablist" aria-label="Sections">'
        + "".join(f'<button class="tb" role="tab" data-go="{k}" '
@@ -320,6 +321,44 @@ EXTRA_CSS = """
 }
 #updbar span{flex:1 1 160px; font-size:14px}
 @media (max-width:640px){ #updbar{flex-direction:column; align-items:stretch} }
+
+/* the video library */
+.vgroup{margin-top:24px}
+.vgroup h3{
+  font-family:"Orbitron",sans-serif; font-weight:800; font-size:13px;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--accent);
+  margin:0 0 10px;
+}
+.vlist{display:grid; gap:7px; grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.vcut{
+  display:flex; align-items:center; gap:11px; text-align:left; cursor:pointer;
+  background:var(--raised); border:1px solid var(--line); color:var(--text);
+  font-family:"Chakra Petch",sans-serif; padding:12px 14px; min-height:52px;
+}
+.vcut:hover{border-color:var(--accent); background:var(--lift)}
+.vcut:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.vcut .vplay{
+  flex:none; width:0; height:0; border-left:11px solid var(--accent);
+  border-top:7px solid transparent; border-bottom:7px solid transparent;
+}
+.vcut .vn{flex:1; font-size:13.5px; line-height:1.35}
+.vcut .vs{
+  font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--faint);
+}
+.vcut.win{border-left:2px solid var(--win)}
+.vcut.loss{border-left:2px solid var(--loss)}
+.vplayer{
+  position:fixed; inset:0; z-index:70; background:rgba(5,7,12,.96);
+  display:flex; flex-direction:column; padding:18px; gap:12px;
+}
+.vhead{
+  display:flex; align-items:center; justify-content:space-between; gap:14px;
+  font-family:"Orbitron",sans-serif; font-weight:800; font-size:13px;
+  letter-spacing:.08em; text-transform:uppercase;
+}
+.vplayer video{
+  flex:1; min-height:0; width:100%; background:#000; border:1px solid var(--line);
+}
 
 /* The platform surface. A chart people work on wants to be the biggest thing
    on screen with its controls floating over it, not a small box under three
@@ -735,7 +774,8 @@ def stamp_worker(page):
     parts = [page]
     for name in ("engine.js", "replay.js", "system.js", "levels.js",
              "lock.js", "demo.js", "revisit.js",
-             "dashboard.js", "chart.js"):
+             "dashboard.js", "chart.js",
+             "videos.js"):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())

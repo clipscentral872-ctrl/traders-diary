@@ -12,6 +12,7 @@ import * as LOCK from "./lock.js";
 import * as DEMO from "./demo.js";
 import * as RV from "./revisit.js";
 import * as DASH from "./dashboard.js";
+import * as VID from "./videos.js";
 
 const $ = id => document.getElementById(id);
 const KEY = "tradersdiary.v1";
@@ -996,6 +997,8 @@ function intoDiary(incoming, source) {
 
 RP.setClock(tzOffset);
 RP.init(practice => intoDiary(practice, "replay"));
+
+VID.init();
 
 DEMO.setClock(tzOffset);
 DEMO.init(

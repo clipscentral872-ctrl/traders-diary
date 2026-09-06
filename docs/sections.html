@@ -178,6 +178,43 @@
 </section>
 </div>
 
+<div class="tabpane" data-tab="videos" hidden>
+
+<section>
+  <h2>Watch your trades back</h2>
+  <p class="lead">The rendered videos of your sessions: every trade of a day,
+  and the winners and losers cut apart so you can watch a run of losses back to
+  back. Reviewing losers together shows the same mistake repeating, which is
+  invisible when wins are mixed in between.</p>
+  <p class="lead">They are files on your own machine, under
+  <code>AITrader\For Learning</code>. <b>Nothing is uploaded.</b> Picking them
+  here just lets this app play them; they never leave the device, which is why
+  they are not bundled with the app on a public site.</p>
+
+  <div class="card hud drop" id="vdrop" tabindex="0" role="button"
+       aria-label="Choose your trade videos">
+    <input type="file" id="vpick" multiple accept="video/mp4,video/*" hidden>
+    <div class="dropface">
+      <div class="dropmark" aria-hidden="true"></div>
+      <p class="dropbig">Add your videos</p>
+      <p class="dropsub">Pick the whole For Learning folder, or drag the files
+      in &nbsp;/&nbsp; they stay on this device</p>
+    </div>
+    <p class="dropmsg" id="vmsg" hidden></p>
+  </div>
+
+  <div id="vlib"></div>
+
+  <div class="vplayer" id="vplayer" hidden>
+    <div class="vhead">
+      <span id="vtitle"></span>
+      <button class="instx" id="vclose">Close</button>
+    </div>
+    <video id="vvideo" controls playsinline></video>
+  </div>
+</section>
+</div>
+
 <div class="tabpane" data-tab="system" hidden>
 
 <section>
