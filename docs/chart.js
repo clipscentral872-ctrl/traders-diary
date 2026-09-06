@@ -82,7 +82,16 @@ export function createChart(canvas, opts = {}) {
 
   const xOf = i => plot.x + (i + 0.5) * (plot.w / Math.max(1, state.count));
   const barWidth = () => plot.w / Math.max(1, state.count);
-  const indexAt = px => Math.floor((px - plot.x) / barWidth());
+  /* Which bar is under this x.
+   *
+   * Guarded, because a chart on a tab that has not been shown yet has no
+   * width, and dividing by a bar width of zero gives NaN. That NaN then went
+   * out through onPick as the bar to cut at, and the replay ended up on bar
+   * NaN of 13,736 saying it was still loading. */
+  const indexAt = px => {
+    const bw = barWidth();
+    return bw > 0 && Number.isFinite(px) ? Math.floor((px - plot.x) / bw) : 0;
+  };
 
   /* ---------------------------------------------------------------- draw */
 
@@ -455,6 +464,8 @@ export function createChart(canvas, opts = {}) {
 
   function down(e) {
     const p = pos(e);
+    // Nothing on a chart with no size can be pointed at meaningfully.
+    if (!plot.w || !plot.h) return;
     if (state.picking) {
       const v = visible();
       const k = Math.max(0, Math.min(v.bars.length - 1, indexAt(p.x)));

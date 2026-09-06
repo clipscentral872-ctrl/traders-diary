@@ -158,7 +158,12 @@ function render() {
          ? "the whole series. Press Cut, then click the chart where you "
            + "want the future to stop."
          : `bar ${S.i + 1} of ${S.bars.length}`)
-    : "Loading the market...";
+    // "Loading" was a lie whenever the bars were already here and the index
+    // was not, which is a different problem and needs a different sentence.
+    : S.bars.length
+      ? `Bar ${S.i + 1} is outside the ${S.bars.length} loaded. `
+        + `Press the cross on the left to start again.`
+      : "Loading the market...";
   $("rpctl").hidden = S.mode !== "replay";
   $("rticket").hidden = S.mode !== "replay";
 
@@ -341,6 +346,10 @@ async function browse() {
   S.bars = all;
   S.mode = "browse";
   S.pos = null;
+  // Back to the start of the new series. Carrying the old index across a
+  // timeframe change is how bar 13,664 ended up being asked for out of 4,600.
+  S.i = 0;
+  stopAuto();
   chart.setData(all);
   chart.setLimit(null);
   chart.fit(200);
@@ -348,11 +357,46 @@ async function browse() {
   return all;
 }
 
+/**
+ * Reload the current contract and timeframe, staying where you were.
+ *
+ * Changing timeframe mid-replay should not throw the replay away. What you
+ * are looking at is a moment, not a bar number, so the moment is what is
+ * kept: the same instant is found in the new series and cut there again.
+ * Bar numbers do not survive the change and were never the thing that
+ * mattered.
+ */
+async function reload() {
+  const wasReplaying = S.mode === "replay";
+  const at = wasReplaying && S.bars[S.i] ? S.bars[S.i].ms : null;
+  S.bars = [];
+  const all = await browse();
+  if (!all || at == null) return;
+  // The last bar that had closed by then, so nothing after the moment you
+  // were at becomes visible just because the bars got bigger.
+  let i = 0;
+  for (let k = 0; k < all.length; k++) {
+    if (all[k].ms <= at) i = k; else break;
+  }
+  cutAt(i);
+}
+
 /** Cut the chart at this bar: everything after it stops existing. */
 function cutAt(i) {
+  // Nothing to cut. Without this the clamp below produced bar 30 of an empty
+  // series, which left the replay showing "Loading the market" for good with
+  // the transport and the order ticket sitting there over it.
+  // A bar number that is not a number cannot be cut at. Belt as well as
+  // braces: the chart guards its end of this too.
+  if (!Number.isFinite(i)) return;
+  if (!S.bars.length) {
+    $("rpread").textContent = "The bars are still loading. Try that again in "
+      + "a moment.";
+    return;
+  }
   // Enough history behind the cut to read structure from. Dropped in with
   // thirty bars of context there is nothing to have formed an opinion on.
-  S.i = Math.max(30, Math.min(i, S.bars.length - 1));
+  S.i = Math.max(0, Math.min(Math.max(30, i), S.bars.length - 1));
   S.mode = "replay";
   S.pos = null;
   chart.setLimit(S.i + 1);
@@ -423,6 +467,8 @@ export function init(onSave) {
 
   $("rsym").addEventListener("change", () => {
     S.sym = $("rsym").value;
+    // A different contract is a different market, so the replay starts over.
+    S.mode = "browse";
     S.bars = [];
     reset();
   });
@@ -432,8 +478,7 @@ export function init(onSave) {
     S.tf = b.dataset.tf;
     [...$("rtf").children].forEach(c =>
       c.setAttribute("aria-pressed", String(c.dataset.tf === S.tf)));
-    S.bars = [];
-    reset();
+    reload();
   });
 
   $("rgo").addEventListener("click", startFromDate);
