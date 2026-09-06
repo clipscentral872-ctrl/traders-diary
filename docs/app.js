@@ -11,6 +11,7 @@ import * as SYS from "./system.js";
 import * as LOCK from "./lock.js";
 import * as DEMO from "./demo.js";
 import * as RV from "./revisit.js";
+import * as DASH from "./dashboard.js";
 
 const $ = id => document.getElementById(id);
 const KEY = "tradersdiary.v1";
@@ -187,6 +188,7 @@ function renderPanels() {
 
   renderStanding();
   renderLearn();
+  DASH.refreshRecord();
   const first = document.querySelector('.src[data-src="live"]')
              || document.querySelector(".src");
   window.pickSource(first ? first.dataset.src : "live");
@@ -615,9 +617,11 @@ async function showRevisitFacts() {
    adding the Demo tab left it off, so clicking Demo silently fell back to the
    Diary and the pane never opened. */
 const TABNAMES = [...document.querySelectorAll(".tb")].map(b => b.dataset.go);
+// Where a fresh open lands, and what an unknown hash falls back to.
+const HOME = TABNAMES[0] || "diary";
 
 function goTab(name, push) {
-  if (!TABNAMES.includes(name)) name = "diary";
+  if (!TABNAMES.includes(name)) name = HOME;
   document.querySelectorAll(".tabpane").forEach(p => {
     p.hidden = p.dataset.tab !== name;
   });
@@ -634,11 +638,17 @@ function goTab(name, push) {
   if (name === "demo") DEMO.redraw();
   if (name === "system") SYS.show();
   if (name === "learn") showRevisitFacts();
+  if (name === "home") DASH.show();
 }
 
 document.querySelector(".tabs2").addEventListener("click", e => {
   const b = e.target.closest(".tb");
   if (b) goTab(b.dataset.go, true);
+});
+// The dashboard's jump buttons carry the same data-go as the nav.
+document.addEventListener("click", e => {
+  const b = e.target.closest("button[data-go]");
+  if (b && !b.classList.contains("tb")) goTab(b.dataset.go, true);
 });
 addEventListener("hashchange", () => goTab(location.hash.slice(1), false));
 
@@ -994,7 +1004,7 @@ DEMO.init(
   // still show up in the numbers when you come back to them.
   () => { renderPanels(); storeLine(); });
 
-goTab(location.hash.slice(1) || "diary", false);
+goTab(location.hash.slice(1) || HOME, false);
 
 /* --------------------------------------------------------- new versions */
 

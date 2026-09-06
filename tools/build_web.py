@@ -57,12 +57,12 @@ REPLAY_SECTION = re.compile(
 
 # One app, four tabs. The diary is the reason to open it, so it comes first
 # and it is what a fresh install lands on.
-TABS = [("diary", "Diary"), ("demo", "Demo"), ("replay", "Replay"),
-        ("system", "System"), ("learn", "Learn")]
+TABS = [("home", "Home"), ("diary", "Diary"), ("demo", "Demo"),
+        ("replay", "Replay"), ("system", "System"), ("learn", "Learn")]
 
 NAV = ('<nav class="tabs2" role="tablist" aria-label="Sections">'
        + "".join(f'<button class="tb" role="tab" data-go="{k}" '
-                 f'aria-selected="{"true" if k == "diary" else "false"}">'
+                 f'aria-selected="{"true" if k == "home" else "false"}">'
                  f'{label}</button>' for k, label in TABS)
        + "</nav>\n")
 
@@ -321,6 +321,47 @@ EXTRA_CSS = """
 #updbar span{flex:1 1 160px; font-size:14px}
 @media (max-width:640px){ #updbar{flex-direction:column; align-items:stretch} }
 
+/* dashboard */
+.dashhead h2{margin-top:0}
+.dgrid{
+  display:grid; gap:12px; margin-top:20px;
+  grid-template-columns:repeat(auto-fit, minmax(215px, 1fr));
+}
+.dtile{
+  background:var(--raised); border:1px solid var(--line); padding:16px 18px;
+  display:flex; flex-direction:column; gap:5px; position:relative;
+  min-height:104px; justify-content:center;
+}
+.dtile::before{
+  content:""; position:absolute; left:-1px; top:-1px; width:16px; height:16px;
+  border-top:2px solid var(--accent); border-left:2px solid var(--accent);
+}
+.dl{
+  color:var(--muted); font-size:10.5px; text-transform:uppercase;
+  letter-spacing:.13em; font-weight:600;
+}
+.dv{
+  font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums;
+  font-size:27px; font-weight:500; line-height:1.15; letter-spacing:-.01em;
+}
+.dv.win{color:var(--win); text-shadow:0 0 22px rgba(43,224,138,.3)}
+.dv.loss{color:var(--loss); text-shadow:0 0 22px rgba(255,92,110,.28)}
+.dn{color:var(--faint); font-size:12px; line-height:1.45}
+.dleak{
+  margin-top:14px; background:var(--line-soft); border:1px solid var(--line);
+  border-left:2px solid var(--loss); padding:15px 18px;
+}
+.dlt{
+  color:var(--loss); font-size:10.5px; text-transform:uppercase;
+  letter-spacing:.13em; font-weight:700;
+}
+.dleak p{margin:6px 0 0; color:var(--text); font-size:14px; line-height:1.65}
+.dleak b{color:var(--loss)}
+@media (max-width:640px){
+  .dgrid{grid-template-columns:1fr}
+  .dv{font-size:24px}
+}
+
 .install{
   display:flex; align-items:center; gap:18px; flex-wrap:wrap;
   padding:20px 22px; margin-bottom:34px;
@@ -564,7 +605,8 @@ def stamp_worker(page):
     import hashlib
     parts = [page]
     for name in ("engine.js", "replay.js", "system.js", "levels.js",
-             "lock.js", "demo.js", "revisit.js"):
+             "lock.js", "demo.js", "revisit.js",
+             "dashboard.js"):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())
