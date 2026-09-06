@@ -108,8 +108,10 @@ function details(t) {
   $("dnote").textContent = t.note || "";
 
   const steps = t.trail || [];
+  // The panel block already carries the heading; adding another printed
+  // "Stop moves" twice, one under the other.
   $("dtrail").innerHTML = !steps.length ? "" :
-    '<h4>Stop moves</h4>' + steps.map(s =>
+    steps.map(s =>
       `<div class="tstep"><span class="tt">${esc(s.t)}</span>`
       + `<span class="tp">${px(s.sl)}</span>`
       + `<span class="tk">${esc(s.kind || "")}</span>`

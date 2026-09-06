@@ -45,6 +45,7 @@ export function createChart(canvas, opts = {}) {
     hoverIndex: null,
     grab: null,          // "stop" or "target" while one is being dragged
     nearLevel: null,     // and which one the cursor is hovering
+    picking: false,      // choosing where to cut the chart for a replay
   };
 
   let W = 0, H = 0, plot = {x: 0, y: 0, w: 0, h: 0}, scale = null;
@@ -119,6 +120,51 @@ export function createChart(canvas, opts = {}) {
     tradeMarks(x, Y, v);
     axes(x, r, Y, v);
     crosshair(x, Y, v, r);
+    cutter(x, v);
+  }
+
+  /* Choosing where to cut. A vertical line with a pair of scissors, which is
+     what every platform shows for this, because "click somewhere on the
+     chart" is otherwise an instruction with no visible target. */
+  function cutter(x, v) {
+    if (!state.picking || !state.cross) return;
+    const k = Math.max(0, Math.min(v.bars.length - 1, indexAt(state.cross.x)));
+    const b = v.bars[k];
+    if (!b) return;
+    const cx = Math.round(xOf(k)) + 0.5;
+
+    // Everything after the cut is what would be hidden, shown greyed so the
+    // choice is visible before it is made.
+    x.save();
+    x.fillStyle = "rgba(5,7,12,.62)";
+    x.fillRect(cx, plot.y, plot.x + plot.w - cx, plot.h);
+    x.strokeStyle = css("--accent");
+    x.lineWidth = 1.5;
+    x.beginPath();
+    x.moveTo(cx, plot.y);
+    x.lineTo(cx, plot.y + plot.h);
+    x.stroke();
+
+    // The scissors, drawn rather than a glyph so it does not depend on a font.
+    const cy = plot.y + 15;
+    x.lineWidth = 1.5;
+    x.beginPath();
+    x.moveTo(cx - 5, cy - 6); x.lineTo(cx + 4, cy + 5);
+    x.moveTo(cx + 5, cy - 6); x.lineTo(cx - 4, cy + 5);
+    x.stroke();
+    x.beginPath();
+    x.arc(cx - 5, cy + 7, 2.6, 0, Math.PI * 2);
+    x.arc(cx + 5, cy + 7, 2.6, 0, Math.PI * 2);
+    x.stroke();
+
+    x.font = '600 10.5px "Chakra Petch", sans-serif';
+    x.fillStyle = css("--accent");
+    x.textBaseline = "middle";
+    const label = (opts.timeLabel || (ms => String(ms)))(b.ms);
+    const w = x.measureText(label).width;
+    const lx = cx + 9 + w > plot.x + plot.w ? cx - 9 - w : cx + 9;
+    x.fillText(label, lx, plot.y + plot.h - 12);
+    x.restore();
   }
 
   function grid(x, r, Y) {
@@ -353,6 +399,15 @@ export function createChart(canvas, opts = {}) {
 
   function down(e) {
     const p = pos(e);
+    if (state.picking) {
+      const v = visible();
+      const k = Math.max(0, Math.min(v.bars.length - 1, indexAt(p.x)));
+      state.picking = false;
+      canvas.style.cursor = "crosshair";
+      if (opts.onPick) opts.onPick(v.start + k);
+      draw();
+      return;
+    }
     const grab = levelAt(p);
     if (grab) {
       // Dragging a level must not also pan the chart underneath it.
@@ -490,6 +545,14 @@ export function createChart(canvas, opts = {}) {
       return api;
     },
     setLevels(list) { state.levels = list || []; draw(); return api; },
+    /** Choose where to cut the chart. The next click on it picks a bar. */
+    pick(on) {
+      state.picking = !!on;
+      canvas.style.cursor = on ? "crosshair" : "crosshair";
+      draw();
+      return api;
+    },
+    get picking() { return state.picking; },
     setPosition(p) { state.position = p || null; draw(); return api; },
     setTrade(t) { state.trade = t || null; draw(); return api; },
     /** Fit everything again, which is what double-click and reset do. */

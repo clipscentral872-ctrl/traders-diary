@@ -87,57 +87,83 @@ INSTALL = """<section id="installbar" hidden>
 # The chart is the reason the diary exists, so it leads the tab and gets the
 # whole width. It used to be a small static picture below a screenful of
 # statistics, which is exactly backwards.
-TRADEVIEW = """<section class="platform" id="tradeview">
-  <div class="pbar">
-    <div class="pgroup" id="dfilter" role="group" aria-label="Which trades">
-      <button class="ptool" data-f="all" aria-pressed="true">All <span class="dfn">0</span></button>
-      <button class="ptool" data-f="won" aria-pressed="false">Winners <span class="dfn">0</span></button>
-      <button class="ptool" data-f="lost" aria-pressed="false">Losers <span class="dfn">0</span></button>
-    </div>
-    <div class="pgroup pgrow" id="dohlc2"></div>
-    <div class="pgroup">
+# The app shell.
+#
+# A chart wants the whole screen; a lesson wants a readable column. So there
+# are two layouts, not one compromise between them. The working tabs run
+# edge to edge and never scroll the page, the way a platform does. The
+# reading tabs keep a measured column, because 1600 pixels of prose is
+# unreadable and calling it "full bleed" does not fix that.
+APPBAR = """<div class="appbar">
+  <span class="brand">Traders&nbsp;Diary</span>
+  __NAV__
+  <span class="appmeta" id="appmeta"><span id="ntrades">0</span> trades</span>
+</div>
+"""
+
+
+TRADEVIEW = """<div class="ws">
+  <div class="wsrail" role="group" aria-label="Which trades" id="dfilter">
+    <button class="rbtn2" data-f="all" aria-pressed="true" title="All trades">All</button>
+    <button class="rbtn2" data-f="won" aria-pressed="false" title="Winners only">W</button>
+    <button class="rbtn2" data-f="lost" aria-pressed="false" title="Losers only">L</button>
+    <span class="railgap"></span>
+    <button class="rbtn2" id="dzin2" title="Zoom in">+</button>
+    <button class="rbtn2" id="dzout2" title="Zoom out">&minus;</button>
+    <button class="rbtn2" id="dfit2" title="Fit the trade">Fit</button>
+  </div>
+
+  <div class="wsmain">
+    <div class="wstop">
       <button class="ptool" id="dprev" title="Previous trade">&#9664;</button>
       <button class="ptool" id="dnext" title="Next trade">&#9654;</button>
+      <div class="chead" id="dhead"></div>
+      <div class="pgrow" id="dohlc2"></div>
     </div>
+    <div class="wsstage">
+      <canvas id="dchart"></canvas>
+      <p class="nobars" id="dnobars" hidden>No candles were stored for this
+      trade. The published bars reach back about ten days, so import each
+      session while it is recent. The numbers are exact either way.</p>
+    </div>
+    <div class="dstrip" id="dtabs" role="tablist" aria-label="Your trades"></div>
+    <div class="wsfoot"><div class="values" id="dvalues"></div></div>
   </div>
 
-  <div class="dstrip" id="dtabs" role="tablist" aria-label="Your trades"></div>
-
-  <div class="pstage">
-    <canvas id="dchart"></canvas>
-    <div class="ptools">
-      <button class="ptool" id="dzin2" title="Zoom in">+</button>
-      <button class="ptool" id="dzout2" title="Zoom out">&minus;</button>
-      <button class="ptool" id="dfit2" title="Fit the trade">Fit</button>
-    </div>
-    <p class="nobars" id="dnobars" hidden>No candles were stored for this trade.
-    The published bars only reach back about ten days, so import each session
-    while it is recent and the chart is kept for good. The numbers are exact
-    either way.</p>
-  </div>
-
-  <div class="chead" id="dhead"></div>
-  <div class="values" id="dvalues"></div>
-
-  <div class="body">
-    <div class="pane">
-      <h3>What happened</h3>
+  <div class="wspanel">
+    <div class="pblock">
+      <h4>What happened</h4>
       <div class="flags" id="dflags"></div>
       <p class="note" id="dnote"></p>
+    </div>
+    <div class="pblock">
+      <h4>What you were thinking</h4>
       <div class="mynote">
-        <label for="mynotebox">What you were thinking</label>
         <textarea id="mynotebox" disabled
           placeholder="Why you took it, what you saw, what you would do differently. Saved on this device as you type."></textarea>
         <p class="mysaved" id="mynotesaved"></p>
       </div>
     </div>
-    <div class="pane">
-      <h3>Stop moves</h3>
+    <div class="pblock">
+      <h4>Stop moves</h4>
       <div class="trail" id="dtrail"></div>
     </div>
+    <div class="pblock">
+      <h4>Import a session</h4>
+      <div class="drop" id="drop" tabindex="0" role="button"
+           aria-label="Choose your TradingView export files">
+        <input type="file" id="pick" multiple accept=".csv" hidden>
+        <p class="dropbig">Add exports</p>
+        <p class="dropsub">All six at once</p>
+        <ul class="dropfiles" id="dropfiles"></ul>
+        <div class="dropbar" id="dropbar" hidden><i></i></div>
+      </div>
+      <p class="dropmsg" id="dropmsg" hidden></p>
+    </div>
   </div>
-</section>
+</div>
 """
+
 
 
 PRIVACY = """<section>
@@ -414,6 +440,157 @@ EXTRA_CSS = """
 }
 .vplayer video{
   flex:1; min-height:0; width:100%; background:#000; border:1px solid var(--line);
+}
+
+/* ------------------------------------------------------------- app shell */
+/* A platform is a fixed frame with one scrolling area inside it, not a long
+   page you fall down. The working tabs get exactly that; the reading tabs
+   keep a column you can actually read. */
+html,body{height:100%}
+body{overflow:hidden}
+.app{display:flex; flex-direction:column; height:100dvh; min-height:0}
+
+.appbar{
+  flex:none; display:flex; align-items:center; gap:18px;
+  background:var(--raised); border-bottom:1px solid var(--line);
+  padding:0 14px; height:46px; overflow:hidden;
+}
+.brand{
+  font-family:"Orbitron",sans-serif; font-weight:900; font-size:13px;
+  letter-spacing:.13em; text-transform:uppercase; color:var(--text);
+  white-space:nowrap; flex:none;
+}
+.appmeta{
+  margin-left:auto; flex:none; font-family:"JetBrains Mono",monospace;
+  font-size:11.5px; color:var(--muted); white-space:nowrap;
+}
+.appmeta b{color:var(--text)}
+.appmeta .win{color:var(--win)} .appmeta .loss{color:var(--loss)}
+
+.appbody{flex:1; min-height:0; position:relative}
+.tabpane{position:absolute; inset:0; display:flex; flex-direction:column; min-height:0}
+.tabpane[hidden]{display:none !important}
+/* Reading tabs scroll their own column; working tabs never scroll the page. */
+.tabpane.reading{overflow-y:auto; overflow-x:hidden}
+.reading .col{max-width:1000px; margin:0 auto; padding:30px 22px 80px}
+
+/* the workspace: rail, stage, panel, status */
+.ws{display:grid; grid-template-columns:46px minmax(0,1fr) 292px; flex:1; min-height:0}
+.wsrail{
+  display:flex; flex-direction:column; gap:4px; padding:8px 5px;
+  background:var(--raised); border-right:1px solid var(--line);
+}
+.rbtn2{
+  width:36px; height:36px; display:flex; align-items:center;
+  justify-content:center; background:none; border:1px solid transparent;
+  color:var(--muted); cursor:pointer; font-family:"Chakra Petch",sans-serif;
+  font-size:12px; font-weight:600; border-radius:2px;
+}
+.rbtn2:hover{color:var(--text); background:var(--lift)}
+.rbtn2[aria-pressed="true"]{color:var(--accent); border-color:var(--accent)}
+.rbtn2:focus-visible{outline:2px solid var(--accent); outline-offset:-1px}
+.railgap{flex:1}
+
+.wsmain{display:flex; flex-direction:column; min-width:0; min-height:0}
+.wstop{
+  flex:none; display:flex; align-items:center; gap:12px; flex-wrap:nowrap;
+  padding:0 12px; height:40px; border-bottom:1px solid var(--line);
+  background:var(--raised); overflow:hidden;
+}
+.wsstage{flex:1; min-height:0; position:relative; background:var(--ground)}
+.wsstage canvas{position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none}
+.wsfoot{
+  flex:none; display:flex; align-items:center; gap:14px; padding:0 12px;
+  height:34px; border-top:1px solid var(--line); background:var(--raised);
+  font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--muted);
+  overflow-x:auto; white-space:nowrap; scrollbar-width:none;
+}
+.wsfoot::-webkit-scrollbar{display:none}
+
+.wspanel{
+  border-left:1px solid var(--line); background:var(--raised);
+  display:flex; flex-direction:column; min-height:0; overflow-y:auto;
+}
+.pblock{border-bottom:1px solid var(--line); padding:13px 14px}
+.pblock h4{
+  margin:0 0 9px; font-family:"Orbitron",sans-serif; font-weight:800;
+  font-size:10.5px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--muted);
+}
+.pblock:last-child{border-bottom:none}
+
+@media (max-width:900px){
+  /* No room for a rail and a panel beside a chart. The panel drops under it
+     and the rail becomes a row, which is what every platform does on a phone. */
+  .ws{
+    display:flex; flex-direction:column; min-height:0;
+  }
+  .wsrail{
+    flex:none; flex-direction:row; border-right:none;
+    border-bottom:1px solid var(--line); overflow-x:auto; scrollbar-width:none;
+  }
+  .wsrail::-webkit-scrollbar{display:none}
+  .railgap{display:none}
+  .wsmain{flex:none}
+  .wsstage{height:46vh; min-height:260px}
+  .wspanel{
+    flex:none; border-left:none; border-top:1px solid var(--line);
+    overflow:visible;
+  }
+  /* The working tabs scroll on a phone. There is no room to hold a chart, an
+     order ticket and an account list on one screen, and pretending otherwise
+     is how a control ends up off the edge where nobody can reach it. */
+  .tabpane{overflow-y:auto}
+
+  /* Controls wrap rather than scroll sideways. A row that scrolls hides its
+     last control, and the last control here is Start: unreachable without
+     knowing to swipe a bar that gives no sign it moves. */
+  .wstop{height:auto; padding:8px 10px; gap:7px; flex-wrap:wrap; overflow:visible}
+  .wstop > *{flex:0 1 auto}
+  .psel, .pbtn{flex:1 1 auto; min-width:0}
+  #rdate{flex:2 1 130px}
+  .pgrow{flex:1 1 100%; overflow:visible}
+  /* The status line is information, so it wraps instead of being clipped. */
+  .wsfoot{height:auto; padding:8px 12px; white-space:normal; line-height:1.5}
+
+  /* Two rows in the bar: identity and count, then the tabs, scrolling. */
+  .appbar{
+    height:auto; flex-wrap:wrap; padding:7px 12px 0; gap:0 12px;
+    overflow:visible;
+  }
+  .brand{font-size:12px; order:1}
+  .appmeta{order:2; margin-left:auto}
+  .appbar .tabs2{
+    order:3; flex:1 0 100%; margin:6px -12px 0; padding:0 12px;
+    border-bottom:none;
+  }
+  .tb{padding:10px 12px; font-size:11px}
+}
+
+
+/* the watchlist */
+.wlist{display:flex; flex-direction:column; gap:2px}
+.wl{
+  display:grid; grid-template-columns:auto 1fr auto; gap:2px 9px;
+  align-items:baseline; text-align:left; cursor:pointer; padding:7px 8px;
+  background:none; border:1px solid transparent; border-left:2px solid transparent;
+  color:var(--muted); font-family:"Chakra Petch",sans-serif;
+}
+.wl:hover{background:var(--lift); color:var(--text)}
+.wl.on{border-left-color:var(--accent); background:var(--lift); color:var(--text)}
+.wl:focus-visible{outline:2px solid var(--accent); outline-offset:-1px}
+.wls{
+  font-family:"Orbitron",sans-serif; font-weight:800; font-size:11.5px;
+  letter-spacing:.06em; color:var(--text);
+}
+.wln{font-size:11px; color:var(--faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.wlp{
+  font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--text);
+  font-variant-numeric:tabular-nums;
+}
+.wlc{
+  grid-column:3; font-family:"JetBrains Mono",monospace; font-size:10.5px;
+  font-variant-numeric:tabular-nums; text-align:right;
 }
 
 /* the trade browser */
@@ -848,6 +1025,15 @@ EXTRA_CSS = """
   .drop:hover{border-color:var(--line); background:transparent}
   .bigbtn:hover{background:var(--lift); box-shadow:0 0 24px rgba(53,224,240,.16)}
 }
+
+/* Every control a thumb has to hit clears 44px, the smallest thing a finger
+   reliably lands on. Keyed off width rather than (hover:none), because a
+   phone-sized window is the case that matters and hover detection is not
+   dependable enough to hang a tap target on. */
+@media (max-width:900px){
+  .rbtn2,.ptool,.pbtn,.psel,.tb,.tq input,.tfb{min-height:44px}
+  .rbtn2{min-width:44px}
+}
 """
 
 
@@ -908,20 +1094,76 @@ def main():
         if not hit:
             raise SystemExit(f"{fn}() moved; check the template")
 
-    # Directly under the header, above everything else on the page.
-    marker = "</header>\n"
-    if marker not in src:
+    # The page becomes an app shell. The big header and the centred column go:
+    # a working chart wants the frame, not a title and 44 pixels of padding
+    # above it. What the template carried inside <div class="wrap"> is split,
+    # the chart becoming the Diary and the reading material moving to Home.
+    head_block = re.search(r"<header>.*?</header>\s*", src, re.S)
+    if not head_block:
         raise SystemExit("the header moved; check the template")
-    src = src.replace(marker, marker + NAV + INSTALL
-                      + '<div class="tabpane" data-tab="diary">\n', 1)
+    src = src.replace(head_block.group(0), "", 1)
 
-    # Everything the template already had becomes the Diary tab. The other
-    # three are appended after it, before the footer that closes the page.
-    foot = "<footer>"
-    if foot not in src:
-        raise SystemExit("the footer moved; check the template")
+    # The source picker went with the header. It belongs on Home beside the
+    # figures it switches, not in a title bar above a chart it does not touch.
+    # Emitted rather than cut out of the header: the picker is two sibling
+    # divs, and a non-greedy match for the wrapper took only the first.
+    source_block = (
+        '<section id="sourcepick">\n'
+        '  <h2>Your figures</h2>\n'
+        '  <p class="lead">Practice and the automated system are kept apart '
+        'from what you actually traded, on purpose. Folded together they would '
+        'flatter or wreck the one number worth checking before you fund '
+        'anything.</p>\n'
+        '  <div class="sources"><div class="srcrow" id="srcrow"></div>'
+        '<div id="srcpanes"></div></div>\n'
+        "</section>\n")
+
+    # A lookahead, so the match stops BEFORE the footer rather than eating it:
+    # swallowing the opening tag left the footer text orphaned and nothing
+    # afterwards could find it.
+    body = re.search(r'<div class="wrap">(.*?)(?=<footer>)', src, re.S)
+    if not body:
+        raise SystemExit("the wrap or footer moved; check the template")
+    inner = body.group(1)
+    if TRADEVIEW not in inner:
+        raise SystemExit("the trade view was not placed; check the build")
+    reading = inner.replace(TRADEVIEW, "")
+    # The import box now lives in the Diary panel, where the trades it creates
+    # appear. Leaving the old section here as well would put two elements with
+    # the same id on the page, and getElementById would only ever find one.
+    reading, n = re.subn(r'<section id="importer">.*?</section>\s*',
+                         "", reading, count=1, flags=re.S)
+    if n != 1:
+        raise SystemExit("the import section moved; check the template")
+
     extra = io.open(os.path.join(DOCS, "sections.html"), encoding="utf-8").read()
-    src = src.replace(foot, "</div>\n" + extra + "\n" + foot, 1)
+    home_open = ('<div class="tabpane reading" data-tab="home" hidden>\n'
+                 '<div class="col">')
+    if home_open not in extra:
+        raise SystemExit("the Home pane moved; check sections.html")
+    extra = extra.replace(
+        home_open, home_open + "\n" + INSTALL + source_block + reading, 1)
+
+    shell = (APPBAR.replace("__NAV__", NAV)
+             + '<div class="appbody">\n'
+             + '<div class="tabpane" data-tab="diary" hidden>'
+             + TRADEVIEW + "</div>\n"
+             + extra + "</div>\n")
+    src = src.replace(body.group(0), '<div class="app">\n' + shell, 1)
+
+    # The footer is reading material and the shell is a fixed frame, so left
+    # where it was it hung below the viewport and gave the app a scrollbar it
+    # is not meant to have. It moves to the end of the Home column instead.
+    tail = re.search(r"<footer>.*?</footer>\s*", src, re.S)
+    if not tail:
+        raise SystemExit("the footer moved; check the template")
+    src = src.replace(tail.group(0), "", 1)
+    # The end of Home is wherever the next pane begins, which is Demo, not
+    # Videos: anchoring on Videos dropped the footer into the middle of Replay.
+    after_home = '<div class="tabpane" data-tab="demo"'
+    if after_home not in src:
+        raise SystemExit("the Demo pane moved; check sections.html")
+    src = src.replace(after_home, tail.group(0) + after_home, 1)
 
     src = src.replace("__LEARN__", PRIVACY + SETTINGS)
 
@@ -961,7 +1203,7 @@ def stamp_worker(page):
     parts = [page]
     for name in ("engine.js", "chart.js", "levels.js", "revisit.js",
                  "replay.js", "demo.js", "diary.js", "videos.js",
-                 "system.js", "dashboard.js", "lock.js"):
+                 "system.js", "dashboard.js", "lock.js", "watchlist.js"):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())

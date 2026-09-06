@@ -561,6 +561,157 @@ footer{
   flex:1; min-height:0; width:100%; background:#000; border:1px solid var(--line);
 }
 
+/* ------------------------------------------------------------- app shell */
+/* A platform is a fixed frame with one scrolling area inside it, not a long
+   page you fall down. The working tabs get exactly that; the reading tabs
+   keep a column you can actually read. */
+html,body{height:100%}
+body{overflow:hidden}
+.app{display:flex; flex-direction:column; height:100dvh; min-height:0}
+
+.appbar{
+  flex:none; display:flex; align-items:center; gap:18px;
+  background:var(--raised); border-bottom:1px solid var(--line);
+  padding:0 14px; height:46px; overflow:hidden;
+}
+.brand{
+  font-family:"Orbitron",sans-serif; font-weight:900; font-size:13px;
+  letter-spacing:.13em; text-transform:uppercase; color:var(--text);
+  white-space:nowrap; flex:none;
+}
+.appmeta{
+  margin-left:auto; flex:none; font-family:"JetBrains Mono",monospace;
+  font-size:11.5px; color:var(--muted); white-space:nowrap;
+}
+.appmeta b{color:var(--text)}
+.appmeta .win{color:var(--win)} .appmeta .loss{color:var(--loss)}
+
+.appbody{flex:1; min-height:0; position:relative}
+.tabpane{position:absolute; inset:0; display:flex; flex-direction:column; min-height:0}
+.tabpane[hidden]{display:none !important}
+/* Reading tabs scroll their own column; working tabs never scroll the page. */
+.tabpane.reading{overflow-y:auto; overflow-x:hidden}
+.reading .col{max-width:1000px; margin:0 auto; padding:30px 22px 80px}
+
+/* the workspace: rail, stage, panel, status */
+.ws{display:grid; grid-template-columns:46px minmax(0,1fr) 292px; flex:1; min-height:0}
+.wsrail{
+  display:flex; flex-direction:column; gap:4px; padding:8px 5px;
+  background:var(--raised); border-right:1px solid var(--line);
+}
+.rbtn2{
+  width:36px; height:36px; display:flex; align-items:center;
+  justify-content:center; background:none; border:1px solid transparent;
+  color:var(--muted); cursor:pointer; font-family:"Chakra Petch",sans-serif;
+  font-size:12px; font-weight:600; border-radius:2px;
+}
+.rbtn2:hover{color:var(--text); background:var(--lift)}
+.rbtn2[aria-pressed="true"]{color:var(--accent); border-color:var(--accent)}
+.rbtn2:focus-visible{outline:2px solid var(--accent); outline-offset:-1px}
+.railgap{flex:1}
+
+.wsmain{display:flex; flex-direction:column; min-width:0; min-height:0}
+.wstop{
+  flex:none; display:flex; align-items:center; gap:12px; flex-wrap:nowrap;
+  padding:0 12px; height:40px; border-bottom:1px solid var(--line);
+  background:var(--raised); overflow:hidden;
+}
+.wsstage{flex:1; min-height:0; position:relative; background:var(--ground)}
+.wsstage canvas{position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none}
+.wsfoot{
+  flex:none; display:flex; align-items:center; gap:14px; padding:0 12px;
+  height:34px; border-top:1px solid var(--line); background:var(--raised);
+  font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--muted);
+  overflow-x:auto; white-space:nowrap; scrollbar-width:none;
+}
+.wsfoot::-webkit-scrollbar{display:none}
+
+.wspanel{
+  border-left:1px solid var(--line); background:var(--raised);
+  display:flex; flex-direction:column; min-height:0; overflow-y:auto;
+}
+.pblock{border-bottom:1px solid var(--line); padding:13px 14px}
+.pblock h4{
+  margin:0 0 9px; font-family:"Orbitron",sans-serif; font-weight:800;
+  font-size:10.5px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--muted);
+}
+.pblock:last-child{border-bottom:none}
+
+@media (max-width:900px){
+  /* No room for a rail and a panel beside a chart. The panel drops under it
+     and the rail becomes a row, which is what every platform does on a phone. */
+  .ws{
+    display:flex; flex-direction:column; min-height:0;
+  }
+  .wsrail{
+    flex:none; flex-direction:row; border-right:none;
+    border-bottom:1px solid var(--line); overflow-x:auto; scrollbar-width:none;
+  }
+  .wsrail::-webkit-scrollbar{display:none}
+  .railgap{display:none}
+  .wsmain{flex:none}
+  .wsstage{height:46vh; min-height:260px}
+  .wspanel{
+    flex:none; border-left:none; border-top:1px solid var(--line);
+    overflow:visible;
+  }
+  /* The working tabs scroll on a phone. There is no room to hold a chart, an
+     order ticket and an account list on one screen, and pretending otherwise
+     is how a control ends up off the edge where nobody can reach it. */
+  .tabpane{overflow-y:auto}
+
+  /* Controls wrap rather than scroll sideways. A row that scrolls hides its
+     last control, and the last control here is Start: unreachable without
+     knowing to swipe a bar that gives no sign it moves. */
+  .wstop{height:auto; padding:8px 10px; gap:7px; flex-wrap:wrap; overflow:visible}
+  .wstop > *{flex:0 1 auto}
+  .psel, .pbtn{flex:1 1 auto; min-width:0}
+  #rdate{flex:2 1 130px}
+  .pgrow{flex:1 1 100%; overflow:visible}
+  /* The status line is information, so it wraps instead of being clipped. */
+  .wsfoot{height:auto; padding:8px 12px; white-space:normal; line-height:1.5}
+
+  /* Two rows in the bar: identity and count, then the tabs, scrolling. */
+  .appbar{
+    height:auto; flex-wrap:wrap; padding:7px 12px 0; gap:0 12px;
+    overflow:visible;
+  }
+  .brand{font-size:12px; order:1}
+  .appmeta{order:2; margin-left:auto}
+  .appbar .tabs2{
+    order:3; flex:1 0 100%; margin:6px -12px 0; padding:0 12px;
+    border-bottom:none;
+  }
+  .tb{padding:10px 12px; font-size:11px}
+}
+
+
+/* the watchlist */
+.wlist{display:flex; flex-direction:column; gap:2px}
+.wl{
+  display:grid; grid-template-columns:auto 1fr auto; gap:2px 9px;
+  align-items:baseline; text-align:left; cursor:pointer; padding:7px 8px;
+  background:none; border:1px solid transparent; border-left:2px solid transparent;
+  color:var(--muted); font-family:"Chakra Petch",sans-serif;
+}
+.wl:hover{background:var(--lift); color:var(--text)}
+.wl.on{border-left-color:var(--accent); background:var(--lift); color:var(--text)}
+.wl:focus-visible{outline:2px solid var(--accent); outline-offset:-1px}
+.wls{
+  font-family:"Orbitron",sans-serif; font-weight:800; font-size:11.5px;
+  letter-spacing:.06em; color:var(--text);
+}
+.wln{font-size:11px; color:var(--faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.wlp{
+  font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--text);
+  font-variant-numeric:tabular-nums;
+}
+.wlc{
+  grid-column:3; font-family:"JetBrains Mono",monospace; font-size:10.5px;
+  font-variant-numeric:tabular-nums; text-align:right;
+}
+
 /* the trade browser */
 .dstrip{
   display:flex; gap:5px; overflow-x:auto; scrollbar-width:none;
@@ -993,15 +1144,105 @@ footer{
   .drop:hover{border-color:var(--line); background:transparent}
   .bigbtn:hover{background:var(--lift); box-shadow:0 0 24px rgba(53,224,240,.16)}
 }
+
+/* Every control a thumb has to hit clears 44px, the smallest thing a finger
+   reliably lands on. Keyed off width rather than (hover:none), because a
+   phone-sized window is the case that matters and hover detection is not
+   dependable enough to hang a tap target on. */
+@media (max-width:900px){
+  .rbtn2,.ptool,.pbtn,.psel,.tb,.tq input,.tfb{min-height:44px}
+  .rbtn2{min-width:44px}
+}
 </style>
 
-<div class="wrap">
-<header>
-  <h1>Traders Diary</h1>
-  <p class="sub"><span class="num"><span id="ntrades">0</span></span> Trades &nbsp;/&nbsp; TradingView Paper Account</p>
-  <div class="sources"><div class="srcrow" id="srcrow"></div><div id="srcpanes"></div></div>
-</header>
-<nav class="tabs2" role="tablist" aria-label="Sections"><button class="tb" role="tab" data-go="home" aria-selected="true">Home</button><button class="tb" role="tab" data-go="diary" aria-selected="false">Diary</button><button class="tb" role="tab" data-go="demo" aria-selected="false">Demo</button><button class="tb" role="tab" data-go="replay" aria-selected="false">Replay</button><button class="tb" role="tab" data-go="videos" aria-selected="false">Videos</button><button class="tb" role="tab" data-go="system" aria-selected="false">System</button><button class="tb" role="tab" data-go="learn" aria-selected="false">Learn</button></nav>
+<div class="app">
+<div class="appbar">
+  <span class="brand">Traders&nbsp;Diary</span>
+  <nav class="tabs2" role="tablist" aria-label="Sections"><button class="tb" role="tab" data-go="home" aria-selected="true">Home</button><button class="tb" role="tab" data-go="diary" aria-selected="false">Diary</button><button class="tb" role="tab" data-go="demo" aria-selected="false">Demo</button><button class="tb" role="tab" data-go="replay" aria-selected="false">Replay</button><button class="tb" role="tab" data-go="videos" aria-selected="false">Videos</button><button class="tb" role="tab" data-go="system" aria-selected="false">System</button><button class="tb" role="tab" data-go="learn" aria-selected="false">Learn</button></nav>
+
+  <span class="appmeta" id="appmeta"><span id="ntrades">0</span> trades</span>
+</div>
+<div class="appbody">
+<div class="tabpane" data-tab="diary" hidden><div class="ws">
+  <div class="wsrail" role="group" aria-label="Which trades" id="dfilter">
+    <button class="rbtn2" data-f="all" aria-pressed="true" title="All trades">All</button>
+    <button class="rbtn2" data-f="won" aria-pressed="false" title="Winners only">W</button>
+    <button class="rbtn2" data-f="lost" aria-pressed="false" title="Losers only">L</button>
+    <span class="railgap"></span>
+    <button class="rbtn2" id="dzin2" title="Zoom in">+</button>
+    <button class="rbtn2" id="dzout2" title="Zoom out">&minus;</button>
+    <button class="rbtn2" id="dfit2" title="Fit the trade">Fit</button>
+  </div>
+
+  <div class="wsmain">
+    <div class="wstop">
+      <button class="ptool" id="dprev" title="Previous trade">&#9664;</button>
+      <button class="ptool" id="dnext" title="Next trade">&#9654;</button>
+      <div class="chead" id="dhead"></div>
+      <div class="pgrow" id="dohlc2"></div>
+    </div>
+    <div class="wsstage">
+      <canvas id="dchart"></canvas>
+      <p class="nobars" id="dnobars" hidden>No candles were stored for this
+      trade. The published bars reach back about ten days, so import each
+      session while it is recent. The numbers are exact either way.</p>
+    </div>
+    <div class="dstrip" id="dtabs" role="tablist" aria-label="Your trades"></div>
+    <div class="wsfoot"><div class="values" id="dvalues"></div></div>
+  </div>
+
+  <div class="wspanel">
+    <div class="pblock">
+      <h4>What happened</h4>
+      <div class="flags" id="dflags"></div>
+      <p class="note" id="dnote"></p>
+    </div>
+    <div class="pblock">
+      <h4>What you were thinking</h4>
+      <div class="mynote">
+        <textarea id="mynotebox" disabled
+          placeholder="Why you took it, what you saw, what you would do differently. Saved on this device as you type."></textarea>
+        <p class="mysaved" id="mynotesaved"></p>
+      </div>
+    </div>
+    <div class="pblock">
+      <h4>Stop moves</h4>
+      <div class="trail" id="dtrail"></div>
+    </div>
+    <div class="pblock">
+      <h4>Import a session</h4>
+      <div class="drop" id="drop" tabindex="0" role="button"
+           aria-label="Choose your TradingView export files">
+        <input type="file" id="pick" multiple accept=".csv" hidden>
+        <p class="dropbig">Add exports</p>
+        <p class="dropsub">All six at once</p>
+        <ul class="dropfiles" id="dropfiles"></ul>
+        <div class="dropbar" id="dropbar" hidden><i></i></div>
+      </div>
+      <p class="dropmsg" id="dropmsg" hidden></p>
+    </div>
+  </div>
+</div>
+</div>
+<div id="lockgate" hidden>
+  <div class="lockcard hud">
+    <div class="lockmark" aria-hidden="true"></div>
+    <h2>Locked</h2>
+    <p class="lead">This diary is encrypted. Enter your passcode to open it.</p>
+    <form id="lockform" autocomplete="off">
+      <input type="password" id="lockpin" placeholder="Passcode"
+             autocomplete="current-password" enterkeyhint="go" required>
+      <button class="bigbtn" type="submit" id="lockgo">Unlock</button>
+    </form>
+    <p class="lockmsg" id="lockmsg" hidden></p>
+    <p class="lead lockhelp">There is no reset and no way round this. If the
+    passcode is gone the record is gone, and the only way back is a backup
+    file. Nobody holds a spare key, including whoever made this.</p>
+  </div>
+</div>
+
+<div class="tabpane reading" data-tab="home" hidden>
+<div class="col">
 <section id="installbar" hidden>
   <div class="card hud install">
     <div class="insticon" aria-hidden="true"></div>
@@ -1013,99 +1254,10 @@ footer{
     <button class="instx" id="instno" aria-label="Dismiss">Not now</button>
   </div>
 </section>
-<div class="tabpane" data-tab="diary">
-
-<section class="platform" id="tradeview">
-  <div class="pbar">
-    <div class="pgroup" id="dfilter" role="group" aria-label="Which trades">
-      <button class="ptool" data-f="all" aria-pressed="true">All <span class="dfn">0</span></button>
-      <button class="ptool" data-f="won" aria-pressed="false">Winners <span class="dfn">0</span></button>
-      <button class="ptool" data-f="lost" aria-pressed="false">Losers <span class="dfn">0</span></button>
-    </div>
-    <div class="pgroup pgrow" id="dohlc2"></div>
-    <div class="pgroup">
-      <button class="ptool" id="dprev" title="Previous trade">&#9664;</button>
-      <button class="ptool" id="dnext" title="Next trade">&#9654;</button>
-    </div>
-  </div>
-
-  <div class="dstrip" id="dtabs" role="tablist" aria-label="Your trades"></div>
-
-  <div class="pstage">
-    <canvas id="dchart"></canvas>
-    <div class="ptools">
-      <button class="ptool" id="dzin2" title="Zoom in">+</button>
-      <button class="ptool" id="dzout2" title="Zoom out">&minus;</button>
-      <button class="ptool" id="dfit2" title="Fit the trade">Fit</button>
-    </div>
-    <p class="nobars" id="dnobars" hidden>No candles were stored for this trade.
-    The published bars only reach back about ten days, so import each session
-    while it is recent and the chart is kept for good. The numbers are exact
-    either way.</p>
-  </div>
-
-  <div class="chead" id="dhead"></div>
-  <div class="values" id="dvalues"></div>
-
-  <div class="body">
-    <div class="pane">
-      <h3>What happened</h3>
-      <div class="flags" id="dflags"></div>
-      <p class="note" id="dnote"></p>
-      <div class="mynote">
-        <label for="mynotebox">What you were thinking</label>
-        <textarea id="mynotebox" disabled
-          placeholder="Why you took it, what you saw, what you would do differently. Saved on this device as you type."></textarea>
-        <p class="mysaved" id="mynotesaved"></p>
-      </div>
-    </div>
-    <div class="pane">
-      <h3>Stop moves</h3>
-      <div class="trail" id="dtrail"></div>
-    </div>
-  </div>
-</section>
-<section id="importer">
-  <h2>Import a session</h2>
-  <p class="lead">Drop all six TradingView exports in at once. Anything the
-  diary cannot use is ignored, and the same file dropped twice changes
-  nothing, so there is no wrong way to do this.</p>
-
-  <div class="card hud drop" id="drop" tabindex="0" role="button"
-       aria-label="Choose your TradingView export files">
-    <input type="file" id="pick" multiple accept=".csv" hidden>
-    <div class="dropface">
-      <div class="dropmark" aria-hidden="true"></div>
-      <p class="dropbig">Drop your exports here</p>
-      <p class="dropsub">or click to choose them &nbsp;/&nbsp; CSV files from
-      TradingView paper trading</p>
-    </div>
-    <ul class="dropfiles" id="dropfiles"></ul>
-    <div class="dropbar" id="dropbar" hidden><i></i></div>
-    <p class="dropmsg" id="dropmsg" hidden></p>
-  </div>
-
-  <details class="how">
-    <summary>Where these files come from</summary>
-    <ol class="howsteps">
-      <li>In TradingView, open the <b>Trading Panel</b> at the bottom of the
-      chart and pick your <b>Paper Trading</b> account.</li>
-      <li>Click the <b>gear icon</b> on the right of that panel, then
-      <b>Export data</b>.</li>
-      <li>Tick everything it offers and download. You get six CSV files.</li>
-      <li>Drag all six onto the box above.</li>
-    </ol>
-      <p class="howwhy">Three of the six do the work. <b>Order history</b> is
-      every fill, and it is what the trades are built from. <b>Activity log</b>
-      is the only record of a stop being moved, so without it a trade has no R.
-      <b>Balance history</b> sets the opening balance so the equity curve shows
-      the account rather than just profit. The other three are read as a
-      cross-check: if what they say disagrees with what the fills say, the
-      page tells you rather than quietly picking one.</p>
-      <p class="howwhy">Export at the <b>end</b> of a session. TradingView caps
-      the activity log at roughly the last hour of events, so exporting late
-      catches the whole session and exporting the next morning misses it.</p>
-  </details>
+<section id="sourcepick">
+  <h2>Your figures</h2>
+  <p class="lead">Practice and the automated system are kept apart from what you actually traded, on purpose. Folded together they would flatter or wreck the one number worth checking before you fund anything.</p>
+  <div class="sources"><div class="srcrow" id="srcrow"></div><div id="srcpanes"></div></div>
 </section>
 
 <section>
@@ -1219,25 +1371,7 @@ footer{
 
 
 
-</div>
-<div id="lockgate" hidden>
-  <div class="lockcard hud">
-    <div class="lockmark" aria-hidden="true"></div>
-    <h2>Locked</h2>
-    <p class="lead">This diary is encrypted. Enter your passcode to open it.</p>
-    <form id="lockform" autocomplete="off">
-      <input type="password" id="lockpin" placeholder="Passcode"
-             autocomplete="current-password" enterkeyhint="go" required>
-      <button class="bigbtn" type="submit" id="lockgo">Unlock</button>
-    </form>
-    <p class="lockmsg" id="lockmsg" hidden></p>
-    <p class="lead lockhelp">There is no reset and no way round this. If the
-    passcode is gone the record is gone, and the only way back is a backup
-    file. Nobody holds a spare key, including whoever made this.</p>
-  </div>
-</div>
 
-<div class="tabpane" data-tab="home" hidden>
 
 <section class="hero">
   <div class="hgrid">
@@ -1279,29 +1413,39 @@ footer{
   </div>
 </section>
 </div>
+</div>
 
+<footer>
+  Drawn on one-minute bars from the same feed the system trades. R is measured
+  against the stop set at entry, never the trailed one, so a tightened stop
+  cannot flatter a result.
+</footer>
 <div class="tabpane" data-tab="demo" hidden>
-
-<section class="platform">
-  <div class="pbar">
-    <div class="pgroup">
-      <select id="dsym" class="psel" aria-label="Contract"></select>
-    </div>
-    <div class="pgroup pgrow" id="dohlc"></div>
-    <div class="pgroup"><span class="pstale" id="dread"></span></div>
+<div class="ws">
+  <div class="wsrail">
+    <button class="rbtn2" id="dlevels" aria-pressed="true" title="Session highs and lows">Lv</button>
+    <button class="rbtn2" id="dzin" title="Zoom in">+</button>
+    <button class="rbtn2" id="dzout" title="Zoom out">&minus;</button>
+    <button class="rbtn2" id="dfit" title="Fit the chart">Fit</button>
   </div>
 
-  <div class="pstage">
-    <canvas id="dc"></canvas>
-
-    <div class="ptools">
-      <button class="ptool" id="dlevels" aria-pressed="true" title="Session levels">Levels</button>
-      <button class="ptool" id="dzin" title="Zoom in">+</button>
-      <button class="ptool" id="dzout" title="Zoom out">&minus;</button>
-      <button class="ptool" id="dfit" title="Fit the chart">Fit</button>
+  <div class="wsmain">
+    <div class="wstop">
+      <select id="dsym" class="psel" aria-label="Contract"></select>
+      <span class="pstale" id="dread"></span>
+      <div class="pgrow" id="dohlc"></div>
     </div>
+    <div class="wsstage"><canvas id="dc"></canvas></div>
+    <div class="wsfoot"><span id="dposline"></span></div>
+  </div>
 
-    <div class="pticket">
+  <div class="wspanel">
+    <div class="pblock watchblock">
+      <h4>Watchlist</h4>
+      <div class="wlist" id="dwatch"></div>
+    </div>
+    <div class="pblock">
+      <h4>Order</h4>
       <div class="tq">
         <label for="dqty">Qty</label><input type="number" id="dqty" min="1" step="1" value="1">
         <label for="drisk">Stop pts</label><input type="number" id="drisk" min="0.25" step="0.25" value="20">
@@ -1314,53 +1458,58 @@ footer{
       <button class="tflat" id="dflat" hidden>Close at market</button>
       <p class="trisk" id="drisknote"></p>
     </div>
+    <div class="pblock">
+      <h4>Account</h4>
+      <div class="stats hud" id="dstats"></div>
+      <ul class="rplist" id="dlist"></ul>
+      <div class="toolrow">
+        <button class="bigbtn" id="dsend" hidden>Send to the Diary</button>
+        <button class="bigbtn ghost" id="dreset">Reset</button>
+      </div>
+    </div>
   </div>
-
-  <p class="pstatus" id="dposline"></p>
-</section>
-
-<section>
-  <h2>The account</h2>
-  <p class="lead">Starts at $100,000, the same as your TradingView paper
-  account, so the numbers are comparable. <b>The price is not live</b>: it is
-  the last bar this site published, refreshed every fifteen minutes or so
-  through the session, and its age is in the bar above the chart. Good for
-  sizing and for letting a trade run; use <b>Replay</b> to practise timing.</p>
-  <div class="stats hud" id="dstats"></div>
-  <ul class="rplist" id="dlist"></ul>
-  <div class="toolrow">
-    <button class="bigbtn" id="dsend" hidden>Send these to the Diary</button>
-    <button class="bigbtn ghost" id="dreset">Reset the account</button>
-  </div>
-</section>
+</div>
 </div>
 
 <div class="tabpane" data-tab="replay" hidden>
-
-<section class="platform">
-  <div class="pbar">
-    <div class="pgroup">
-      <select id="rsym" class="psel" aria-label="Contract"></select>
-      <div class="tfrow" id="rtf" role="group" aria-label="Timeframe"></div>
-    </div>
-    <div class="pgroup pgrow" id="rohlc"></div>
-    <div class="pgroup">
-      <input type="date" id="rdate" class="psel" aria-label="Start from">
-      <button class="pbtn go" id="rgo">Start here</button>
-    </div>
+<div class="ws">
+  <div class="wsrail">
+    <button class="rbtn2" id="rcut" aria-pressed="false" title="Cut the chart here and replay from it">&#9986;</button>
+    <button class="rbtn2" id="rlevels" aria-pressed="true" title="Session highs and lows">Lv</button>
+    <button class="rbtn2" id="rzin" title="Zoom in">+</button>
+    <button class="rbtn2" id="rzout" title="Zoom out">&minus;</button>
+    <button class="rbtn2" id="rfit" title="Fit the chart">Fit</button>
+    <span class="railgap"></span>
+    <button class="rbtn2" id="rback" title="Exit the replay">&#10005;</button>
   </div>
 
-  <div class="pstage">
-    <canvas id="rc"></canvas>
-
-    <div class="ptools">
-      <button class="ptool" id="rlevels" aria-pressed="true" title="Session levels">Levels</button>
-      <button class="ptool" id="rzin" title="Zoom in">+</button>
-      <button class="ptool" id="rzout" title="Zoom out">&minus;</button>
-      <button class="ptool" id="rfit" title="Fit the chart">Fit</button>
+  <div class="wsmain">
+    <div class="wstop">
+      <select id="rsym" class="psel" aria-label="Contract"></select>
+      <div class="tfrow" id="rtf" role="group" aria-label="Timeframe"></div>
+      <input type="date" id="rdate" class="psel" aria-label="Start from">
+      <button class="pbtn go" id="rgo">Start</button>
+      <div class="pgrow" id="rohlc"></div>
     </div>
+    <div class="wsstage">
+      <canvas id="rc"></canvas>
+      <div class="ptransport" id="rpctl" hidden>
+        <button class="ptool" id="rstep1" title="One bar">&#9654;</button>
+        <button class="ptool" id="rstep5" title="Five bars">&#9654;&#9654;</button>
+        <button class="ptool" id="rstep20" title="Twenty bars">&#9654;&#9654;&#9654;</button>
+        <button class="ptool" id="rplay">Auto</button>
+      </div>
+    </div>
+    <div class="wsfoot"><span id="rpread"></span></div>
+  </div>
 
-    <div class="pticket" id="rticket" hidden>
+  <div class="wspanel">
+    <div class="pblock watchblock">
+      <h4>Watchlist</h4>
+      <div class="wlist" id="rwatch"></div>
+    </div>
+    <div class="pblock" id="rticket" hidden>
+      <h4>Order</h4>
       <div class="tq">
         <label for="rqty">Qty</label><input type="number" id="rqty" min="1" step="1" value="1">
         <label for="rrisk">Stop pts</label><input type="number" id="rrisk" min="0.25" step="0.25" value="20">
@@ -1373,38 +1522,25 @@ footer{
       <button class="tflat" id="rflat" hidden>Close at market</button>
       <p class="trisk" id="rrisknote"></p>
     </div>
-
-    <div class="ptransport" id="rpctl" hidden>
-      <button class="ptool" id="rstep1" title="One bar">&#9654;</button>
-      <button class="ptool" id="rstep5">&#9654;&#9654;</button>
-      <button class="ptool" id="rstep20">&#9654;&#9654;&#9654;</button>
-      <button class="ptool" id="rplay">Auto</button>
-      <span class="pspacer"></span>
-      <button class="ptool" id="rback">Exit replay</button>
+    <div class="pblock">
+      <h4>Position</h4>
+      <p class="trisk" id="rposline"></p>
+    </div>
+    <div class="pblock">
+      <h4>This session</h4>
+      <div class="stats hud" id="rstats"></div>
+      <ul class="rplist" id="rplist"></ul>
+      <div class="toolrow">
+        <button class="bigbtn" id="rsave" hidden>Save to the Diary</button>
+        <button class="bigbtn ghost" id="rclear" hidden>Discard</button>
+      </div>
     </div>
   </div>
-
-  <p class="pstatus" id="rpread"></p>
-</section>
-
-<section>
-  <h2>This replay session</h2>
-  <p class="lead">Stops and targets fill on the same rules the backtester
-  uses, so what you learn here can be compared with the real thing rather than
-  flattering it. Session highs and lows appear only once that session has
-  closed, and the revisit percentage beside a previous-day level is measured,
-  not guessed.</p>
-  <div class="stats hud" id="rstats"></div>
-  <ul class="rplist" id="rplist"></ul>
-  <p class="lead" id="rposline"></p>
-  <div class="toolrow">
-    <button class="bigbtn" id="rsave" hidden>Save to the Diary as practice</button>
-    <button class="bigbtn ghost" id="rclear" hidden>Discard these</button>
-  </div>
-</section>
+</div>
 </div>
 
-<div class="tabpane" data-tab="videos" hidden>
+<div class="tabpane reading" data-tab="videos" hidden>
+<div class="col">
 
 <section>
   <h2>Watch your trades back</h2>
@@ -1440,8 +1576,10 @@ footer{
   </div>
 </section>
 </div>
+</div>
 
-<div class="tabpane" data-tab="system" hidden>
+<div class="tabpane reading" data-tab="system" hidden>
+<div class="col">
 
 <section>
   <h2>The automated system</h2>
@@ -1481,8 +1619,10 @@ footer{
   </div>
 </section>
 </div>
+</div>
 
-<div class="tabpane" data-tab="learn" hidden>
+<div class="tabpane reading" data-tab="learn" hidden>
+<div class="col">
 
 <section>
   <h2>The method, in four steps</h2>
@@ -1578,12 +1718,8 @@ footer{
   <ul class="stands" id="proof"></ul>
 </section>
 </div>
-
-<footer>
-  Drawn on one-minute bars from the same feed the system trades. R is measured
-  against the stop set at entry, never the trailed one, so a tightened stop
-  cannot flatter a result.
-</footer>
+</div>
+</div>
 </div>
 
 <script>

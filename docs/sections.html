@@ -15,7 +15,8 @@
   </div>
 </div>
 
-<div class="tabpane" data-tab="home" hidden>
+<div class="tabpane reading" data-tab="home" hidden>
+<div class="col">
 
 <section class="hero">
   <div class="hgrid">
@@ -57,29 +58,34 @@
   </div>
 </section>
 </div>
+</div>
 
 <div class="tabpane" data-tab="demo" hidden>
-
-<section class="platform">
-  <div class="pbar">
-    <div class="pgroup">
-      <select id="dsym" class="psel" aria-label="Contract"></select>
-    </div>
-    <div class="pgroup pgrow" id="dohlc"></div>
-    <div class="pgroup"><span class="pstale" id="dread"></span></div>
+<div class="ws">
+  <div class="wsrail">
+    <button class="rbtn2" id="dlevels" aria-pressed="true" title="Session highs and lows">Lv</button>
+    <button class="rbtn2" id="dzin" title="Zoom in">+</button>
+    <button class="rbtn2" id="dzout" title="Zoom out">&minus;</button>
+    <button class="rbtn2" id="dfit" title="Fit the chart">Fit</button>
   </div>
 
-  <div class="pstage">
-    <canvas id="dc"></canvas>
-
-    <div class="ptools">
-      <button class="ptool" id="dlevels" aria-pressed="true" title="Session levels">Levels</button>
-      <button class="ptool" id="dzin" title="Zoom in">+</button>
-      <button class="ptool" id="dzout" title="Zoom out">&minus;</button>
-      <button class="ptool" id="dfit" title="Fit the chart">Fit</button>
+  <div class="wsmain">
+    <div class="wstop">
+      <select id="dsym" class="psel" aria-label="Contract"></select>
+      <span class="pstale" id="dread"></span>
+      <div class="pgrow" id="dohlc"></div>
     </div>
+    <div class="wsstage"><canvas id="dc"></canvas></div>
+    <div class="wsfoot"><span id="dposline"></span></div>
+  </div>
 
-    <div class="pticket">
+  <div class="wspanel">
+    <div class="pblock watchblock">
+      <h4>Watchlist</h4>
+      <div class="wlist" id="dwatch"></div>
+    </div>
+    <div class="pblock">
+      <h4>Order</h4>
       <div class="tq">
         <label for="dqty">Qty</label><input type="number" id="dqty" min="1" step="1" value="1">
         <label for="drisk">Stop pts</label><input type="number" id="drisk" min="0.25" step="0.25" value="20">
@@ -92,53 +98,58 @@
       <button class="tflat" id="dflat" hidden>Close at market</button>
       <p class="trisk" id="drisknote"></p>
     </div>
+    <div class="pblock">
+      <h4>Account</h4>
+      <div class="stats hud" id="dstats"></div>
+      <ul class="rplist" id="dlist"></ul>
+      <div class="toolrow">
+        <button class="bigbtn" id="dsend" hidden>Send to the Diary</button>
+        <button class="bigbtn ghost" id="dreset">Reset</button>
+      </div>
+    </div>
   </div>
-
-  <p class="pstatus" id="dposline"></p>
-</section>
-
-<section>
-  <h2>The account</h2>
-  <p class="lead">Starts at $100,000, the same as your TradingView paper
-  account, so the numbers are comparable. <b>The price is not live</b>: it is
-  the last bar this site published, refreshed every fifteen minutes or so
-  through the session, and its age is in the bar above the chart. Good for
-  sizing and for letting a trade run; use <b>Replay</b> to practise timing.</p>
-  <div class="stats hud" id="dstats"></div>
-  <ul class="rplist" id="dlist"></ul>
-  <div class="toolrow">
-    <button class="bigbtn" id="dsend" hidden>Send these to the Diary</button>
-    <button class="bigbtn ghost" id="dreset">Reset the account</button>
-  </div>
-</section>
+</div>
 </div>
 
 <div class="tabpane" data-tab="replay" hidden>
-
-<section class="platform">
-  <div class="pbar">
-    <div class="pgroup">
-      <select id="rsym" class="psel" aria-label="Contract"></select>
-      <div class="tfrow" id="rtf" role="group" aria-label="Timeframe"></div>
-    </div>
-    <div class="pgroup pgrow" id="rohlc"></div>
-    <div class="pgroup">
-      <input type="date" id="rdate" class="psel" aria-label="Start from">
-      <button class="pbtn go" id="rgo">Start here</button>
-    </div>
+<div class="ws">
+  <div class="wsrail">
+    <button class="rbtn2" id="rcut" aria-pressed="false" title="Cut the chart here and replay from it">&#9986;</button>
+    <button class="rbtn2" id="rlevels" aria-pressed="true" title="Session highs and lows">Lv</button>
+    <button class="rbtn2" id="rzin" title="Zoom in">+</button>
+    <button class="rbtn2" id="rzout" title="Zoom out">&minus;</button>
+    <button class="rbtn2" id="rfit" title="Fit the chart">Fit</button>
+    <span class="railgap"></span>
+    <button class="rbtn2" id="rback" title="Exit the replay">&#10005;</button>
   </div>
 
-  <div class="pstage">
-    <canvas id="rc"></canvas>
-
-    <div class="ptools">
-      <button class="ptool" id="rlevels" aria-pressed="true" title="Session levels">Levels</button>
-      <button class="ptool" id="rzin" title="Zoom in">+</button>
-      <button class="ptool" id="rzout" title="Zoom out">&minus;</button>
-      <button class="ptool" id="rfit" title="Fit the chart">Fit</button>
+  <div class="wsmain">
+    <div class="wstop">
+      <select id="rsym" class="psel" aria-label="Contract"></select>
+      <div class="tfrow" id="rtf" role="group" aria-label="Timeframe"></div>
+      <input type="date" id="rdate" class="psel" aria-label="Start from">
+      <button class="pbtn go" id="rgo">Start</button>
+      <div class="pgrow" id="rohlc"></div>
     </div>
+    <div class="wsstage">
+      <canvas id="rc"></canvas>
+      <div class="ptransport" id="rpctl" hidden>
+        <button class="ptool" id="rstep1" title="One bar">&#9654;</button>
+        <button class="ptool" id="rstep5" title="Five bars">&#9654;&#9654;</button>
+        <button class="ptool" id="rstep20" title="Twenty bars">&#9654;&#9654;&#9654;</button>
+        <button class="ptool" id="rplay">Auto</button>
+      </div>
+    </div>
+    <div class="wsfoot"><span id="rpread"></span></div>
+  </div>
 
-    <div class="pticket" id="rticket" hidden>
+  <div class="wspanel">
+    <div class="pblock watchblock">
+      <h4>Watchlist</h4>
+      <div class="wlist" id="rwatch"></div>
+    </div>
+    <div class="pblock" id="rticket" hidden>
+      <h4>Order</h4>
       <div class="tq">
         <label for="rqty">Qty</label><input type="number" id="rqty" min="1" step="1" value="1">
         <label for="rrisk">Stop pts</label><input type="number" id="rrisk" min="0.25" step="0.25" value="20">
@@ -151,38 +162,25 @@
       <button class="tflat" id="rflat" hidden>Close at market</button>
       <p class="trisk" id="rrisknote"></p>
     </div>
-
-    <div class="ptransport" id="rpctl" hidden>
-      <button class="ptool" id="rstep1" title="One bar">&#9654;</button>
-      <button class="ptool" id="rstep5">&#9654;&#9654;</button>
-      <button class="ptool" id="rstep20">&#9654;&#9654;&#9654;</button>
-      <button class="ptool" id="rplay">Auto</button>
-      <span class="pspacer"></span>
-      <button class="ptool" id="rback">Exit replay</button>
+    <div class="pblock">
+      <h4>Position</h4>
+      <p class="trisk" id="rposline"></p>
+    </div>
+    <div class="pblock">
+      <h4>This session</h4>
+      <div class="stats hud" id="rstats"></div>
+      <ul class="rplist" id="rplist"></ul>
+      <div class="toolrow">
+        <button class="bigbtn" id="rsave" hidden>Save to the Diary</button>
+        <button class="bigbtn ghost" id="rclear" hidden>Discard</button>
+      </div>
     </div>
   </div>
-
-  <p class="pstatus" id="rpread"></p>
-</section>
-
-<section>
-  <h2>This replay session</h2>
-  <p class="lead">Stops and targets fill on the same rules the backtester
-  uses, so what you learn here can be compared with the real thing rather than
-  flattering it. Session highs and lows appear only once that session has
-  closed, and the revisit percentage beside a previous-day level is measured,
-  not guessed.</p>
-  <div class="stats hud" id="rstats"></div>
-  <ul class="rplist" id="rplist"></ul>
-  <p class="lead" id="rposline"></p>
-  <div class="toolrow">
-    <button class="bigbtn" id="rsave" hidden>Save to the Diary as practice</button>
-    <button class="bigbtn ghost" id="rclear" hidden>Discard these</button>
-  </div>
-</section>
+</div>
 </div>
 
-<div class="tabpane" data-tab="videos" hidden>
+<div class="tabpane reading" data-tab="videos" hidden>
+<div class="col">
 
 <section>
   <h2>Watch your trades back</h2>
@@ -218,8 +216,10 @@
   </div>
 </section>
 </div>
+</div>
 
-<div class="tabpane" data-tab="system" hidden>
+<div class="tabpane reading" data-tab="system" hidden>
+<div class="col">
 
 <section>
   <h2>The automated system</h2>
@@ -259,8 +259,10 @@
   </div>
 </section>
 </div>
+</div>
 
-<div class="tabpane" data-tab="learn" hidden>
+<div class="tabpane reading" data-tab="learn" hidden>
+<div class="col">
 
 <section>
   <h2>The method, in four steps</h2>
@@ -355,4 +357,5 @@
   <h2>What has and has not been proven</h2>
   <ul class="stands" id="proof"></ul>
 </section>
+</div>
 </div>

@@ -14,6 +14,7 @@ import * as E from "./engine.js";
 import {levelsAt, FAMILY_COLOUR} from "./levels.js";
 import * as RV from "./revisit.js";
 import {createChart} from "./chart.js";
+import * as WL from "./watchlist.js";
 
 const $ = id => document.getElementById(id);
 const PRACTICE_KEY = "tradersdiary.replay";
@@ -168,9 +169,10 @@ function render() {
   const b = S.bars[S.i];
   $("rpread").textContent = b
     ? `${S.sym} ${S.tf}   ${stamp(b.ms).slice(0, 16)}   `
-      + (S.mode === "browse" ? "browsing"
+      + (S.mode === "browse"
+         ? "browsing the whole series. Press Cut, then click where to start."
          : `bar ${S.i + 1} of ${S.bars.length}`)
-    : "Pick a contract, a timeframe and a date, then press Start here.";
+    : "Loading the market...";
   $("rpctl").hidden = S.mode !== "replay";
   $("rticket").hidden = S.mode !== "replay";
 
@@ -339,37 +341,64 @@ function stopAuto() {
   if (S.timer) { clearInterval(S.timer); S.timer = null; $("rplay").textContent = "Auto"; }
 }
 
-async function start() {
-  const d = $("rdate").value;
-  if (!d) { $("rpread").textContent = "Pick a date first."; return; }
+/** Load the contract and show it whole, so there is something to cut into.
+ *
+ *  Browsing used to show an empty chart and a date box, which meant choosing
+ *  a starting point blind. The whole series is on screen now, right up to the
+ *  last bar published, and you scroll back to the bit you want. */
+async function browse() {
   const all = await load(S.sym, S.tf).catch(() => null);
   if (!all || !all.length) {
     $("rpread").textContent = "No published bars for that contract yet.";
-    return;
+    return null;
   }
   S.bars = all;
-  const want = Date.parse(d + "T00:00:00Z") - tzHours() * 3600e3;
-  let i = all.findIndex(b => b.ms >= want);
-  if (i < 0) i = all.length - 1;
-  // Enough history behind the cut to read structure from, which is the whole
-  // point of choosing where to start rather than being dropped in cold.
-  S.i = Math.max(30, i);
+  S.mode = "browse";
+  S.pos = null;
+  chart.setData(all);
+  chart.setLimit(null);
+  chart.fit(200);
+  render();
+  return all;
+}
+
+/** Cut the chart at this bar: everything after it stops existing. */
+function cutAt(i) {
+  // Enough history behind the cut to read structure from. Dropped in with
+  // thirty bars of context there is nothing to have formed an opinion on.
+  S.i = Math.max(30, Math.min(i, S.bars.length - 1));
   S.mode = "replay";
   S.pos = null;
-  chart.setData(S.bars);
   chart.setLimit(S.i + 1);
   chart.fit(160);
   render();
 }
 
+/** The scissors. Click the chart to choose where the future stops. */
+async function armCut() {
+  if (!S.bars.length && !(await browse())) return;
+  chart.pick(true);
+  $("rcut").setAttribute("aria-pressed", "true");
+  $("rpread").textContent = "Click the chart where you want to start. "
+    + "Everything after that point is hidden until you play it forward.";
+}
+
+/** The other way in, which every platform also offers: pick a date. */
+async function startFromDate() {
+  const d = $("rdate").value;
+  if (!d) { $("rpread").textContent = "Pick a date first."; return; }
+  if (!S.bars.length && !(await browse())) return;
+  const want = Date.parse(d + "T00:00:00Z") - tzHours() * 3600e3;
+  let i = S.bars.findIndex(b => b.ms >= want);
+  if (i < 0) i = S.bars.length - 1;
+  cutAt(i);
+}
+
 function reset() {
   stopAuto();
-  S.mode = "browse";
-  S.pos = null;
-  S.bars = [];
-  S.i = 0;
-  chart.setData([]);
-  render();
+  chart.pick(false);
+  $("rcut").setAttribute("aria-pressed", "false");
+  browse();
 }
 
 function saveDraft() {
@@ -388,6 +417,7 @@ export function init(onSave) {
     onHover: b => ohlc(b || S.bars[S.i]),
     onLevelMove: levelMoved,
     onLevelDrop: which => { recordMove(which); render(); },
+    onPick: i => { $("rcut").setAttribute("aria-pressed", "false"); cutAt(i); },
   });
 
   $("rsym").innerHTML = SYMS.map(s => `<option value="${s}">${s}</option>`).join("");
@@ -395,17 +425,23 @@ export function init(onSave) {
     `<button class="ptool tfb" data-tf="${k}" aria-pressed="${k === S.tf}">${label}</button>`)
     .join("");
 
-  $("rsym").addEventListener("change", () => { S.sym = $("rsym").value; reset(); });
+  $("rsym").addEventListener("change", () => {
+    S.sym = $("rsym").value;
+    S.bars = [];
+    reset();
+  });
   $("rtf").addEventListener("click", e => {
     const b = e.target.closest(".tfb");
     if (!b) return;
     S.tf = b.dataset.tf;
     [...$("rtf").children].forEach(c =>
       c.setAttribute("aria-pressed", String(c.dataset.tf === S.tf)));
+    S.bars = [];
     reset();
   });
 
-  $("rgo").addEventListener("click", start);
+  $("rgo").addEventListener("click", startFromDate);
+  $("rcut").addEventListener("click", armCut);
   $("rstep1").addEventListener("click", () => step(1));
   $("rstep5").addEventListener("click", () => step(5));
   $("rstep20").addEventListener("click", () => step(20));
@@ -445,6 +481,16 @@ export function init(onSave) {
 
   $("rdate").value = new Date(Date.now() - 3 * 864e5).toISOString().slice(0, 10);
   restoreDraft();
+  WL.render($("rwatch"), S.sym, sym => {
+    if (S.pos) return;          // never switch contract out from under a trade
+    S.sym = sym;
+    $("rsym").value = sym;
+    S.bars = [];
+    reset();
+    WL.render($("rwatch"), S.sym, () => {});
+  });
+  // Land on the live chart rather than an empty box.
+  browse();
 
   $("rsave").addEventListener("click", () => {
     if (!S.done.length) return;

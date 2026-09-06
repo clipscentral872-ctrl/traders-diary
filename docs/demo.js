@@ -17,6 +17,7 @@
 import * as E from "./engine.js";
 import {levelsAt, FAMILY_COLOUR} from "./levels.js";
 import {createChart} from "./chart.js";
+import * as WL from "./watchlist.js";
 import * as RV from "./revisit.js";
 
 const $ = id => document.getElementById(id);
@@ -424,6 +425,15 @@ export function init(onSaveToDiary, onTradeClosed) {
   $("dfit").addEventListener("click", () => chart.fit(160));
 
   $("dsym").innerHTML = SYMS.map(s => `<option value="${s}">${s}</option>`).join("");
+  const paintWatch = () => WL.render($("dwatch"), D.sym, sym => {
+    // Switching contract mid-trade would orphan the position on a chart it
+    // does not belong to, so it is simply not offered.
+    if (D.pos) return;
+    D.sym = sym;
+    $("dsym").value = sym;
+    refresh().then(paintWatch);
+  });
+  paintWatch();
   $("dsym").addEventListener("change", async () => {
     // Switching contract while in a trade would leave the position orphaned
     // on a chart it does not belong to.
@@ -468,7 +478,7 @@ export function init(onSaveToDiary, onTradeClosed) {
   refresh();
   // The site republishes bars through the session, so a tab left open picks
   // them up without being reloaded.
-  setInterval(refresh, 5 * 60000);
+  setInterval(() => { WL.refresh(); refresh().then(paintWatch); }, 5 * 60000);
 }
 
 export const redraw = () => { if (chart) chart.draw(); };
