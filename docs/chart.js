@@ -270,9 +270,19 @@ export function createChart(canvas, opts = {}) {
     if (!state.levels.length) return;
     x.font = FONT.replace("11px", "10px");
     x.textBaseline = "middle";
-    for (const m of state.levels) {
-      const y = Y(m.price);
-      if (y < plot.y - 4 || y > plot.y + plot.h + 4) continue;
+
+    /* Two levels at nearly the same price printed their names on top of each
+       other, which turned "Prev Day High" and "New York High" into one
+       unreadable smear. The lines still sit where the prices are; only the
+       labels are nudged apart, in price order so the nudging cannot imply the
+       wrong one is higher. */
+    const on = state.levels
+      .map(m => ({m, y: Y(m.price)}))
+      .filter(o => o.y >= plot.y - 4 && o.y <= plot.y + plot.h + 4)
+      .sort((a, b) => a.y - b.y);
+    let lastLabel = -Infinity;
+    for (const o of on) {
+      const {m, y} = o;
       x.strokeStyle = x.fillStyle = m.colour || css("--faint");
       x.globalAlpha = 0.45;
       x.setLineDash([2, 4]);
@@ -282,7 +292,9 @@ export function createChart(canvas, opts = {}) {
       x.stroke();
       x.setLineDash([]);
       x.globalAlpha = 0.9;
-      x.fillText(m.label, plot.x + 5, y - 7);
+      const ly = Math.max(y - 7, lastLabel + 11);
+      x.fillText(m.label, plot.x + 5, ly);
+      lastLabel = ly;
       x.globalAlpha = 1;
     }
   }
