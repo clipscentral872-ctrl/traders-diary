@@ -27,7 +27,10 @@ COL_EDGE = (79, 168, 216)
 LINE_LO = (34, 184, 119)
 LINE_HI = (91, 255, 176)
 GLOW = (43, 224, 138)
-SIZES = [180, 192, 512]
+# 32 and 48 are the browser tab and the desktop shortcut, which some
+# browsers will not take an SVG for. 180 is Apple, 192 and 512 are the
+# manifest.
+SIZES = [32, 48, 180, 192, 512]
 SS = 4          # supersample, then shrink, because these have thin strokes
 
 # The mark, on the 512 grid the SVG is drawn on.

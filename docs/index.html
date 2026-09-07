@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#05070C">
+<meta name="theme-color" content="#FFFFFF">
 <meta name="description" content="A trading journal that shows you the trade, not just the number.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -8,6 +8,12 @@
 <meta name="apple-mobile-web-app-title" content="Traders Diary">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<!-- A PNG behind the SVG. Safari and a few others will not use an SVG for a
+     tab or a desktop shortcut, and quietly show nothing rather than saying
+     so, which is how an app ends up with a blank square for a logo. -->
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="icon-48.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <title>Traders Diary</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2129,7 +2135,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=cfda37a33443","./chart.js":"./chart.js?v=cfda37a33443","./levels.js":"./levels.js?v=cfda37a33443","./revisit.js":"./revisit.js?v=cfda37a33443","./series.js":"./series.js?v=cfda37a33443","./clock.js":"./clock.js?v=cfda37a33443","./vault.js":"./vault.js?v=cfda37a33443","./draw.js":"./draw.js?v=cfda37a33443","./profile.js":"./profile.js?v=cfda37a33443","./whatif.js":"./whatif.js?v=cfda37a33443","./precheck.js":"./precheck.js?v=cfda37a33443","./watchlist.js":"./watchlist.js?v=cfda37a33443","./lock.js":"./lock.js?v=cfda37a33443","./replay.js":"./replay.js?v=cfda37a33443","./demo.js":"./demo.js?v=cfda37a33443","./diary.js":"./diary.js?v=cfda37a33443","./videos.js":"./videos.js?v=cfda37a33443","./system.js":"./system.js?v=cfda37a33443","./dashboard.js":"./dashboard.js?v=cfda37a33443"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=e19960559c99","./chart.js":"./chart.js?v=e19960559c99","./levels.js":"./levels.js?v=e19960559c99","./revisit.js":"./revisit.js?v=e19960559c99","./series.js":"./series.js?v=e19960559c99","./clock.js":"./clock.js?v=e19960559c99","./vault.js":"./vault.js?v=e19960559c99","./draw.js":"./draw.js?v=e19960559c99","./profile.js":"./profile.js?v=e19960559c99","./whatif.js":"./whatif.js?v=e19960559c99","./precheck.js":"./precheck.js?v=e19960559c99","./watchlist.js":"./watchlist.js?v=e19960559c99","./lock.js":"./lock.js?v=e19960559c99","./replay.js":"./replay.js?v=e19960559c99","./demo.js":"./demo.js?v=e19960559c99","./diary.js":"./diary.js?v=e19960559c99","./videos.js":"./videos.js?v=e19960559c99","./system.js":"./system.js?v=e19960559c99","./dashboard.js":"./dashboard.js?v=e19960559c99"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.

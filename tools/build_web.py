@@ -40,7 +40,7 @@ FLAG_TEXT = {
 
 HEAD_TAGS = """<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#05070C">
+<meta name="theme-color" content="#FFFFFF">
 <meta name="description" content="A trading journal that shows you the trade, not just the number.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -48,6 +48,12 @@ HEAD_TAGS = """<meta charset="utf-8">
 <meta name="apple-mobile-web-app-title" content="Traders Diary">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<!-- A PNG behind the SVG. Safari and a few others will not use an SVG for a
+     tab or a desktop shortcut, and quietly show nothing rather than saying
+     so, which is how an app ends up with a blank square for a logo. -->
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="icon-48.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 """
 
 # The desktop template links to a separate replay page. Here the replay is a

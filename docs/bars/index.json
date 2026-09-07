@@ -1,5 +1,5 @@
 {
- "updated": "2026-09-06T20:04:15Z",
+ "updated": "2026-09-07T14:39:57Z",
  "series": [
   {
    "symbol": "ES",
@@ -12,7 +12,8 @@
    "symbol": "ES",
    "tf": "1m",
    "bars": 9228,
-   "from": "2026-08-27"
+   "from": "2026-08-27",
+   "days": 8
   },
   {
    "symbol": "ES",
@@ -32,7 +33,8 @@
    "symbol": "NQ",
    "tf": "1m",
    "bars": 9229,
-   "from": "2026-08-27"
+   "from": "2026-08-27",
+   "days": 8
   },
   {
    "symbol": "NQ",
@@ -52,7 +54,8 @@
    "symbol": "RTY",
    "tf": "1m",
    "bars": 8964,
-   "from": "2026-08-27"
+   "from": "2026-08-27",
+   "days": 8
   },
   {
    "symbol": "RTY",
@@ -72,7 +75,8 @@
    "symbol": "YM",
    "tf": "1m",
    "bars": 8945,
-   "from": "2026-08-27"
+   "from": "2026-08-27",
+   "days": 8
   },
   {
    "symbol": "YM",

@@ -16,7 +16,7 @@
 // Stamped by tools/build_web.py from the content of the files below. A
 // fixed version meant a cache-first shell served the old page forever:
 // once installed, no update could reach anyone.
-const VERSION = "cfda37a33443";
+const VERSION = "e19960559c99";
 const SHELL = "diary-shell-" + VERSION;
 const DATA = "diary-bars-" + VERSION;
 
@@ -33,6 +33,7 @@ const FILES = [
   "./", "./index.html",
   ...MODULES.map(m => `./${m}?v=${VERSION}`),
   "./manifest.webmanifest", "./icon.svg",
+  "./icon-32.png", "./icon-48.png",
   "./icon-180.png", "./icon-192.png", "./icon-512.png",
 ];
 

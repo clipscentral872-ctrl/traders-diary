@@ -60,7 +60,7 @@ export function createChart(canvas, opts = {}) {
 
   function visible() {
     const end = Math.max(1, Math.min(state.right, lastIndex()));
-    const start = Math.max(0, end - state.count);
+    const start = Math.max(0, Math.round(end - state.count));
     return {start, end, bars: state.bars.slice(start, end)};
   }
 
@@ -425,7 +425,14 @@ export function createChart(canvas, opts = {}) {
   /* ------------------------------------------------------------- gestures */
 
   function clampView() {
-    state.count = Math.max(MIN_BARS, Math.min(MAX_BARS, Math.round(state.count)));
+    /* Fractional on purpose.
+     *
+     * Rounding here threw away every trackpad step small enough to matter:
+     * a one percent nudge on twenty bars is 20.2, which rounds straight back
+     * to 20, so a slow careful scroll did nothing at all while a fast one
+     * flew. The count is rounded where a whole number is actually needed,
+     * which is choosing which bars to slice. */
+    state.count = Math.max(MIN_BARS, Math.min(MAX_BARS, state.count));
     const end = lastIndex();
     state.right = Math.max(Math.min(state.count, end),
                            Math.min(state.right, end));
@@ -436,6 +443,8 @@ export function createChart(canvas, opts = {}) {
     const v = visible();
     const anchor = v.start + Math.max(0, Math.min(state.count - 1, indexAt(px)));
     const before = state.count;
+    // Fractional, not rounded, so a run of small trackpad steps accumulates
+    // instead of each one being rounded away to nothing.
     state.count = Math.max(MIN_BARS, Math.min(MAX_BARS, state.count * factor));
     // Keep whatever was under the cursor under the cursor.
     const frac = before ? (anchor - v.start) / before : 0.5;
@@ -560,9 +569,45 @@ export function createChart(canvas, opts = {}) {
     draw();
   }
 
+  /* The wheel, and the trackpad, which are not the same input at all.
+   *
+   * A mouse wheel sends a handful of large notches. A trackpad sends dozens
+   * of small ones per flick, at the refresh rate. A fixed twelve percent per
+   * event is a reasonable notch and, multiplied by thirty events in a swipe,
+   * is a chart that shoots from a day to a year and back before your finger
+   * has stopped.
+   *
+   * So the step follows the size of the movement rather than ignoring it,
+   * and browsers that report lines or pages instead of pixels are converted
+   * first. A mouse notch of a hundred pixels comes out near eight percent,
+   * about what it was; a small trackpad nudge comes out under one, which is
+   * what makes a flick read as one smooth movement instead of a jump.
+   *
+   * Exponential rather than linear because zoom is multiplicative: two equal
+   * pushes should scale equally, whichever direction they are in.
+   */
+  const SENSITIVITY = 0.0009;
+  const MAX_STEP = 260;        // px of a single event that can count
+
   function wheel(e) {
     e.preventDefault();
-    zoomAt(pos(e).x, e.deltaY > 0 ? 1.12 : 1 / 1.12);
+    const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+    const dx = e.deltaX * unit, dy = e.deltaY * unit;
+
+    // A sideways flick pans, the way it does everywhere else, and does not
+    // also zoom on the way past.
+    if (Math.abs(dx) > Math.abs(dy)) {
+      const bw = barWidth();
+      if (bw > 0) {
+        state.right = Math.round(state.right + dx / bw);
+        clampView();
+        draw();
+      }
+      return;
+    }
+    if (!dy) return;
+    const step = Math.max(-MAX_STEP, Math.min(MAX_STEP, dy));
+    zoomAt(pos(e).x, Math.exp(step * SENSITIVITY));
   }
 
   // Two fingers pinch, one finger pans. Same maths as the mouse paths.

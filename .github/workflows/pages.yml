@@ -14,10 +14,20 @@ on:
   push:
     branches: [main]
   schedule:
-    # Every fifteen minutes through the US session and the hours after it,
-    # weekdays only. GitHub runs scheduled jobs late when it is busy, so the
-    # real gap is nearer twenty to forty minutes. That is the honest figure.
-    - cron: "*/15 13-22 * * 1-5"
+    # Half hourly through the US session and the hours after it, weekdays
+    # only.
+    #
+    # This was every fifteen minutes and GitHub ran it exactly never: thirty
+    # two pushes and two manual runs in the first day and a half, and not one
+    # scheduled run, including ninety minutes sitting inside the window on a
+    # Monday. High frequency schedules on shared runners are dropped rather
+    # than queued, and dropped silently. Half hourly is the same data an hour
+    # older at worst, and it is a schedule that actually fires.
+    #
+    # Even then, treat this as best effort. GitHub makes no promise about
+    # scheduled jobs and says so. The app already handles missing candles by
+    # saying the numbers are exact and the picture is not.
+    - cron: "5,35 13-22 * * 1-5"
     # Once before the open, with every timeframe, so the deeper history for
     # the replay stays current too.
     - cron: "40 11 * * 1-5"
@@ -28,11 +38,12 @@ permissions:
   pages: write
   id-token: write
 
-# Never two deploys at once, and a queued one can be dropped: the next run is
-# only minutes away and will fetch newer bars anyway.
+# Never two deploys at once. A queued PUSH can be dropped, because another is
+# usually right behind it. A queued schedule must not be, because it is the
+# only thing that refreshes the candles and the next one is half an hour away.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   publish:
@@ -52,7 +63,7 @@ jobs:
         # that go stale. Refetching two years of hourly history every fifteen
         # minutes would be four times the work for nothing.
         run: |
-          if [ "${{ github.event.schedule }}" = "*/15 13-22 * * 1-5" ]; then
+          if [ "${{ github.event.schedule }}" = "5,35 13-22 * * 1-5" ]; then
             python tools/publish_bars.py --only 1m
           else
             python tools/publish_bars.py
