@@ -213,12 +213,25 @@ export async function init() {
     urls.clear();
   });
 
-  // What was picked on a previous visit is still here.
+  await reload();
+}
+
+/**
+ * Re-read the library for whichever journal is open.
+ *
+ * init() runs before a PIN has been entered, when there is no journal and so
+ * no library to read. Without this the videos were there in storage and the
+ * tab said there were none, which looks exactly like having lost them.
+ */
+export async function reload() {
   try {
     files = (await V.list()).sort((a, b) => a.name.localeCompare(b.name));
   } catch { files = []; }
+  for (const u of urls.values()) URL.revokeObjectURL(u);
+  urls.clear();
   render();
   if (files.length) await tally("");
+  else say("");
 }
 
 /**

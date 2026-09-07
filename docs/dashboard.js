@@ -72,7 +72,7 @@ function hero() {
   const days = new Set(live.map(t => t.open_t.slice(0, 10))).size;
   box.innerHTML = '<span class="hk">Your record</span>'
     + `<span class="hv ${s.pnl >= 0 ? "win" : "loss"}">${money(s.pnl)}</span>`
-    + `<span class="hsub">${s.trades} trades over ${days} `
+    + `<span class="hsub">${s.trades} trade${s.trades === 1 ? "" : "s"} over ${days} `
     + `day${days === 1 ? "" : "s"}, ${s.wins}W / ${s.losses}L`
     + (s.expectancy_r === null ? ""
        : `, ${(s.expectancy_r >= 0 ? "+" : "") + s.expectancy_r.toFixed(2)}R a trade`)
@@ -100,13 +100,15 @@ function figures() {
   const scored = live.filter(t => t.got_r !== null && t.got_r !== undefined);
   box.innerHTML = [
     fig("Win rate", s.win_rate.toFixed(0) + "%", "", `${s.wins} of ${s.trades}`),
+    // No R is not zero and must not be coloured as one. `null || 0` is 0 and
+    // 0 >= 0 is true, so "no R" came out green, which reads as a good number.
     fig("Expectancy", s.expectancy_r === null ? "no R"
          : (s.expectancy_r >= 0 ? "+" : "") + s.expectancy_r.toFixed(2) + "R",
-         (s.expectancy_r || 0) >= 0 ? "win" : "loss",
+         s.expectancy_r === null ? "" : s.expectancy_r >= 0 ? "win" : "loss",
          scored.length < live.length
            ? `on ${scored.length} of ${live.length}` : "a trade"),
     fig("Worst drawdown", plain(s.max_dd), "loss",
-         `${s.worst_streak} losses in a row`),
+         `${s.worst_streak} loss${s.worst_streak === 1 ? "" : "es"} in a row`),
     demoFig,
   ].join("");
 }

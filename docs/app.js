@@ -169,7 +169,10 @@ function stat(label, value, cls = "") {
 
 function renderPanels() {
   const all = window.TRADES;
-  $("ntrades").textContent = all.length;
+  // One trade is not "1 trades". The whole phrase is written here rather
+  // than a number beside a fixed word, which cannot be made to agree.
+  $("appmeta").textContent = all.length === 0 ? "no trades"
+    : all.length === 1 ? "1 trade" : `${all.length} trades`;
 
   const present = SOURCES.filter(([k]) =>
     all.some(t => k === "all" || (t.source || "live") === k));
@@ -329,6 +332,15 @@ const readFile = f => new Promise((res, rej) => {
 });
 
 async function handle(fileHandles) {
+  // Ask before doing the work, not after. Reading five exports, pairing the
+  // round trips and reconciling them against the broker takes a few seconds,
+  // and finishing all of that to then say it could not be saved is the wrong
+  // order to find out in.
+  if (!PROF.isOpen()) {
+    say("No journal is open, so there is nowhere to put these. Enter your PIN "
+      + "and drop them again.", true);
+    return;
+  }
   const csv = [...fileHandles].filter(f => /\.csv$/i.test(f.name));
   preview(fileHandles);
   if (!csv.length) {
@@ -842,6 +854,15 @@ async function opened(pin) {
   storeLine();
   lockState();
   DEMO.reload();
+  // The video library belongs to the journal too, and init() ran before there
+  // was one.
+  // Re-ask whether the trade on screen has a video, now that the library has
+  // actually been read. redraw() only repaints the chart; the offer beside it
+  // is set when a trade is shown, and that already happened.
+  VID.reload().then(() => {
+    const block = $("dvidblock");
+    if (block) block.hidden = !VID.forTrade(DIARY.current());
+  });
   loadBars(feedsFor(window.TRADES)).then(fillCandles);
   if (moved) say(`Your existing journal has been moved onto this PIN. `
                + `${window.TRADES.length} trades came with it.`);
@@ -1195,6 +1216,10 @@ function apply(reg) {
  * is safe. The exceptions are a note being typed, a replay position still
  * open, and an import mid-flight. */
 function busy() {
+  // An update is a reload, and a reload sends you back to the PIN screen.
+  // That is safe but it is not something to do to somebody mid-session over
+  // a change they did not ask for, so it waits for the app to be closed.
+  if (PROF.isOpen()) return "a journal open";
   const el = document.activeElement;
   if (el && /^(TEXTAREA|INPUT|SELECT)$/.test(el.tagName)) return "typing";
   const box = $("mynotebox");
@@ -1219,8 +1244,9 @@ function offerUpdate(reg) {
 
   const el = document.createElement("div");
   el.id = "updbar";
-  el.innerHTML = `<span>A new version is ready. It will install by itself once `
-    + `you are done, because right now there is ${held}.</span>`
+  el.innerHTML = `<span>A new version is ready. It installs the next time you `
+    + `open the app, or now if you would rather. Right now there is `
+    + `${held}.</span>`
     + '<button class="bigbtn" id="updgo">Update now</button>'
     + '<button class="instx" id="updno">Later</button>';
   document.body.appendChild(el);

@@ -97,7 +97,7 @@ INSTALL = """<section id="installbar" hidden>
 APPBAR = """<div class="appbar">
   <span class="brand">Traders&nbsp;Diary</span>
   __NAV__
-  <span class="appmeta" id="appmeta"><span id="ntrades">0</span> trades</span>
+  <span class="appmeta" id="appmeta">no trades</span>
 </div>
 """
 
@@ -424,7 +424,7 @@ EXTRA_CSS = """
   position:fixed; left:16px; right:16px; bottom:16px; z-index:50;
   display:flex; align-items:center; gap:14px; flex-wrap:wrap;
   background:var(--lift); border:1px solid var(--accent); padding:14px 18px;
-  box-shadow:0 10px 40px rgba(0,0,0,.65), 0 0 30px var(--accent-dim);
+  box-shadow:var(--shadow); border-radius:6px;
 }
 #updbar span{flex:1 1 160px; font-size:14px}
 @media (max-width:640px){ #updbar{flex-direction:column; align-items:stretch} }
@@ -455,7 +455,10 @@ EXTRA_CSS = """
 .vcut.win{border-left:2px solid var(--win)}
 .vcut.loss{border-left:2px solid var(--loss)}
 .vplayer{
-  position:fixed; inset:0; z-index:70; background:rgba(5,7,12,.96);
+  /* Dark on purpose, and the only dark surface left. A white surround
+     round moving footage is glare, and every video player anyone has used
+     is dark for that reason. */
+  position:fixed; inset:0; z-index:70; background:rgba(19,23,34,.97);
   display:flex; flex-direction:column; padding:18px; gap:12px;
 }
 .vhead{
@@ -569,10 +572,16 @@ body{overflow:hidden}
     display:flex; flex-direction:column; min-height:0;
   }
   .wsrail{
-    flex:none; flex-direction:row; border-right:none;
+    flex:none; flex-direction:row; border-right:none; align-items:center;
     border-bottom:1px solid var(--line); overflow-x:auto; scrollbar-width:none;
   }
   .wsrail::-webkit-scrollbar{display:none}
+  /* The drawing tools are a column on a desktop and have to become part of
+     the same row on a phone. Left as a column they were one very tall item
+     inside a horizontal rail, which took most of the screen and pushed the
+     chart off the bottom. */
+  .drawrail{flex-direction:row; flex:none}
+  .raildiv{height:24px; width:1px; margin:0 4px; flex:none}
   .railgap{display:none}
   .wsmain{flex:none}
   .wsstage{height:46vh; min-height:260px}
@@ -790,12 +799,13 @@ body{overflow:hidden}
 }
 .pspacer{flex:1}
 .ptool{
-  background:rgba(10,15,23,.86); border:1px solid var(--line);
+  background:var(--raised); border:1px solid var(--line); border-radius:4px;
+  box-shadow:var(--shadow);
   color:var(--muted); font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:600;
   font-size:11.5px; letter-spacing:.02em; padding:0 11px; min-width:38px;
   min-height:38px; cursor:pointer;
 }
-.ptool:hover{color:var(--text); border-color:var(--accent)}
+.ptool:hover{color:var(--text); border-color:var(--accent); background:var(--lift)}
 .ptool[aria-pressed="true"]{color:var(--accent); border-color:var(--accent)}
 .ptool:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
 
@@ -804,7 +814,8 @@ body{overflow:hidden}
    you are about to press. */
 .pticket{
   position:absolute; top:10px; right:10px; width:206px; z-index:2;
-  background:rgba(10,15,23,.9); border:1px solid var(--line); padding:11px;
+  background:var(--raised); border:1px solid var(--line); padding:11px;
+  border-radius:6px; box-shadow:var(--shadow);
 }
 .tq{display:grid; grid-template-columns:auto 1fr; gap:6px 8px; align-items:center}
 .tq label{

@@ -524,7 +524,7 @@ footer{
   position:fixed; left:16px; right:16px; bottom:16px; z-index:50;
   display:flex; align-items:center; gap:14px; flex-wrap:wrap;
   background:var(--lift); border:1px solid var(--accent); padding:14px 18px;
-  box-shadow:0 10px 40px rgba(0,0,0,.65), 0 0 30px var(--accent-dim);
+  box-shadow:var(--shadow); border-radius:6px;
 }
 #updbar span{flex:1 1 160px; font-size:14px}
 @media (max-width:640px){ #updbar{flex-direction:column; align-items:stretch} }
@@ -555,7 +555,10 @@ footer{
 .vcut.win{border-left:2px solid var(--win)}
 .vcut.loss{border-left:2px solid var(--loss)}
 .vplayer{
-  position:fixed; inset:0; z-index:70; background:rgba(5,7,12,.96);
+  /* Dark on purpose, and the only dark surface left. A white surround
+     round moving footage is glare, and every video player anyone has used
+     is dark for that reason. */
+  position:fixed; inset:0; z-index:70; background:rgba(19,23,34,.97);
   display:flex; flex-direction:column; padding:18px; gap:12px;
 }
 .vhead{
@@ -669,10 +672,16 @@ body{overflow:hidden}
     display:flex; flex-direction:column; min-height:0;
   }
   .wsrail{
-    flex:none; flex-direction:row; border-right:none;
+    flex:none; flex-direction:row; border-right:none; align-items:center;
     border-bottom:1px solid var(--line); overflow-x:auto; scrollbar-width:none;
   }
   .wsrail::-webkit-scrollbar{display:none}
+  /* The drawing tools are a column on a desktop and have to become part of
+     the same row on a phone. Left as a column they were one very tall item
+     inside a horizontal rail, which took most of the screen and pushed the
+     chart off the bottom. */
+  .drawrail{flex-direction:row; flex:none}
+  .raildiv{height:24px; width:1px; margin:0 4px; flex:none}
   .railgap{display:none}
   .wsmain{flex:none}
   .wsstage{height:46vh; min-height:260px}
@@ -890,12 +899,13 @@ body{overflow:hidden}
 }
 .pspacer{flex:1}
 .ptool{
-  background:rgba(10,15,23,.86); border:1px solid var(--line);
+  background:var(--raised); border:1px solid var(--line); border-radius:4px;
+  box-shadow:var(--shadow);
   color:var(--muted); font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:600;
   font-size:11.5px; letter-spacing:.02em; padding:0 11px; min-width:38px;
   min-height:38px; cursor:pointer;
 }
-.ptool:hover{color:var(--text); border-color:var(--accent)}
+.ptool:hover{color:var(--text); border-color:var(--accent); background:var(--lift)}
 .ptool[aria-pressed="true"]{color:var(--accent); border-color:var(--accent)}
 .ptool:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
 
@@ -904,7 +914,8 @@ body{overflow:hidden}
    you are about to press. */
 .pticket{
   position:absolute; top:10px; right:10px; width:206px; z-index:2;
-  background:rgba(10,15,23,.9); border:1px solid var(--line); padding:11px;
+  background:var(--raised); border:1px solid var(--line); padding:11px;
+  border-radius:6px; box-shadow:var(--shadow);
 }
 .tq{display:grid; grid-template-columns:auto 1fr; gap:6px 8px; align-items:center}
 .tq label{
@@ -1304,7 +1315,7 @@ body{overflow:hidden}
   <span class="brand">Traders&nbsp;Diary</span>
   <nav class="tabs2" role="tablist" aria-label="Sections"><button class="tb" role="tab" data-go="home" aria-selected="true">Home</button><button class="tb" role="tab" data-go="diary" aria-selected="false">Diary</button><button class="tb" role="tab" data-go="demo" aria-selected="false">Demo</button><button class="tb" role="tab" data-go="replay" aria-selected="false">Replay</button><button class="tb" role="tab" data-go="videos" aria-selected="false">Videos</button><button class="tb" role="tab" data-go="system" aria-selected="false">System</button><button class="tb" role="tab" data-go="learn" aria-selected="false">Learn</button></nav>
 
-  <span class="appmeta" id="appmeta"><span id="ntrades">0</span> trades</span>
+  <span class="appmeta" id="appmeta">no trades</span>
 </div>
 <div class="appbody">
 <div class="tabpane" data-tab="diary" hidden><div class="ws">
@@ -2038,7 +2049,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=48ed3e9bf2a1","./chart.js":"./chart.js?v=48ed3e9bf2a1","./levels.js":"./levels.js?v=48ed3e9bf2a1","./revisit.js":"./revisit.js?v=48ed3e9bf2a1","./series.js":"./series.js?v=48ed3e9bf2a1","./clock.js":"./clock.js?v=48ed3e9bf2a1","./vault.js":"./vault.js?v=48ed3e9bf2a1","./draw.js":"./draw.js?v=48ed3e9bf2a1","./profile.js":"./profile.js?v=48ed3e9bf2a1","./watchlist.js":"./watchlist.js?v=48ed3e9bf2a1","./lock.js":"./lock.js?v=48ed3e9bf2a1","./replay.js":"./replay.js?v=48ed3e9bf2a1","./demo.js":"./demo.js?v=48ed3e9bf2a1","./diary.js":"./diary.js?v=48ed3e9bf2a1","./videos.js":"./videos.js?v=48ed3e9bf2a1","./system.js":"./system.js?v=48ed3e9bf2a1","./dashboard.js":"./dashboard.js?v=48ed3e9bf2a1"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=6f0a7d48c330","./chart.js":"./chart.js?v=6f0a7d48c330","./levels.js":"./levels.js?v=6f0a7d48c330","./revisit.js":"./revisit.js?v=6f0a7d48c330","./series.js":"./series.js?v=6f0a7d48c330","./clock.js":"./clock.js?v=6f0a7d48c330","./vault.js":"./vault.js?v=6f0a7d48c330","./draw.js":"./draw.js?v=6f0a7d48c330","./profile.js":"./profile.js?v=6f0a7d48c330","./watchlist.js":"./watchlist.js?v=6f0a7d48c330","./lock.js":"./lock.js?v=6f0a7d48c330","./replay.js":"./replay.js?v=6f0a7d48c330","./demo.js":"./demo.js?v=6f0a7d48c330","./diary.js":"./diary.js?v=6f0a7d48c330","./videos.js":"./videos.js?v=6f0a7d48c330","./system.js":"./system.js?v=6f0a7d48c330","./dashboard.js":"./dashboard.js?v=6f0a7d48c330"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -2211,7 +2222,10 @@ function stat(label, value, cls = "") {
 
 function renderPanels() {
   const all = window.TRADES;
-  $("ntrades").textContent = all.length;
+  // One trade is not "1 trades". The whole phrase is written here rather
+  // than a number beside a fixed word, which cannot be made to agree.
+  $("appmeta").textContent = all.length === 0 ? "no trades"
+    : all.length === 1 ? "1 trade" : `${all.length} trades`;
 
   const present = SOURCES.filter(([k]) =>
     all.some(t => k === "all" || (t.source || "live") === k));
@@ -2371,6 +2385,15 @@ const readFile = f => new Promise((res, rej) => {
 });
 
 async function handle(fileHandles) {
+  // Ask before doing the work, not after. Reading five exports, pairing the
+  // round trips and reconciling them against the broker takes a few seconds,
+  // and finishing all of that to then say it could not be saved is the wrong
+  // order to find out in.
+  if (!PROF.isOpen()) {
+    say("No journal is open, so there is nowhere to put these. Enter your PIN "
+      + "and drop them again.", true);
+    return;
+  }
   const csv = [...fileHandles].filter(f => /\.csv$/i.test(f.name));
   preview(fileHandles);
   if (!csv.length) {
@@ -2884,6 +2907,15 @@ async function opened(pin) {
   storeLine();
   lockState();
   DEMO.reload();
+  // The video library belongs to the journal too, and init() ran before there
+  // was one.
+  // Re-ask whether the trade on screen has a video, now that the library has
+  // actually been read. redraw() only repaints the chart; the offer beside it
+  // is set when a trade is shown, and that already happened.
+  VID.reload().then(() => {
+    const block = $("dvidblock");
+    if (block) block.hidden = !VID.forTrade(DIARY.current());
+  });
   loadBars(feedsFor(window.TRADES)).then(fillCandles);
   if (moved) say(`Your existing journal has been moved onto this PIN. `
                + `${window.TRADES.length} trades came with it.`);
@@ -3237,6 +3269,10 @@ function apply(reg) {
  * is safe. The exceptions are a note being typed, a replay position still
  * open, and an import mid-flight. */
 function busy() {
+  // An update is a reload, and a reload sends you back to the PIN screen.
+  // That is safe but it is not something to do to somebody mid-session over
+  // a change they did not ask for, so it waits for the app to be closed.
+  if (PROF.isOpen()) return "a journal open";
   const el = document.activeElement;
   if (el && /^(TEXTAREA|INPUT|SELECT)$/.test(el.tagName)) return "typing";
   const box = $("mynotebox");
@@ -3261,8 +3297,9 @@ function offerUpdate(reg) {
 
   const el = document.createElement("div");
   el.id = "updbar";
-  el.innerHTML = `<span>A new version is ready. It will install by itself once `
-    + `you are done, because right now there is ${held}.</span>`
+  el.innerHTML = `<span>A new version is ready. It installs the next time you `
+    + `open the app, or now if you would rather. Right now there is `
+    + `${held}.</span>`
     + '<button class="bigbtn" id="updgo">Update now</button>'
     + '<button class="instx" id="updno">Later</button>';
   document.body.appendChild(el);
