@@ -176,10 +176,23 @@ function overlayLevels() {
   return marks;
 }
 
+/* What the two orders are worth, for the labels on their lines.
+ *
+ * The chart draws them; it does not know what a point of NQ is worth, and it
+ * should not. This is worked out fresh on every repaint so the numbers move
+ * with the line while it is being dragged. */
+function withWorth(p) {
+  if (!p) return null;
+  const pv = E.POINT[S.sym] ?? 1;
+  return {...p,
+    stopMoney: money(-Math.abs(p.entry - p.stop) * pv * p.qty),
+    targetMoney: money(Math.abs(p.target - p.entry) * pv * p.qty)};
+}
+
 function paint() {
   if (!chart) return;
   chart.setLevels(overlayLevels());
-  chart.setPosition(S.pos);
+  chart.setPosition(withWorth(S.pos));
   chart.setLimit(S.mode === "replay" ? S.i + 1 : null);
 }
 
@@ -584,6 +597,7 @@ export function init(onSave) {
     overlay: c => DRAW.paint(c),
     onPress: (px, py) => DRAW.down(px, py, chart),
     onDrag: (px, py) => DRAW.move(px, py, chart),
+    onRelease: moved => { if (DRAW.release(moved)) chart.repaint(); },
   });
 
   $("rsym").innerHTML = SYMS.map(s => `<option value="${s}">${s}</option>`).join("");

@@ -268,10 +268,23 @@ function overlayLevels() {
   return marks;
 }
 
+/* What the two orders are worth, for the labels on their lines.
+ *
+ * The chart draws them; it does not know what a point of NQ is worth, and it
+ * should not. This is worked out fresh on every repaint so the numbers move
+ * with the line while it is being dragged. */
+function withWorth(p) {
+  if (!p) return null;
+  const pv = E.POINT[p.symbol] ?? 1;
+  return {...p,
+    stopMoney: money(-Math.abs(p.entry - p.stop) * pv * p.qty),
+    targetMoney: money(Math.abs(p.target - p.entry) * pv * p.qty)};
+}
+
 function paint() {
   if (!chart) return;
   chart.setLevels(overlayLevels());
-  chart.setPosition(D.pos);
+  chart.setPosition(withWorth(D.pos));
 }
 
 function ohlc(b) {
@@ -526,6 +539,7 @@ export function init(onSaveToDiary, onTradeClosed) {
     overlay: c => DRAW.paint(c),
     onPress: (px, py) => DRAW.down(px, py, chart),
     onDrag: (px, py) => DRAW.move(px, py, chart),
+    onRelease: moved => { if (DRAW.release(moved)) chart.repaint(); },
     onHover: b => ohlc(b || last()),
     onLevelMove: levelMoved,
     onLevelDrop: which => { recordMove(which); saveAccount(); render(); },
@@ -616,6 +630,10 @@ export function init(onSaveToDiary, onTradeClosed) {
       b.setAttribute("aria-pressed", String(b.dataset.tool === on)));
     $("dwipe").disabled = !DRAW.count();
   };
+  // The rail has to hear about drawings made anywhere, including the ones
+  // already saved when a journal opens. Without this the Clear button here
+  // stayed greyed out over a chart with a box sitting on it.
+  DRAW.setOnChange(litTools);
   $("dtools").addEventListener("click", e => {
     const b = e.target.closest(".rtool");
     if (!b) return;

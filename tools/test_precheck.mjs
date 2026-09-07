@@ -41,6 +41,13 @@ console.log("\nthe release slots are the ones that cost money here");
   check("it names the slot", /08:30/.test(words(l)), words(l));
   const ok = PC.check({ms: ny(8, 20), risk: 200, reward: 400, balance: 100000});
   check("ten minutes before is not", !PC.holds(ok), words(ok));
+  // The bar a five minute chart actually prints before the slot. Inside
+  // three minutes there is no such bar, so the warning arrived too late to
+  // be a warning.
+  const five = PC.check({ms: ny(9, 55), risk: 200, reward: 400, balance: 100000});
+  check("the 09:55 bar catches the ten o'clock slot", PC.holds(five), words(five));
+  const early = PC.check({ms: ny(9, 50), risk: 200, reward: 400, balance: 100000});
+  check("but the one before it does not", !PC.holds(early), words(early));
   const after = PC.check({ms: ny(8, 31), risk: 200, reward: 400, balance: 100000});
   check("a minute after is not", !PC.holds(after), words(after));
   const ten = PC.check({ms: ny(9, 58), risk: 200, reward: 400, balance: 100000});

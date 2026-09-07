@@ -167,6 +167,9 @@ export function createChart(canvas, opts = {}) {
     // where the cursor is and must never be hidden.
     if (opts.overlay) opts.overlay(api);
     axes(x, r, Y, v);
+    // After the candles and after the axis, so an order is never buried by
+    // the price it is waiting for, nor by the last-price tag.
+    orders(x, Y);
     crosshair(x, Y, v, r);
     cutter(x, v);
   }
@@ -224,6 +227,9 @@ export function createChart(canvas, opts = {}) {
     }
   }
 
+  /* The shading only. The lines and their labels are drawn over the candles
+     by orders(), the way a chart with an order on it does it: the risk and
+     the reward are behind the price, the orders themselves are in front. */
   function zones(x, Y) {
     const src = state.position || state.trade;
     if (!src || typeof src.entry !== "number") return;
@@ -234,35 +240,69 @@ export function createChart(canvas, opts = {}) {
     };
     box(src.entry, src.stop, css("--loss-zone"));
     box(src.entry, src.target, css("--win-zone"));
-    const live = state.position && opts.onLevelMove;
-    for (const [key, v, col, dash] of [
-      ["stop", src.stop, css("--loss-faded"), [5, 4]],
-      ["target", src.target, css("--win-faded"), [5, 4]],
-      ["entry", src.entry, css("--text"), []],
+  }
+
+  const ROUND = (x, l, t, w, h, r) => {
+    if (x.roundRect) { x.beginPath(); x.roundRect(l, t, w, h, r); return; }
+    x.beginPath();
+    x.moveTo(l + r, t);
+    x.arcTo(l + w, t, l + w, t + h, r);
+    x.arcTo(l + w, t + h, l, t + h, r);
+    x.arcTo(l, t + h, l, t, r);
+    x.arcTo(l, t, l + w, t, r);
+    x.closePath();
+  };
+
+  /* The badge on the end of an order line.
+   *
+   * White on the colour rather than a theme token: the fill is a saturated
+   * red or green in both themes, and white is what reads on it. */
+  function badge(x, y, text, colour, hot) {
+    x.font = FONT;
+    const w = Math.round(x.measureText(text).width) + 16;
+    const left = plot.x + plot.w - w - 5;
+    const top = Math.round(y) - 8;
+    x.globalAlpha = hot ? 1 : 0.9;
+    x.fillStyle = colour;
+    ROUND(x, left, top, w, 16, 3);
+    x.fill();
+    x.globalAlpha = 1;
+    x.fillStyle = "#fff";
+    x.textBaseline = "middle";
+    x.fillText(text, left + 8, Math.round(y) + 1);
+  }
+
+  /* The stop and the target, labelled the way TradingView labels them.
+   *
+   * A dashed line the whole width, a badge on the end of it saying what the
+   * order is worth in money, and the price tagged on the axis in the same
+   * colour. Dragging a line whose only readout is a number in a panel
+   * somewhere else is guesswork; this puts both where the finger is. */
+  function orders(x, Y) {
+    const src = state.position || state.trade;
+    if (!src || typeof src.entry !== "number") return;
+    const live = !!(state.position && opts.onLevelMove);
+    for (const [key, v, col, hue, dash, worth] of [
+      ["entry", src.entry, css("--text"), css("--text"), [], null],
+      ["stop", src.stop, css("--loss-faded"), css("--loss"), [5, 4], src.stopMoney],
+      ["target", src.target, css("--win-faded"), css("--win"), [5, 4], src.targetMoney],
     ]) {
       if (typeof v !== "number") continue;
+      const y = Y(v);
+      if (y < plot.y - 20 || y > plot.y + plot.h + 20) continue;
       const hot = live && key !== "entry"
         && (state.grab === key || state.nearLevel === key);
-      x.strokeStyle = hot ? css(key === "stop" ? "--loss" : "--win") : col;
+      x.strokeStyle = hot ? hue : col;
       x.lineWidth = hot ? 2 : 1;
       x.setLineDash(dash);
       x.beginPath();
-      x.moveTo(plot.x, Y(v) + 0.5); x.lineTo(plot.x + plot.w, Y(v) + 0.5);
+      x.moveTo(plot.x, Math.round(y) + 0.5);
+      x.lineTo(plot.x + plot.w, Math.round(y) + 0.5);
       x.stroke();
       x.setLineDash([]);
       x.lineWidth = 1;
-
-      // A line you can move should look like one. The grip only appears on
-      // the two that are actually draggable, so the entry does not invite a
-      // drag that would do nothing.
-      if (live && key !== "entry") {
-        const gy = Math.round(Y(v));
-        x.fillStyle = hot ? css(key === "stop" ? "--loss" : "--win") : col;
-        x.fillRect(plot.x + plot.w - 26, gy - 5, 20, 10);
-        x.fillStyle = css("--ground");
-        for (let g = 0; g < 3; g++)
-          x.fillRect(plot.x + plot.w - 22 + g * 5, gy - 2, 1.5, 4);
-      }
+      if (key !== "entry" && worth) badge(x, y, worth, hue, hot);
+      tag(x, y, fmtPrice(v), hue, key === "entry" ? css("--ground") : "#fff");
     }
   }
 
@@ -482,6 +522,7 @@ export function createChart(canvas, opts = {}) {
   };
 
   let drag = null;
+  let pressed = null;   // a press the drawing layer took
   const pos = e => {
     const r = canvas.getBoundingClientRect();
     const t = e.touches ? e.touches[0] : e;
@@ -497,7 +538,13 @@ export function createChart(canvas, opts = {}) {
     // The drawing layer gets first refusal. It takes the press when a tool is
     // armed or when one of its own shapes was hit, and declines otherwise so
     // the chart still pans normally.
-    if (opts.onPress && opts.onPress(p.x, p.y)) return;
+    if (opts.onPress && opts.onPress(p.x, p.y)) {
+      // Remembered so the release knows whether the press travelled. A drag
+      // that went somewhere finishes a drawing; one that did not is still
+      // the first of two clicks.
+      pressed = {x: p.x, y: p.y, moved: false};
+      return;
+    }
     if (state.picking) {
       const v = visible();
       const k = Math.max(0, Math.min(v.bars.length - 1, indexAt(p.x)));
@@ -523,6 +570,9 @@ export function createChart(canvas, opts = {}) {
 
   function move(e) {
     const p = pos(e);
+    if (pressed && !pressed.moved
+        && Math.hypot(p.x - pressed.x, p.y - pressed.y) > 4)
+      pressed.moved = true;
     if (opts.onDrag && opts.onDrag(p.x, p.y)) {
       state.cross = p.x < plot.x + plot.w ? p : null;
       draw();
@@ -562,6 +612,11 @@ export function createChart(canvas, opts = {}) {
   }
 
   function up() {
+    if (pressed) {
+      const was = pressed;
+      pressed = null;
+      if (opts.onRelease) opts.onRelease(was.moved);
+    }
     if (drag && drag.level && opts.onLevelDrop) opts.onLevelDrop(drag.level);
     drag = null;
     state.grab = null;

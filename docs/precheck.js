@@ -23,7 +23,15 @@ import * as C from "./clock.js";
 
 export const OPEN = 9 * 60 + 30;
 export const CLOSE = 16 * 60;
-const NEWS_MIN = 3;          // how close to a slot is close enough to matter
+/* How close to a release slot is close enough to matter.
+ *
+ * Three minutes was useless on the timeframe this is actually traded on. A
+ * five minute chart prints 09:55 and then 10:00, so within three minutes
+ * there is no bar to warn on: the first the replay said about the ten o'clock
+ * slot was "it is 10:00", by which point the entry decision has been made.
+ * Five catches the 09:55 bar, which is the last moment a warning can still
+ * change anything. */
+const NEWS_MIN = 5;
 const RISK_WARN = 0.01;      // a percent of the account
 const RISK_HOLD = 0.02;
 

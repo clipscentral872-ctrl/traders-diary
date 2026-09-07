@@ -48,7 +48,14 @@ let tool = "cursor";
 let sym = "NQ";
 let live = null;            // the one being drawn right now
 let picked = null;          // the one selected
-let onChange = () => {};
+
+/* Every rail that needs to know, not just the last one to ask.
+ *
+ * This was a single slot, so the Demo tab and the Replay tab overwrote each
+ * other and only one of them ever heard about a change. The other kept a
+ * stale Clear button. */
+const listeners = [];
+const onChange = () => { for (const fn of listeners) fn(); };
 
 function load() {
   try { return JSON.parse(P.get("draw")) || {}; }
@@ -63,6 +70,11 @@ function save() {
 export function reload() {
   all = null;
   picked = live = null;
+  // And say so. The rails light themselves at start-up, before a journal is
+  // open and while there is nothing to count, so without this a journal with
+  // saved drawings came back with its Clear button greyed out until you
+  // happened to touch a tool.
+  onChange();
 }
 
 const mine = () => {
@@ -73,7 +85,7 @@ const mine = () => {
 export function setSymbol(s) { sym = s || "NQ"; picked = null; live = null; }
 export function setTool(t) { tool = t; live = null; picked = null; }
 export const getTool = () => tool;
-export function setOnChange(fn) { onChange = fn || (() => {}); }
+export function setOnChange(fn) { if (fn) listeners.push(fn); }
 export const count = () => mine().length;
 
 /** Everything for this contract, gone. */
@@ -325,6 +337,22 @@ function finish() {
   tool = "cursor";
   save();
   onChange();
+}
+
+/**
+ * The mouse coming up, which on every other chart also finishes a drawing.
+ *
+ * Two presses was the only way to complete a shape: one for a corner, one
+ * for the other. Drag and let go, which is what everybody tries first, left
+ * the box sitting on screen looking finished, never saved, and put its far
+ * corner wherever the next click happened to land. A release that actually
+ * travelled finishes it. One that did not is still the first of two clicks,
+ * so both ways of drawing work.
+ */
+export function release(moved) {
+  if (!live || !live.b || !moved) return false;
+  finish();
+  return true;
 }
 
 /** The mouse moving, while a two-point drawing is half made. */
