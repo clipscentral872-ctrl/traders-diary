@@ -906,6 +906,9 @@ body{overflow:hidden}
 .hv.win{color:var(--win); text-shadow:0 0 34px rgba(43,224,138,.3)}
 .hv.loss{color:var(--loss); text-shadow:0 0 34px rgba(255,92,110,.28)}
 .hsub{color:var(--faint); font-size:12.5px; line-height:1.5}
+/* The one action an empty journal has, on the panel that is otherwise
+   telling you it is empty. */
+.hact{display:block; margin-top:14px}
 /* Up in the corner rather than along the bottom, because the bottom is where
    the curve lives and a line of text laid over a rising equity curve is
    unreadable exactly when the curve is doing something worth looking at. */

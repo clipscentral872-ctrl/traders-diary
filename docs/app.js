@@ -712,7 +712,13 @@ document.querySelector(".tabs2").addEventListener("click", e => {
 // The dashboard's jump buttons carry the same data-go as the nav.
 document.addEventListener("click", e => {
   const b = e.target.closest("button[data-go]");
-  if (b && !b.classList.contains("tb")) goTab(b.dataset.go, true);
+  if (!b || b.classList.contains("tb")) return;
+  goTab(b.dataset.go, true);
+  // Import goes one step further than the tab it lives on: it opens the file
+  // picker too, so "import my trades" is one tap rather than a tab, a scroll
+  // and a hunt for the right panel. Still inside the click, which is what
+  // lets a browser open a file dialog at all.
+  if (b.dataset.import) $("pick").click();
 });
 addEventListener("hashchange", () => goTab(location.hash.slice(1), false));
 

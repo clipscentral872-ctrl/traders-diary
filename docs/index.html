@@ -1006,6 +1006,9 @@ body{overflow:hidden}
 .hv.win{color:var(--win); text-shadow:0 0 34px rgba(43,224,138,.3)}
 .hv.loss{color:var(--loss); text-shadow:0 0 34px rgba(255,92,110,.28)}
 .hsub{color:var(--faint); font-size:12.5px; line-height:1.5}
+/* The one action an empty journal has, on the panel that is otherwise
+   telling you it is empty. */
+.hact{display:block; margin-top:14px}
 /* Up in the corner rather than along the bottom, because the bottom is where
    the curve lives and a line of text laid over a rising equity curve is
    unreadable exactly when the curve is doing something worth looking at. */
@@ -2049,7 +2052,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=6f0a7d48c330","./chart.js":"./chart.js?v=6f0a7d48c330","./levels.js":"./levels.js?v=6f0a7d48c330","./revisit.js":"./revisit.js?v=6f0a7d48c330","./series.js":"./series.js?v=6f0a7d48c330","./clock.js":"./clock.js?v=6f0a7d48c330","./vault.js":"./vault.js?v=6f0a7d48c330","./draw.js":"./draw.js?v=6f0a7d48c330","./profile.js":"./profile.js?v=6f0a7d48c330","./watchlist.js":"./watchlist.js?v=6f0a7d48c330","./lock.js":"./lock.js?v=6f0a7d48c330","./replay.js":"./replay.js?v=6f0a7d48c330","./demo.js":"./demo.js?v=6f0a7d48c330","./diary.js":"./diary.js?v=6f0a7d48c330","./videos.js":"./videos.js?v=6f0a7d48c330","./system.js":"./system.js?v=6f0a7d48c330","./dashboard.js":"./dashboard.js?v=6f0a7d48c330"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=32a17c177085","./chart.js":"./chart.js?v=32a17c177085","./levels.js":"./levels.js?v=32a17c177085","./revisit.js":"./revisit.js?v=32a17c177085","./series.js":"./series.js?v=32a17c177085","./clock.js":"./clock.js?v=32a17c177085","./vault.js":"./vault.js?v=32a17c177085","./draw.js":"./draw.js?v=32a17c177085","./profile.js":"./profile.js?v=32a17c177085","./watchlist.js":"./watchlist.js?v=32a17c177085","./lock.js":"./lock.js?v=32a17c177085","./replay.js":"./replay.js?v=32a17c177085","./demo.js":"./demo.js?v=32a17c177085","./diary.js":"./diary.js?v=32a17c177085","./videos.js":"./videos.js?v=32a17c177085","./system.js":"./system.js?v=32a17c177085","./dashboard.js":"./dashboard.js?v=32a17c177085"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -2765,7 +2768,13 @@ document.querySelector(".tabs2").addEventListener("click", e => {
 // The dashboard's jump buttons carry the same data-go as the nav.
 document.addEventListener("click", e => {
   const b = e.target.closest("button[data-go]");
-  if (b && !b.classList.contains("tb")) goTab(b.dataset.go, true);
+  if (!b || b.classList.contains("tb")) return;
+  goTab(b.dataset.go, true);
+  // Import goes one step further than the tab it lives on: it opens the file
+  // picker too, so "import my trades" is one tap rather than a tab, a scroll
+  // and a hunt for the right panel. Still inside the click, which is what
+  // lets a browser open a file dialog at all.
+  if (b.dataset.import) $("pick").click();
 });
 addEventListener("hashchange", () => goTab(location.hash.slice(1), false));
 

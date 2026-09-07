@@ -62,10 +62,14 @@ function hero() {
   const box = $("hmain");
   if (!box) return;
   if (!live.length) {
+    // A sentence telling you where the button is, when it could just be the
+    // button. This is the first screen a new journal shows.
     box.innerHTML = '<span class="hk">Your record</span>'
       + '<span class="hv">Nothing yet</span>'
-      + '<span class="hsub">Import your six TradingView exports on the Diary '
-      + 'tab and everything here fills in.</span>';
+      + '<span class="hsub">Export the six files from TradingView, then drop '
+      + 'them all in at once.</span>'
+      + '<span class="hact"><button class="bigbtn" data-go="diary" '
+      + 'data-import="1">Import your trades</button></span>';
     return;
   }
   const s = E.summarise(live);
@@ -154,6 +158,7 @@ function leak() {
    land at whatever size the font decides, which is the one thing a row of
    six identical cards cannot survive. */
 const GLYPH = {
+  import: '<path d="M12 16V4M12 4 7 9M12 4l5 5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>',
   diary: '<path d="M3 5h7a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H3zM21 5h-7a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h7z"/>',
   demo: '<path d="M4 20V9M10 20V4M16 20v-7M4 13l6-6 6 6 5-6"/>',
   replay: '<path d="M4 12a8 8 0 1 0 2.6-5.9M4 3v4h4"/><path d="M11 9l5 3-5 3z"/>',
@@ -162,8 +167,12 @@ const GLYPH = {
   learn: '<path d="M12 7 2 4l10-2 10 2zM4 8v7c0 2 4 4 8 4s8-2 8-4V8"/>',
 };
 
+/* Importing comes first, because on a journal with nothing in it that is the
+   only thing worth doing, and on one with something in it it is the thing you
+   came back to do. */
 const DOORS = [
-  ["diary", "Diary", "Import a session, watch your trades back"],
+  ["import", "Import", "Drop your six TradingView exports"],
+  ["diary", "Diary", "Watch your trades back on the chart"],
   ["demo", "Demo", "Place a trade on today's market"],
   ["replay", "Replay", "Cut a past session and trade it out"],
   ["videos", "Videos", "Your winners and losers, side by side"],
@@ -175,7 +184,8 @@ function doors() {
   const box = $("dashjumps");
   if (!box) return;
   box.innerHTML = DOORS.map(([go, name, sub]) =>
-    `<button class="jump" data-go="${go}">`
+    `<button class="jump" data-go="${go === "import" ? "diary" : go}"`
+    + `${go === "import" ? ' data-import="1"' : ""}>`
     + `<svg viewBox="0 0 24 24" aria-hidden="true">${GLYPH[go]}</svg>`
     + `<b>${name}</b><span>${esc(sub)}</span></button>`).join("");
 }
