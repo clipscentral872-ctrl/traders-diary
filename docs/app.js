@@ -1250,9 +1250,10 @@ function offerUpdate(reg) {
 
   const el = document.createElement("div");
   el.id = "updbar";
-  el.innerHTML = `<span>A new version is ready. It installs the next time you `
-    + `open the app, or now if you would rather. Right now there is `
-    + `${held}.</span>`
+  // The reason it is waiting was written for whoever built it. What matters
+  // to whoever is holding the phone is that nothing needs doing.
+  el.innerHTML = "<span>A new version is ready. It installs next time you "
+    + "open the app.</span>"
     + '<button class="bigbtn" id="updgo">Update now</button>'
     + '<button class="instx" id="updno">Later</button>';
   document.body.appendChild(el);

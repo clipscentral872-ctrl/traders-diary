@@ -421,13 +421,26 @@ EXTRA_CSS = """
 .mysaved{color:var(--faint); font-size:11.5px; margin:7px 0 0; min-height:16px}
 
 #updbar{
-  position:fixed; left:16px; right:16px; bottom:16px; z-index:50;
+  position:fixed; left:16px; right:16px; z-index:50;
+  bottom:calc(16px + env(safe-area-inset-bottom, 0px));
   display:flex; align-items:center; gap:14px; flex-wrap:wrap;
   background:var(--lift); border:1px solid var(--accent); padding:14px 18px;
   box-shadow:var(--shadow); border-radius:6px;
 }
-#updbar span{flex:1 1 160px; font-size:14px}
-@media (max-width:640px){ #updbar{flex-direction:column; align-items:stretch} }
+#updbar span{flex:1 1 160px; font-size:13.5px; line-height:1.45}
+#updbar .bigbtn{padding:10px 18px; flex:none}
+@media (max-width:640px){
+  /* Stacked, but not a full screen of it. Left to stretch, a notice with two
+     buttons filled half the phone, which is a lot of screen to give a
+     sentence saying nothing has to be done. */
+  #updbar{
+    flex-direction:row; align-items:center; gap:10px; padding:11px 13px;
+    left:10px; right:10px;
+  }
+  #updbar span{flex:1 1 100%; font-size:13px}
+  #updbar .bigbtn{padding:9px 14px; font-size:11px}
+  #updbar .instx{padding:9px 6px}
+}
 
 /* the video library */
 .vgroup{margin-top:24px}
@@ -459,7 +472,9 @@ EXTRA_CSS = """
      round moving footage is glare, and every video player anyone has used
      is dark for that reason. */
   position:fixed; inset:0; z-index:70; background:rgba(19,23,34,.97);
-  display:flex; flex-direction:column; padding:18px; gap:12px;
+  display:flex; flex-direction:column; gap:12px;
+  padding:calc(18px + env(safe-area-inset-top, 0px)) 18px
+          calc(18px + env(safe-area-inset-bottom, 0px));
 }
 .vhead{
   display:flex; align-items:center; justify-content:space-between; gap:14px;
@@ -476,7 +491,22 @@ EXTRA_CSS = """
    keep a column you can actually read. */
 html,body{height:100%}
 body{overflow:hidden}
-.app{display:flex; flex-direction:column; height:100dvh; min-height:0}
+/* The shell, kept out from under the phone's own furniture.
+ *
+ * The page is told to cover the whole screen, notch included, which is what
+ * makes an installed app look like an app rather than a web page in a frame.
+ * The price of that is having to say where the screen actually starts. Left
+ * unsaid, the bar ran under the status bar: the clock sat on top of the name
+ * and the tab strip was against the very top edge, too high to hit.
+ */
+.app{
+  display:flex; flex-direction:column; min-height:0;
+  height:100dvh;
+  padding-top:env(safe-area-inset-top, 0px);
+  padding-left:env(safe-area-inset-left, 0px);
+  padding-right:env(safe-area-inset-right, 0px);
+  box-sizing:border-box;
+}
 
 .appbar{
   flex:none; display:flex; align-items:center; gap:18px;
@@ -500,7 +530,10 @@ body{overflow:hidden}
 .tabpane[hidden]{display:none !important}
 /* Reading tabs scroll their own column; working tabs never scroll the page. */
 .tabpane.reading{overflow-y:auto; overflow-x:hidden}
-.reading .col{max-width:1000px; margin:0 auto; padding:30px 22px 80px}
+.reading .col{
+  max-width:1000px; margin:0 auto;
+  padding:30px 22px calc(80px + env(safe-area-inset-bottom, 0px));
+}
 
 /* the workspace: rail, stage, panel, status */
 .ws{display:grid; grid-template-columns:46px minmax(0,1fr) 292px; flex:1; min-height:0}
@@ -607,16 +640,20 @@ body{overflow:hidden}
 
   /* Two rows in the bar: identity and count, then the tabs, scrolling. */
   .appbar{
-    height:auto; flex-wrap:wrap; padding:7px 12px 0; gap:0 12px;
+    height:auto; flex-wrap:wrap; padding:10px 14px 0; gap:0 12px;
     overflow:visible;
   }
-  .brand{font-size:12px; order:1}
-  .appmeta{order:2; margin-left:auto}
+  /* Readable rather than merely present. At 12px in a bar squeezed under a
+     status bar the name was neither. */
+  .brand{font-size:14px; letter-spacing:.02em; order:1}
+  .appmeta{order:2; margin-left:auto; font-size:12px}
   .appbar .tabs2{
-    order:3; flex:1 0 100%; margin:6px -12px 0; padding:0 12px;
+    order:3; flex:1 0 100%; margin:8px -14px 0; padding:0 14px;
     border-bottom:none;
   }
-  .tb{padding:10px 12px; font-size:11px}
+  /* 46px of target, and the text sitting in the middle of it rather than at
+     the top where a thumb has to stretch for it. */
+  .tb{padding:13px 14px; font-size:12px; min-height:46px}
 }
 
 
@@ -1076,7 +1113,9 @@ body{overflow:hidden}
 .instx:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 #lockgate{
   position:fixed; inset:0; z-index:60; background:var(--ground);
-  display:flex; padding:22px; overflow-y:auto;
+  display:flex; overflow-y:auto;
+  padding:calc(22px + env(safe-area-inset-top, 0px)) 22px
+          calc(22px + env(safe-area-inset-bottom, 0px));
 }
 /* margin:auto rather than align-items:center. Centring a flex item that is
    taller than the box pushes its top off the edge and there is no scrolling
