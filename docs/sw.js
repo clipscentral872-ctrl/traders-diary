@@ -16,7 +16,7 @@
 // Stamped by tools/build_web.py from the content of the files below. A
 // fixed version meant a cache-first shell served the old page forever:
 // once installed, no update could reach anyone.
-const VERSION = "cad7d4048a50";
+const VERSION = "48ed3e9bf2a1";
 const SHELL = "diary-shell-" + VERSION;
 const DATA = "diary-bars-" + VERSION;
 
@@ -27,12 +27,11 @@ const DATA = "diary-bars-" + VERSION;
 // with ignoreSearch looked equivalent and was not: a stale entry answered
 // the new version's request, and the app came up half old and half new.
 // Stamped by tools/build_web.py, the same way VERSION is.
-const MODULES = ["engine.js", "chart.js", "levels.js", "revisit.js", "series.js", "clock.js", "vault.js", "draw.js", "watchlist.js", "lock.js", "replay.js", "demo.js", "diary.js", "videos.js", "system.js", "dashboard.js"];
+const MODULES = ["engine.js", "chart.js", "levels.js", "revisit.js", "series.js", "clock.js", "vault.js", "draw.js", "profile.js", "watchlist.js", "lock.js", "replay.js", "demo.js", "diary.js", "videos.js", "system.js", "dashboard.js"];
 
 const FILES = [
   "./", "./index.html",
   ...MODULES.map(m => `./${m}?v=${VERSION}`),
-  "./seed.json",
   "./manifest.webmanifest", "./icon.svg",
   "./icon-180.png", "./icon-192.png", "./icon-512.png",
 ];

@@ -14,7 +14,7 @@
  * Kept per contract, in this browser, alongside everything else here.
  */
 
-const KEY = "tradersdiary.draw";
+import * as P from "./profile.js";
 
 /* The tools, in the order they sit on the rail. Each says how many points it
    needs and how it is drawn; nothing else in here knows about any of them. */
@@ -41,7 +41,9 @@ const FIB = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
 const GANN = [0.25, 0.5, 0.75];
 const HIT = 7;              // how close a click has to be, in pixels
 
-let all = load();
+// Read lazily. At module load there is no journal open yet, so reading
+// here would have picked up whatever the unprefixed keys held.
+let all = null;
 let tool = "cursor";
 let sym = "NQ";
 let live = null;            // the one being drawn right now
@@ -49,16 +51,24 @@ let picked = null;          // the one selected
 let onChange = () => {};
 
 function load() {
-  try { return JSON.parse(localStorage.getItem(KEY)) || {}; }
+  try { return JSON.parse(P.get("draw")) || {}; }
   catch { return {}; }
 }
 
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(all)); }
-  catch { /* full or blocked; the drawings are still on screen */ }
+  if (all) P.set("draw", JSON.stringify(all));
 }
 
-const mine = () => (all[sym] = all[sym] || []);
+/** Re-read for whichever journal is open now. */
+export function reload() {
+  all = null;
+  picked = live = null;
+}
+
+const mine = () => {
+  if (!all) all = load();
+  return (all[sym] = all[sym] || []);
+};
 
 export function setSymbol(s) { sym = s || "NQ"; picked = null; live = null; }
 export function setTool(t) { tool = t; live = null; picked = null; }

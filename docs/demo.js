@@ -22,9 +22,10 @@ import * as WL from "./watchlist.js";
 import * as SER from "./series.js";
 import * as RV from "./revisit.js";
 import * as DRAW from "./draw.js";
+import * as P from "./profile.js";
 
 const $ = id => document.getElementById(id);
-const KEY = "tradersdiary.demo";
+// The demo account lives under whichever journal is open.
 const SYMS = ["NQ", "ES", "YM", "RTY"];
 const START_BALANCE = 100000;
 
@@ -55,7 +56,7 @@ const stamp = ms => {
 
 function loadAccount() {
   try {
-    const o = JSON.parse(localStorage.getItem(KEY));
+    const o = JSON.parse(P.get("demo"));
     if (o && typeof o.balance === "number") {
       // Anything in the list that is not a trade is dropped rather than
       // trusted. A half-written or older-format entry here throws while the
@@ -71,7 +72,7 @@ function loadAccount() {
 }
 function saveAccount() {
   try {
-    localStorage.setItem(KEY, JSON.stringify(
+    P.set("demo", JSON.stringify(
       {balance: D.account.balance, trades: D.account.trades, pos: D.pos}));
   } catch { /* storage full or blocked; the screen is still right */ }
 }
@@ -543,6 +544,14 @@ export function init(onSaveToDiary, onTradeClosed) {
   // The site republishes bars through the session, so a tab left open picks
   // them up without being reloaded.
   setInterval(() => { WL.refresh(); refresh().then(paintWatch); }, 5 * 60000);
+}
+
+/** Re-read the account for whichever journal is now open. */
+export function reload() {
+  D.account = {balance: START_BALANCE, trades: []};
+  D.pos = null;
+  loadAccount();
+  render();
 }
 
 export const redraw = () => { if (chart) chart.draw(); };

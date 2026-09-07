@@ -7,6 +7,7 @@
  */
 import * as E from "./engine.js";
 import * as C from "./clock.js";
+import * as PROF from "./profile.js";
 import * as RP from "./replay.js";
 import * as SYS from "./system.js";
 import * as LOCK from "./lock.js";
@@ -15,15 +16,17 @@ import * as RV from "./revisit.js";
 import * as DASH from "./dashboard.js";
 import * as VID from "./videos.js";
 import * as DIARY from "./diary.js";
+import * as DRAW from "./draw.js";
 
 const $ = id => document.getElementById(id);
-const KEY = "tradersdiary.v1";
-const TZ_KEY = "tradersdiary.tz";
+// Names within a journal. The journal itself decides where they land, so
+// two people on one device never touch each other's.
+const KEY = "v1";
+const TZ_KEY = "tz";
 // Set the first time the seed is planted, and also by "Erase everything", so
 // an app you have deliberately emptied stays empty instead of filling itself
 // back up on the next reload.
-const SEED_KEY = "tradersdiary.seeded";
-const SHOW_TZ_KEY = "tradersdiary.showtz";
+const SHOW_TZ_KEY = "showtz";
 
 /* ------------------------------------------------------------- storage */
 
@@ -33,7 +36,7 @@ let PASSCODE = null;
 
 function load() {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = PROF.get(KEY);
     if (!raw) return {trades: [], start: null};
     if (LOCK.isLocked(raw)) return {trades: [], start: null, sealed: true};
     const o = JSON.parse(raw);
@@ -50,17 +53,22 @@ const CANT_STORE =
   + "because private browsing blocks storage. Your trades are on screen but "
   + "will be gone when you close the tab. Save a backup file.";
 
+const NO_JOURNAL =
+  "No journal is open, so nothing was saved. Enter your PIN and try again.";
+
 function save(trades, start) {
+  // Refuse rather than write somewhere shared. This is the one place a
+  // person's trades could land in a bucket that is not theirs.
+  if (!PROF.isOpen()) return NO_JOURNAL;
   const body = {trades, start, saved: Date.now()};
   try {
     if (PASSCODE === null) {
-      localStorage.setItem(KEY, JSON.stringify(body));
-      return null;
+      return PROF.set(KEY, JSON.stringify(body)) ? null : CANT_STORE;
     }
     // Locked. Encrypt first, and only overwrite once that has succeeded, so a
     // failure here can never replace a good record with a broken one.
     LOCK.lock(body, PASSCODE)
-      .then(env => localStorage.setItem(KEY, JSON.stringify(env)))
+      .then(env => PROF.set(KEY, JSON.stringify(env)))
       .catch(() => say("The record could not be locked, so it was not saved. "
                      + "Save a backup file now.", true));
     return null;
@@ -73,44 +81,21 @@ let STATE = load();
 window.TRADES = STATE.trades;
 window.START = STATE.start;
 
-/* The record this app ships with.
+/* Nothing ships with the app any more.
  *
- * A fresh install used to open empty and ask for six CSV exports before it
- * could say anything, which is the wrong first screen for a record that
- * already exists. seed.json holds it, and lands only on a browser that has
- * never stored anything: with a record present, a sealed store, a store that
- * failed to read, or an erase behind it, this does nothing at all. It can
- * never overwrite or resurrect a thing. */
-async function plantSeed() {
-  if (window.TRADES.length || STATE.sealed || STATE.broken) return false;
-  try {
-    if (localStorage.getItem(SEED_KEY)) return false;
-  } catch { return false; }
-  try {
-    const r = await fetch("seed.json", {cache: "no-cache"});
-    if (!r.ok) return false;
-    const body = await r.json();
-    if (!Array.isArray(body.trades) || !body.trades.length) return false;
-    window.TRADES = body.trades;
-    window.START = body.start ?? null;
-    save(window.TRADES, window.START);
-    try { localStorage.setItem(SEED_KEY, "1"); } catch { /* fine */ }
-    return true;
-  } catch {
-    // No seed published, or offline on a first run. An empty diary that asks
-    // for an import is a perfectly good fallback.
-    return false;
-  }
-}
+ * It used to carry a starting record so a fresh install had something to
+ * look at. That record was one person's real trades sitting in a file on a
+ * public site, and the moment the link went to a second person it was also
+ * the first person's trades appearing in the second person's journal. A
+ * backup file restored once per device does the same job and tells nobody
+ * else anything.
+ */
 
 /** New York unless you have said otherwise. */
-const displayZone = () => {
-  try { return localStorage.getItem(SHOW_TZ_KEY) || C.NY; }
-  catch { return C.NY; }
-};
+const displayZone = () => PROF.get(SHOW_TZ_KEY) || C.NY;
 
 const tzOffset = () => {
-  const v = parseFloat(localStorage.getItem(TZ_KEY));
+  const v = parseFloat(PROF.get(TZ_KEY));
   // Falling back to the device's own offset is right far more often than any
   // fixed guess, because most people export on the machine they trade on.
   return Number.isFinite(v) ? v : -new Date().getTimezoneOffset() / 60;
@@ -480,9 +465,10 @@ $("loadpick").addEventListener("change", async () => {
     if (!Array.isArray(o.trades)) throw new Error("no trades in that file");
     window.TRADES = o.trades;
     window.START = o.start ?? null;
-    save(window.TRADES, window.START);
+    const warn = save(window.TRADES, window.START);
     renderPanels();
     storeLine();
+    if (warn) { say(warn, true); return; }
     say(`Restored ${o.trades.length} trades from the backup.`);
     location.hash = "";
   } catch (e) {
@@ -494,10 +480,7 @@ $("wipe").addEventListener("click", () => {
   if (!window.TRADES.length) { say("There is nothing stored to erase."); return; }
   if (!confirm(`Erase all ${window.TRADES.length} trades from this browser? `
              + `This cannot be undone unless you saved a backup.`)) return;
-  localStorage.removeItem(KEY);
-  // Erased means erased. Without this the seed would plant itself again on
-  // the next reload and it would look like the erase had not worked.
-  try { localStorage.setItem(SEED_KEY, "1"); } catch { /* fine */ }
+  PROF.remove(KEY);
   window.TRADES = [];
   window.START = null;
   renderPanels();
@@ -516,7 +499,7 @@ tzSel.innerHTML = ZONES.map(h => {
 }).join("");
 tzSel.value = String(tzOffset());
 tzSel.addEventListener("change", () => {
-  localStorage.setItem(TZ_KEY, tzSel.value);
+  PROF.set(TZ_KEY, tzSel.value);
   E.setLocalOffset(parseFloat(tzSel.value));
   say("Saved. Re-import a session for the New York clock check to use it.");
 });
@@ -527,7 +510,7 @@ tzSel.addEventListener("change", () => {
 const showSel = $("showtz");
 showSel.value = displayZone();
 showSel.addEventListener("change", () => {
-  try { localStorage.setItem(SHOW_TZ_KEY, showSel.value); } catch { /* fine */ }
+  PROF.set(SHOW_TZ_KEY, showSel.value);
   C.setZone(showSel.value);
   C.reset();
   renderPanels();
@@ -787,53 +770,133 @@ function fillCandles() {
 
 const gate = $("lockgate");
 
-function showGate(msg) {
+/* The PIN screen.
+ *
+ * Two jobs in one box, because from where you are standing they are the same
+ * question. A PIN that opens a journal on this device opens it. A PIN that
+ * opens none offers to start one. That is the whole of it: no sign up, no
+ * account, no list of journals to pick from, and nothing that says whether
+ * anyone else has one here.
+ */
+function showGate(msg, mode) {
+  const first = !PROF.list().length;
+  // Somebody who used this before PINs existed already has a journal and a
+  // code for it. Telling them to "set" one reads like being asked to start
+  // over, and the code they would then type is the one they already had.
+  const carryOver = first && PROF.hasLegacy();
   gate.hidden = false;
+  gate.dataset.mode = mode || (first && !carryOver ? "new" : "open");
+  const isNew = gate.dataset.mode === "new";
+  $("locktitle").textContent = isNew ? "Set your PIN"
+    : carryOver ? "Enter your passcode" : "Enter your PIN";
+  $("locklead").textContent = isNew
+    ? "Four digits. This is what your journal is kept under, so everything "
+      + "you import belongs to this PIN and nobody else's does."
+    : carryOver
+      ? "Your journal is already here. Enter the passcode you set for it and "
+        + "it carries across to a PIN, with everything in it."
+      : "This journal is encrypted. Your PIN opens it.";
+  $("lockgo").textContent = isNew ? "Start my journal" : "Open";
+  $("lockpin").value = "";
   $("lockmsg").hidden = !msg;
   $("lockmsg").textContent = msg || "";
-  $("lockpin").value = "";
+  $("locknew").hidden = isNew || first;
   $("lockpin").focus();
+}
+
+/** Everything that has to happen once a journal is actually open. */
+async function opened(pin) {
+  PASSCODE = pin;
+  // A journal left by the version before PINs is taken over rather than
+  // stranded, so nobody has to export and import their own record to get
+  // past a change they did not ask for.
+  const moved = PROF.hasLegacy() ? PROF.adoptLegacy() : 0;
+
+  STATE = load();
+  if (STATE.sealed) {
+    try {
+      const body = await LOCK.unlock(JSON.parse(PROF.get(KEY)), pin);
+      window.TRADES = body.trades || [];
+      window.START = body.start ?? null;
+    } catch {
+      // The journal opened but its contents will not, which means the store
+      // was written under a different PIN. Say so rather than showing an
+      // empty diary that looks like lost data.
+      showGate("This journal opened but its trades are locked with a "
+             + "different code. Restore from a backup file.");
+      return false;
+    }
+  } else {
+    window.TRADES = STATE.trades;
+    window.START = STATE.start;
+  }
+
+  gate.hidden = true;
+  DRAW.reload();
+  E.setLocalOffset(tzOffset());
+  C.setExportOffset(tzOffset);
+  C.setZone(displayZone());
+  if (tzSel) tzSel.value = String(tzOffset());
+  if ($("showtz")) $("showtz").value = displayZone();
+  renderPanels();
+  storeLine();
+  lockState();
+  DEMO.reload();
+  loadBars(feedsFor(window.TRADES)).then(fillCandles);
+  if (moved) say(`Your existing journal has been moved onto this PIN. `
+               + `${window.TRADES.length} trades came with it.`);
+  return true;
 }
 
 $("lockform").addEventListener("submit", async e => {
   e.preventDefault();
-  const pin = $("lockpin").value;
-  if (!pin) return;
+  const pin = $("lockpin").value.trim();
+  if (!/^\d{4,}$/.test(pin)) {
+    showGate("Four digits or more.", gate.dataset.mode);
+    return;
+  }
   const btn = $("lockgo");
   btn.disabled = true;
-  btn.textContent = "Unlocking...";
+  btn.textContent = "One moment...";
   try {
-    const env = JSON.parse(localStorage.getItem(KEY));
-    const body = await LOCK.unlock(env, pin);
-    PASSCODE = pin;
-    window.TRADES = body.trades || [];
-    window.START = body.start ?? null;
-    gate.hidden = true;
-    renderPanels();
-    storeLine();
-    lockState();
-    loadBars(feedsFor(window.TRADES)).then(fillCandles);
+    if (gate.dataset.mode === "new") {
+      const made = await PROF.create(pin, "My journal");
+      if (!made) {
+        showGate("A journal on this device already uses that PIN. Enter it "
+               + "to open that one, or pick different digits.", "open");
+      } else {
+        await opened(pin);
+      }
+    } else {
+      let got = await PROF.open(pin);
+      // Nothing to match against yet on a carry-over: the journal is there
+      // but it predates profiles, so the PIN typed becomes its PIN.
+      if (!got && !PROF.list().length && PROF.hasLegacy())
+        got = await PROF.create(pin, "My journal");
+      if (got) await opened(pin);
+      else showGate("No journal on this device uses that PIN.");
+    }
   } catch {
-    // AES-GCM authenticates, so a wrong passcode fails outright. There is
-    // nothing here that leaks whether it was nearly right.
-    showGate("That passcode does not open this diary.");
+    showGate("Something went wrong opening that. Try again.");
   }
+  // showGate owns the wording, so restoring what the button said before would
+  // undo it: after being told a PIN is already in use the screen said "Enter
+  // your PIN" over a button that still said "Start my journal".
   btn.disabled = false;
-  btn.textContent = "Unlock";
+  if (btn.textContent === "One moment...")
+    btn.textContent = gate.dataset.mode === "new" ? "Start my journal" : "Open";
 });
 
+$("locknew").addEventListener("click", () => showGate("", "new"));
+
 function lockState() {
-  const on = PASSCODE !== null;
-  $("setlock").textContent = on ? "Change the passcode" : "Set a passcode";
-  $("unsetlock").hidden = !on;
-  $("lockstate").textContent = on
-    ? "Locked. The record in this browser is encrypted, and the passcode is "
-      + "forgotten the moment you close the app."
-    : LOCK.available()
-      ? "Not locked. The record is readable by anyone who can open this browser."
-      : "This browser cannot encrypt, so the passcode option is not available "
-        + "here. It needs a secure connection.";
-  $("setlock").disabled = !LOCK.available();
+  const n = PROF.list().length;
+  $("lockstate").textContent = PROF.isOpen()
+    ? `Open, and encrypted with your PIN, which is forgotten the moment you `
+      + `close the app. ${n === 1 ? "This is the only journal on this device."
+                                  : n + " journals on this device."}`
+    : "No journal is open.";
+  $("setlock").disabled = !LOCK.available() || !PROF.isOpen();
 }
 
 function setMsg(text, bad) {
@@ -924,17 +987,22 @@ $("setform").addEventListener("submit", async e => {
   btn.disabled = true;
   btn.textContent = "Locking...";
   try {
+    // The record and the journal's own check blob both move to the new PIN,
+    // and only after BOTH have been produced. Re-keying one and failing on
+    // the other would leave a journal whose PIN opens it but whose trades it
+    // cannot read, which is a worse place to be than not having changed it.
     const env = await LOCK.lock(
       {trades: window.TRADES, start: window.START, saved: Date.now()}, pin);
-    localStorage.setItem(KEY, JSON.stringify(env));
+    const rekeyed = await PROF.rekey(pin);
+    if (!rekeyed) throw new Error("the journal would not take the new PIN");
+    PROF.set(KEY, JSON.stringify(env));
     PASSCODE = pin;
     $("setpanel").hidden = true;
     lockState();
     storeLine();
-    say("Locked. This diary now asks for that passcode when it opens on this "
-      + "device. Your backup file is still unencrypted, so keep it somewhere "
-      + "you trust. Setting it here does not lock your other devices: do the "
-      + "same on each one.");
+    say("Done. This journal opens with that PIN on this device from now on. "
+      + "Your backup file is still unencrypted, so keep it somewhere you "
+      + "trust. This does not change your other devices: do the same on each.");
   } catch (err) {
     // Nothing was written, so nothing was lost.
     setMsg("The record could not be locked, so nothing changed.", true);
@@ -943,17 +1011,17 @@ $("setform").addEventListener("submit", async e => {
   btn.textContent = "Lock it";
 });
 
-$("unsetlock").addEventListener("click", () => {
-  if (PASSCODE === null) return;
-  // Losing a lock is recoverable in a way that losing a record is not, so a
-  // single confirmation is the right weight here.
-  if (!confirm("Remove the passcode? The record goes back to being readable "
-             + "by anyone who can open this browser.")) return;
+/* Lock, and let somebody else in.
+ *
+ * Reloading rather than just hiding things: half the app is holding this
+ * journal's trades, drawings and account in memory, and the only way to be
+ * certain none of it is still on screen for the next person is to start the
+ * page again. It costs a second and it cannot leak.
+ */
+$("locknow").addEventListener("click", () => {
+  PROF.close();
   PASSCODE = null;
-  const warn = save(window.TRADES, window.START);
-  lockState();
-  storeLine();
-  say(warn || "Passcode removed.");
+  location.reload();
 });
 
 /* --------------------------------------------------------- installing */
@@ -1044,25 +1112,19 @@ E.setLocalOffset(tzOffset());
 // stored stamp, and which zone to print it in.
 C.setExportOffset(tzOffset);
 C.setZone(displayZone());
+
+/* Nothing is shown before a PIN.
+ *
+ * Not for secrecy so much as for ownership: until a journal is open there is
+ * no answer to whose trades these would be. Drawing an empty diary first and
+ * asking afterwards is how the app used to look like it had lost everything.
+ */
+window.TRADES = [];
+window.START = null;
 renderPanels();
 storeLine();
 lockState();
-// A sealed store means the record is there but encrypted. Ask before drawing
-// anything, so an empty diary is never mistaken for a lost one.
-if (STATE.sealed) showGate("");
-// A sealed store has nothing loaded yet, so there is nothing to draw candles
-// on. This runs again after unlocking instead.
-if (!STATE.sealed) {
-  plantSeed().then(planted => {
-    if (planted) {
-      renderPanels();
-      storeLine();
-      say(`Your ${window.TRADES.length} trades are already here. Import a new `
-        + `session on the Diary tab whenever you have one.`);
-    }
-    return loadBars(feedsFor(window.TRADES)).then(fillCandles);
-  });
-}
+showGate("");
 
 /** Take trades from Replay or Demo into the Diary, ignoring any already there.
  *

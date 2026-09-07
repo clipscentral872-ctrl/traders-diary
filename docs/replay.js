@@ -18,9 +18,10 @@ import {createChart} from "./chart.js";
 import * as WL from "./watchlist.js";
 import * as SER from "./series.js";
 import * as DRAW from "./draw.js";
+import * as P from "./profile.js";
 
 const $ = id => document.getElementById(id);
-const PRACTICE_KEY = "tradersdiary.replay";
+// Practice trades live under whichever journal is open.
 
 export const TF = SER.TIMEFRAMES.map(t => [t.key, t.label]);
 const SYMS = ["NQ", "ES", "YM", "RTY"];
@@ -443,11 +444,11 @@ function reset() {
 }
 
 function saveDraft() {
-  try { localStorage.setItem(PRACTICE_KEY, JSON.stringify(S.done)); } catch { /* fine */ }
+  P.set("replay", JSON.stringify(S.done));
 }
 function restoreDraft() {
   try {
-    const raw = localStorage.getItem(PRACTICE_KEY);
+    const raw = P.get("replay");
     if (raw) S.done = JSON.parse(raw) || [];
   } catch { S.done = []; }
 }

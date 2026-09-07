@@ -16,17 +16,22 @@
  * silently is worse than being told it could not be kept.
  */
 
-const DB = "tradersdiary.vault";
+import * as P from "./profile.js";
 const STORE = "videos";
 const VERSION = 1;
 
 let dbp = null;
+let openedFor = null;
 
 function open() {
+  // A different journal is a different library, so the handle is dropped
+  // when the journal changes rather than quietly serving the last one's.
+  if (dbp && openedFor !== P.dbName()) { dbp = null; }
+  openedFor = P.dbName();
   if (dbp) return dbp;
   dbp = new Promise((ok, fail) => {
     let req;
-    try { req = indexedDB.open(DB, VERSION); }
+    try { req = indexedDB.open(P.dbName(), VERSION); }
     catch (e) { fail(e); return; }
     req.onupgradeneeded = () => {
       const db = req.result;

@@ -193,19 +193,20 @@ PRIVACY = """<section>
 </section>
 
 <section>
-  <h2>Lock it with a passcode</h2>
-  <p class="lead">A passcode does not just hide the diary behind a screen, it
-  <b>encrypts</b> the record. What is left in this browser afterwards is a blob
-  that means nothing without the passcode, so someone holding your unlocked
-  phone gets nothing out of it.</p>
-  <p class="lead">The cost of that is real and there is no way around it:
-  <b>there is no reset.</b> No account, no recovery email, nobody with a spare
-  key. Forget the passcode and the record is gone. Save a backup file first,
-  and keep it somewhere you trust, because the backup stays unencrypted on
-  purpose so that it is a way back in rather than a second thing to lose.</p>
+  <h2>Your PIN</h2>
+  <p class="lead">Your PIN is what this journal is kept under. Everything you
+  import belongs to it, and it <b>encrypts</b> the record, so what is left in
+  this browser is a blob that means nothing without it.</p>
+  <p class="lead">Somebody else can pick up this device, open the app, tap
+  <b>Start a new journal</b> and set their own PIN. They get a clean journal
+  and see nothing of yours, and you see nothing of theirs. That is the whole
+  mechanism: no accounts, nothing shared, nothing on a server.</p>
+  <p class="lead">The cost is real and there is no way around it: <b>there is
+  no reset.</b> Nobody has a spare key. Forget the PIN and that journal is
+  gone, and a backup file is the only way back, so keep one.</p>
   <div class="toolrow" id="lockrow">
-    <button class="bigbtn" id="setlock">Set a passcode</button>
-    <button class="bigbtn ghost" id="unsetlock" hidden>Remove the passcode</button>
+    <button class="bigbtn" id="setlock">Change your PIN</button>
+    <button class="bigbtn ghost" id="locknow">Lock and switch journal</button>
   </div>
   <p class="lead" id="lockstate"></p>
 
@@ -213,13 +214,13 @@ PRIVACY = """<section>
        iPhone can swallow prompt() entirely, and a passcode you tap Set on and
        nothing happens is worse than no passcode at all. -->
   <div class="setcard hud" id="setpanel" hidden>
-    <h3 id="settitle">Set a passcode</h3>
-    <p class="lead">Longer beats clever. A short phrase you will not forget is
-    stronger than a word with symbols in it.</p>
+    <h3 id="settitle">Change your PIN</h3>
+    <p class="lead">Four digits or more. This becomes the PIN that opens this
+    journal on this device, and it does not change your other devices.</p>
     <form id="setform" autocomplete="off">
-      <label class="rpl" for="pin1">Passcode
+      <label class="rpl" for="pin1">New PIN
         <input type="password" id="pin1" autocomplete="new-password"
-               minlength="4" required></label>
+               inputmode="numeric" minlength="4" required></label>
       <p class="strength" id="strength" hidden></p>
       <label class="rpl" for="pin2">Type it again
         <input type="password" id="pin2" autocomplete="new-password"
@@ -228,7 +229,7 @@ PRIVACY = """<section>
         I understand there is <b>no reset</b>. If I forget this, the record on
         this device is gone and only a backup file can bring it back.</label>
       <div class="toolrow">
-        <button class="bigbtn" type="submit" id="setgo">Lock it</button>
+        <button class="bigbtn" type="submit" id="setgo">Change it</button>
         <button class="bigbtn ghost" type="button" id="setbackup">Save a backup first</button>
         <button class="bigbtn ghost" type="button" id="setcancel">Cancel</button>
       </div>
@@ -1061,12 +1062,18 @@ body{overflow:hidden}
 .instx:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 #lockgate{
   position:fixed; inset:0; z-index:60; background:var(--ground);
-  display:flex; align-items:center; justify-content:center; padding:22px;
+  display:flex; padding:22px; overflow-y:auto;
 }
+/* margin:auto rather than align-items:center. Centring a flex item that is
+   taller than the box pushes its top off the edge and there is no scrolling
+   back to it: on a short screen the title and the button were simply gone.
+   An auto margin centres when there is room and gives up when there is not. */
 .lockcard{
-  background:var(--raised); border:1px solid var(--line); padding:34px 30px;
-  max-width:420px; width:100%; text-align:center;
+  background:var(--raised); border:1px solid var(--line); padding:30px 28px;
+  border-radius:8px; box-shadow:var(--shadow);
+  max-width:420px; width:100%; margin:auto; text-align:center;
 }
+.lockcard .lockhelp{font-size:12.5px; line-height:1.5; margin:10px 0 0}
 .lockcard h2{margin:0 0 10px}
 .lockcard h2::before{display:none}
 .lockmark{
@@ -1116,10 +1123,21 @@ body{overflow:hidden}
 .ack input{width:20px; height:20px; margin:2px 0 0; flex:none; accent-color:var(--accent)}
 .ack b{color:var(--loss)}
 .toolrow{display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 12px}
+/* The primary button, solid, the way a light UI marks the one thing it wants
+   you to press. It was a pale tint on a white ground, which read as disabled
+   next to a ghost button that read as normal. */
+.bigbtn{
+  background:var(--accent); border-color:var(--accent); color:#FFF;
+  border-radius:4px;
+}
+.bigbtn:hover{background:#1E53E5; border-color:#1E53E5; color:#FFF}
+.bigbtn:disabled{opacity:.45; cursor:default}
+.bigbtn:disabled:hover{background:var(--accent); border-color:var(--accent)}
 .bigbtn.ghost{
   background:transparent; border-color:var(--line); color:var(--muted);
   box-shadow:none;
 }
+.bigbtn.ghost:hover{color:var(--text)}
 .bigbtn.ghost:hover{border-color:var(--accent); color:var(--text); background:var(--raised)}
 #wipe:hover{border-color:var(--loss); color:var(--loss)}
 .setrow{
@@ -1348,7 +1366,8 @@ def main():
 # and it would not show up until a deploy went out half old and half new.
 MODULES = [
     "engine.js", "chart.js", "levels.js", "revisit.js", "series.js",
-    "clock.js", "vault.js", "draw.js", "watchlist.js", "lock.js",
+    "clock.js", "vault.js", "draw.js", "profile.js",
+    "watchlist.js", "lock.js",
     "replay.js", "demo.js", "diary.js", "videos.js", "system.js",
     "dashboard.js",
 ]
@@ -1395,7 +1414,8 @@ def stamp_worker(page):
     for name in ("engine.js", "chart.js", "levels.js", "revisit.js",
                  "replay.js", "demo.js", "diary.js", "videos.js",
                  "system.js", "dashboard.js", "lock.js", "watchlist.js",
-                 "series.js", "clock.js", "vault.js", "draw.js", "seed.json"):
+                 "series.js", "clock.js", "vault.js", "draw.js",
+                 "profile.js"):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())

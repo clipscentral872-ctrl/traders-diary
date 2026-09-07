@@ -18,6 +18,7 @@
  */
 import * as E from "./engine.js";
 import * as RV from "./revisit.js";
+import * as P from "./profile.js";
 
 const $ = id => document.getElementById(id);
 
@@ -85,7 +86,7 @@ function figures() {
   if (!box) return;
 
   let d = null;
-  try { d = JSON.parse(localStorage.getItem("tradersdiary.demo")); } catch { /* fresh */ }
+  try { d = JSON.parse(P.get("demo")); } catch { /* fresh */ }
   const demoFig = !d || typeof d.balance !== "number"
     ? fig("Demo", "not started", "", "open the Demo tab")
     : fig("Demo", plain(d.balance), d.balance - 100000 >= 0 ? "win" : "loss",
