@@ -243,9 +243,12 @@ export async function reload() {
  */
 export function forTrade(t) {
   if (!t || !files.length) return null;
+  // Down to the second, because two trades a minute apart is normal and two
+  // in the same minute is not rare either: matching on minutes alone handed
+  // back whichever of them happened to be first in the list.
   const stamp = String(t.open_t || "");
   const key = `${t.symbol} ${stamp.slice(0, 10)} `
-            + `${stamp.slice(11, 13)}${stamp.slice(14, 16)}`;
+            + `${stamp.slice(11, 13)}${stamp.slice(14, 16)}${stamp.slice(17, 19)}`;
   const hit = files.find(f => f.name.includes(key));
   return hit ? hit.name : null;
 }
