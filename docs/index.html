@@ -122,6 +122,19 @@ h1{
 
 .sources{margin-top:26px}
 .srcrow{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:16px}
+/* The same picker again, beside the trades it decides.
+ *
+ * It lived only on the reading tab, under the figures. So sending demo trades
+ * to the Diary put five of them somewhere with no visible way to reach them:
+ * the header counted five and the trade browser said no trades in this view.
+ * It shows only when there is more than one kind of trade to choose from. */
+.srcrow.mini{margin:0 4px 0 6px; flex-wrap:nowrap; gap:4px}
+.srcrow.mini:empty{display:none}
+.srcrow.mini .src{
+  padding:5px 10px; font-size:10.5px; gap:6px; border-radius:4px;
+  box-shadow:none;
+}
+.srcrow.mini .sn{font-size:10.5px}
 .src{
   background:var(--raised); border:1px solid var(--line); color:var(--muted);
   font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:600; font-size:11.5px;
@@ -1489,6 +1502,7 @@ body{overflow:hidden}
     <div class="wstop">
       <button class="ptool" id="dprev" title="Previous trade">&#9664;</button>
       <button class="ptool" id="dnext" title="Next trade">&#9654;</button>
+      <div class="srcrow mini" id="srcrow2"></div>
       <div class="chead" id="dhead"></div>
       <div class="pgrow" id="dohlc2"></div>
     </div>
@@ -2215,7 +2229,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=54c89516189d","./chart.js":"./chart.js?v=54c89516189d","./levels.js":"./levels.js?v=54c89516189d","./revisit.js":"./revisit.js?v=54c89516189d","./series.js":"./series.js?v=54c89516189d","./clock.js":"./clock.js?v=54c89516189d","./vault.js":"./vault.js?v=54c89516189d","./draw.js":"./draw.js?v=54c89516189d","./profile.js":"./profile.js?v=54c89516189d","./whatif.js":"./whatif.js?v=54c89516189d","./precheck.js":"./precheck.js?v=54c89516189d","./shelf.js":"./shelf.js?v=54c89516189d","./watchlist.js":"./watchlist.js?v=54c89516189d","./lock.js":"./lock.js?v=54c89516189d","./replay.js":"./replay.js?v=54c89516189d","./demo.js":"./demo.js?v=54c89516189d","./diary.js":"./diary.js?v=54c89516189d","./videos.js":"./videos.js?v=54c89516189d","./system.js":"./system.js?v=54c89516189d","./dashboard.js":"./dashboard.js?v=54c89516189d"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=20f1572832f0","./chart.js":"./chart.js?v=20f1572832f0","./levels.js":"./levels.js?v=20f1572832f0","./revisit.js":"./revisit.js?v=20f1572832f0","./series.js":"./series.js?v=20f1572832f0","./clock.js":"./clock.js?v=20f1572832f0","./vault.js":"./vault.js?v=20f1572832f0","./draw.js":"./draw.js?v=20f1572832f0","./profile.js":"./profile.js?v=20f1572832f0","./whatif.js":"./whatif.js?v=20f1572832f0","./precheck.js":"./precheck.js?v=20f1572832f0","./shelf.js":"./shelf.js?v=20f1572832f0","./watchlist.js":"./watchlist.js?v=20f1572832f0","./lock.js":"./lock.js?v=20f1572832f0","./replay.js":"./replay.js?v=20f1572832f0","./demo.js":"./demo.js?v=20f1572832f0","./diary.js":"./diary.js?v=20f1572832f0","./videos.js":"./videos.js?v=20f1572832f0","./system.js":"./system.js?v=20f1572832f0","./dashboard.js":"./dashboard.js?v=20f1572832f0"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -2397,11 +2411,16 @@ function renderPanels() {
     all.some(t => k === "all" || (t.source || "live") === k));
   const usable = present.length > 1 ? present : present.slice(0, 1);
 
-  $("srcrow").innerHTML = usable.map(([k, label]) => {
+  const buttons = usable.map(([k, label]) => {
     const n = all.filter(t => k === "all" || (t.source || "live") === k).length;
     return `<button class="src" data-src="${k}" onclick="pickSource('${k}')">`
          + `${label}<span class="sn">${n}</span></button>`;
   }).join("");
+  $("srcrow").innerHTML = buttons;
+  // The same choice, drawn again next to the trade browser. With one kind of
+  // trade there is nothing to choose, so there it stays empty and hidden.
+  const mini = $("srcrow2");
+  if (mini) mini.innerHTML = usable.length > 1 ? buttons : "";
 
   $("srcpanes").innerHTML = usable.map(([k]) => {
     const sel = all.filter(t => k === "all" || (t.source || "live") === k);
@@ -2441,9 +2460,15 @@ function renderPanels() {
   renderLearn();
   DASH.refreshRecord();
   DIARY.pick(0);
-  const first = document.querySelector('.src[data-src="live"]')
-             || document.querySelector(".src");
-  window.pickSource(first ? first.dataset.src : "live");
+  /* Whatever is being looked at stays being looked at.
+   *
+   * This snapped back to Live on every redraw, and a redraw happens whenever
+   * anything is added. So sending demo trades to the Diary moved you off the
+   * source that holds them, in the same breath as saying they had arrived. */
+  const want = document.querySelector(`.src[data-src="${window.curSource}"]`)
+            || document.querySelector('.src[data-src="live"]')
+            || document.querySelector(".src");
+  window.pickSource(want ? want.dataset.src : "live");
 }
 
 /** Where the record actually stands, worked out every time it is drawn. */
@@ -3416,6 +3441,15 @@ window.__diaryPick = i => DIARY.pick(i);
 DIARY.init();
 
 VID.init();
+
+/* The picker and the trade browser are one choice, not two.
+ *
+ * The reading tab owns the picker and the Diary tab owns the list, and each
+ * kept its own idea of which source was showing. Choosing Demo moved the
+ * figures and left the browser on Live, which is how five demo trades could
+ * be sent to the Diary and then not be in it. */
+const basePickSource = window.pickSource;
+window.pickSource = src => { DIARY.setSource(src); basePickSource(src); };
 
 DEMO.setClock(tzOffset);
 DEMO.init(

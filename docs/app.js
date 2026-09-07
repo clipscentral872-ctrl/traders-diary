@@ -178,11 +178,16 @@ function renderPanels() {
     all.some(t => k === "all" || (t.source || "live") === k));
   const usable = present.length > 1 ? present : present.slice(0, 1);
 
-  $("srcrow").innerHTML = usable.map(([k, label]) => {
+  const buttons = usable.map(([k, label]) => {
     const n = all.filter(t => k === "all" || (t.source || "live") === k).length;
     return `<button class="src" data-src="${k}" onclick="pickSource('${k}')">`
          + `${label}<span class="sn">${n}</span></button>`;
   }).join("");
+  $("srcrow").innerHTML = buttons;
+  // The same choice, drawn again next to the trade browser. With one kind of
+  // trade there is nothing to choose, so there it stays empty and hidden.
+  const mini = $("srcrow2");
+  if (mini) mini.innerHTML = usable.length > 1 ? buttons : "";
 
   $("srcpanes").innerHTML = usable.map(([k]) => {
     const sel = all.filter(t => k === "all" || (t.source || "live") === k);
@@ -222,9 +227,15 @@ function renderPanels() {
   renderLearn();
   DASH.refreshRecord();
   DIARY.pick(0);
-  const first = document.querySelector('.src[data-src="live"]')
-             || document.querySelector(".src");
-  window.pickSource(first ? first.dataset.src : "live");
+  /* Whatever is being looked at stays being looked at.
+   *
+   * This snapped back to Live on every redraw, and a redraw happens whenever
+   * anything is added. So sending demo trades to the Diary moved you off the
+   * source that holds them, in the same breath as saying they had arrived. */
+  const want = document.querySelector(`.src[data-src="${window.curSource}"]`)
+            || document.querySelector('.src[data-src="live"]')
+            || document.querySelector(".src");
+  window.pickSource(want ? want.dataset.src : "live");
 }
 
 /** Where the record actually stands, worked out every time it is drawn. */
@@ -1197,6 +1208,15 @@ window.__diaryPick = i => DIARY.pick(i);
 DIARY.init();
 
 VID.init();
+
+/* The picker and the trade browser are one choice, not two.
+ *
+ * The reading tab owns the picker and the Diary tab owns the list, and each
+ * kept its own idea of which source was showing. Choosing Demo moved the
+ * figures and left the browser on Live, which is how five demo trades could
+ * be sent to the Diary and then not be in it. */
+const basePickSource = window.pickSource;
+window.pickSource = src => { DIARY.setSource(src); basePickSource(src); };
 
 DEMO.setClock(tzOffset);
 DEMO.init(

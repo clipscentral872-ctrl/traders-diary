@@ -123,6 +123,7 @@ TRADEVIEW = """<div class="ws">
     <div class="wstop">
       <button class="ptool" id="dprev" title="Previous trade">&#9664;</button>
       <button class="ptool" id="dnext" title="Next trade">&#9654;</button>
+      <div class="srcrow mini" id="srcrow2"></div>
       <div class="chead" id="dhead"></div>
       <div class="pgrow" id="dohlc2"></div>
     </div>

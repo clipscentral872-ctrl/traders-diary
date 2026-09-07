@@ -106,6 +106,19 @@ h1{
 
 .sources{margin-top:26px}
 .srcrow{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:16px}
+/* The same picker again, beside the trades it decides.
+ *
+ * It lived only on the reading tab, under the figures. So sending demo trades
+ * to the Diary put five of them somewhere with no visible way to reach them:
+ * the header counted five and the trade browser said no trades in this view.
+ * It shows only when there is more than one kind of trade to choose from. */
+.srcrow.mini{margin:0 4px 0 6px; flex-wrap:nowrap; gap:4px}
+.srcrow.mini:empty{display:none}
+.srcrow.mini .src{
+  padding:5px 10px; font-size:10.5px; gap:6px; border-radius:4px;
+  box-shadow:none;
+}
+.srcrow.mini .sn{font-size:10.5px}
 .src{
   background:var(--raised); border:1px solid var(--line); color:var(--muted);
   font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:600; font-size:11.5px;

@@ -82,9 +82,24 @@ function saveAccount() {
 
 const last = () => D.bars.length ? D.bars[D.bars.length - 1] : null;
 
+/** The freshest price the app holds, which is not the bar on the chart.
+ *
+ *  A five minute chart's last bar is still forming. It is stamped 12:55 and
+ *  its close is the price at 12:59, and the minute bars for 12:56 to 12:59
+ *  sit inside it. Opening a trade on that bar and then recording 12:55 as
+ *  the moment last seen made settle() walk those four minutes as if they
+ *  were news, and close the trade on them: a long opened and stopped out in
+ *  the same click, at -1.96R, on four minutes that had already happened.
+ *  Worse on an hourly chart, where up to sixty minutes are replayed.
+ *
+ *  So the entry, its moment, and the price on the buttons all come from
+ *  here, and a position can only ever be resolved by bars that arrive after
+ *  it was opened. */
+const tip = () => entryBar(D.bars, D.fine);
+
 /** How old the price on screen is, in minutes. */
 const delayMin = () => {
-  const b = last();
+  const b = tip();
   return b ? Math.max(0, Math.round((Date.now() - b.ms) / 60000)) : null;
 };
 
@@ -131,24 +146,58 @@ const loadSymbol = (sym, tf) => SER.load(sym, tf || D.tf);
 const fillPrice = (b, level, worseIsBelow) =>
   worseIsBelow ? (b.o < level ? b.o : level) : (b.o > level ? b.o : level);
 
+/** Which bar a trade opens on: the freshest one held, whatever the chart shows.
+ *
+ *  Exported so it can be tested against the pair of series that broke it.
+ *
+ *  @param chart the bars being drawn, whose last one may still be forming
+ *  @param fine  the minute bars fills are resolved on
+ */
+export function entryBar(chart, fine) {
+  const b = chart && chart.length ? chart[chart.length - 1] : null;
+  const f = fine && fine.length ? fine[fine.length - 1] : null;
+  if (!b) return f;
+  if (!f) return b;
+  return f.ms > b.ms ? f : b;
+}
+
 /** Walk any bars that arrived since the position was opened, in order.
  *
  *  Bars land in batches here rather than one at a time, so this has to check
  *  every bar it has not seen, not just the newest. Skipping to the latest
  *  would miss a stop that was hit and then recovered from, which is exactly
- *  the case that matters. */
+ *  the case that matters.
+ *
+ *  A bar that touches both the stop and the target closes at the stop. Which
+ *  came first inside the minute is not knowable from a bar, and the honest
+ *  guess is the one that does not flatter the record.
+ *
+ *  @returns {seen, hit} where hit is {price, ms, how} or null
+ */
+export function resolve(p, bars) {
+  const long = p.side === "Long";
+  let seen = p.seen;
+  for (const b of bars) {
+    if (b.ms <= seen) continue;
+    seen = b.ms;
+    const hitStop = long ? b.l <= p.stop : b.h >= p.stop;
+    const hitTgt = long ? b.h >= p.target : b.l <= p.target;
+    if (hitStop)
+      return {seen, hit: {price: fillPrice(b, p.stop, long), ms: b.ms,
+                          how: "Stop"}};
+    if (hitTgt)
+      return {seen, hit: {price: fillPrice(b, p.target, !long), ms: b.ms,
+                          how: "Take Profit"}};
+  }
+  return {seen, hit: null};
+}
+
 function settle() {
   const p = D.pos;
   if (!p) return;
-  const long = p.side === "Long";
-  for (const b of (D.fine || D.bars)) {
-    if (b.ms <= p.seen) continue;
-    p.seen = b.ms;
-    const hitStop = long ? b.l <= p.stop : b.h >= p.stop;
-    const hitTgt = long ? b.h >= p.target : b.l <= p.target;
-    if (hitStop) { close(fillPrice(b, p.stop, long), b.ms, "Stop"); return; }
-    if (hitTgt) { close(fillPrice(b, p.target, !long), b.ms, "Take Profit"); return; }
-  }
+  const {seen, hit} = resolve(p, D.fine || D.bars);
+  p.seen = seen;
+  if (hit) close(hit.price, hit.ms, hit.how);
 }
 
 function close(price, ms, how) {
@@ -228,7 +277,7 @@ function ohlc(b) {
 /* -------------------------------------------------------------- render */
 
 function ticket() {
-  const b = last();
+  const b = tip();
   const qty = Math.max(1, +$("dqty").value || 1);
   const risk = Math.max(0.25, +$("drisk").value || 0);
   const rr = Math.max(0.1, +$("drr").value || 0);
@@ -246,7 +295,7 @@ function ticket() {
 
 /** What the list needs to know: the bar, the money, and today so far. */
 function context() {
-  const b = last();
+  const b = tip();
   const qty = Math.max(1, +$("dqty").value || 1);
   const risk = Math.max(0.25, +$("drisk").value || 0);
   const rr = Math.max(0.1, +$("drr").value || 0);
@@ -281,24 +330,25 @@ function precheck() {
 
 function render() {
   const b = last();
+  const t = tip();
   const d = delayMin();
-  $("dread").innerHTML = b
-    ? `${C.full(b.ms)} ${C.zoneName(b.ms)} &nbsp; `
+  $("dread").innerHTML = t
+    ? `${C.full(t.ms)} ${C.zoneName(t.ms)} &nbsp; `
       + `<span class="${d > 90 ? "old" : ""}">${ageWords(d)}</span>`
     : "Loading the market...";
-  if (b) {
-    $("dbuypx").textContent = px(b.c);
-    $("dsellpx").textContent = px(b.c);
-    ohlc(b);
+  if (t) {
+    $("dbuypx").textContent = px(t.c);
+    $("dsellpx").textContent = px(t.c);
   }
+  if (b) ohlc(b);
 
   const p = D.pos;
   const stats = [
     ["balance", plain(D.account.balance), ""],
     ["open", p ? `${p.side} ${p.qty} ${p.symbol}` : "flat", ""],
   ];
-  if (p && b) {
-    const pts = p.side === "Long" ? b.c - p.entry : p.entry - b.c;
+  if (p && t) {
+    const pts = p.side === "Long" ? t.c - p.entry : p.entry - t.c;
     const pv = E.POINT[p.symbol] ?? 1;
     const open = pts * pv * p.qty;
     stats.push(["unrealised", money(open), open >= 0 ? "win" : "loss"]);
@@ -317,14 +367,14 @@ function render() {
     ? `In a ${p.side.toLowerCase()} of ${p.qty} from ${px(p.entry)}, opened `
       + `${C.hhmm(p.ms)}. Stop ${px(p.stop)}, target ${px(p.target)}. `
       + `It settles by itself as new bars arrive.`
-    : b ? "Flat. Set your size and stop, then take a side."
+    : t ? "Flat. Set your size and stop, then take a side."
         : "Waiting for the market data to load.";
 
   $("dflat").hidden = !p;
   // Opening on a price from before the weekend is not a demo trade, it is a
   // bet on the gap. Nothing good is learned from it.
   const stale = d != null && d > 240;
-  $("dbuy").disabled = $("dsell").disabled = !!p || !b || stale;
+  $("dbuy").disabled = $("dsell").disabled = !!p || !t || stale;
   if (stale && !p)
     $("dposline").textContent = `The market is shut. The last price is `
       + `${ageWords(d)}, so taking a trade on it would be a bet on where it `
@@ -353,7 +403,7 @@ function render() {
 const BE_AT_R = 2;
 
 function levelMoved(which, price) {
-  const p = D.pos, b = last();
+  const p = D.pos, b = tip();
   if (!p || !b) return;
   const long = p.side === "Long";
   const tick = 0.25;
@@ -369,7 +419,7 @@ function levelMoved(which, price) {
 }
 
 function dragNote() {
-  const p = D.pos, b = last();
+  const p = D.pos, b = tip();
   if (!p || !b) { ticket(); return; }
   const long = p.side === "Long";
   const risk = Math.abs(p.entry - p.stop);
@@ -392,7 +442,7 @@ function dragNote() {
 
 /** Write a finished drag into the trail, once, the way an activity log would. */
 function recordMove(which) {
-  const p = D.pos, b = last();
+  const p = D.pos, b = tip();
   if (!p || !b || which !== "stop") return;
   p.trail = p.trail || [];
   const long = p.side === "Long";
@@ -413,7 +463,7 @@ function recordMove(which) {
 /* ------------------------------------------------------------ controls */
 
 function open_(side) {
-  const b = last();
+  const b = tip();
   if (!b || D.pos) return;
   // The short list, before the entry rather than after it.
   const list = PC.check(context());
