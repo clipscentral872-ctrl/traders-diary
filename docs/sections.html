@@ -190,7 +190,7 @@
 <div class="tabpane reading" data-tab="videos" hidden>
 <div class="col">
 
-<section>
+<section id="vsec">
   <h2>Watch your trades back</h2>
   <p class="lead">The rendered videos of your sessions: every trade of a day,
   and the winners and losers cut apart so you can watch a run of losses back to
@@ -204,11 +204,14 @@
   <div class="card hud drop" id="vdrop" tabindex="0" role="button"
        aria-label="Choose your trade videos">
     <input type="file" id="vpick" multiple accept="video/mp4,video/*" hidden>
+    <input type="file" id="vpickdir" webkitdirectory hidden>
     <div class="dropface">
       <div class="dropmark" aria-hidden="true"></div>
       <p class="dropbig">Add your videos</p>
-      <p class="dropsub">Pick the whole For Learning folder, or drag the files
-      in &nbsp;/&nbsp; they stay on this device</p>
+      <p class="dropsub">Drop the files in, or pick them &nbsp;/&nbsp; they stay
+      on this device</p>
+      <button class="bigbtn ghost" id="vdir" type="button" hidden>Add a whole
+      folder</button>
     </div>
     <p class="dropmsg" id="vmsg" hidden></p>
   </div>

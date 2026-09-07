@@ -476,8 +476,10 @@ EXTRA_CSS = """
 .vplayer{
   /* Dark on purpose, and the only dark surface left. A white surround
      round moving footage is glare, and every video player anyone has used
-     is dark for that reason. */
-  position:fixed; inset:0; z-index:70; background:rgba(19,23,34,.97);
+     is dark for that reason.
+     Solid, not nearly solid: at 97% the app header behind it still read
+     through the title bar as grey ghost text. */
+  position:fixed; inset:0; z-index:70; background:#131722;
   display:flex; flex-direction:column; gap:12px;
   padding:calc(18px + env(safe-area-inset-top, 0px)) 18px
           calc(18px + env(safe-area-inset-bottom, 0px));
@@ -676,6 +678,81 @@ body{overflow:hidden}
 .pcitem.hold::before{background:var(--loss)}
 .pcitem.note{background:var(--lift); color:var(--muted)}
 .pcitem.note::before{background:var(--line)}
+
+/* Once there is a library, it leads and everything else gets out of its way.
+ *
+ * An empty tab has to explain itself, so the writing and the drop zone come
+ * first. A stocked one does not: you came here to open a video, and the shelf
+ * should be the first thing under the heading rather than the third. Every
+ * child gets an order, because one without it silently falls to the front. */
+#vsec.stocked{display:flex; flex-direction:column}
+#vsec.stocked h2{order:0}
+#vsec.stocked #vlib{order:1}
+#vsec.stocked .vplayer{order:2}
+#vsec.stocked .toolrow{order:3}
+#vsec.stocked #vdrop{order:4; margin-top:26px; padding:16px 14px}
+#vsec.stocked #vdrop .dropmark{display:none}
+#vsec.stocked #vdrop .dropbig{font-size:13.5px}
+#vsec.stocked #vdrop .dropsub{font-size:12px}
+#vsec.stocked .lead{order:5; font-size:12.5px; opacity:.78}
+
+/* The library, browsed the way a file explorer does it: a trail across the
+   top, folders first, then what is in this one. */
+.shbar{
+  display:flex; align-items:center; gap:10px;
+  padding:0 0 12px; font-size:12.5px;
+}
+/* The trail scrolls sideways rather than wrapping. Wrapped, a deep folder
+   pushed "Up one" onto a line of its own with a hole above it. */
+.shtrail{
+  display:flex; align-items:center; gap:6px; min-width:0;
+  overflow-x:auto; white-space:nowrap; scrollbar-width:none;
+}
+.shtrail::-webkit-scrollbar{display:none}
+.crumb{
+  background:none; border:none; padding:3px 5px; border-radius:4px;
+  color:var(--accent); cursor:pointer; font-family:inherit; font-size:12.5px;
+}
+.crumb:hover{background:var(--lift)}
+.crumb.on{color:var(--text); font-weight:600; padding:3px 5px}
+.crumbsep{color:var(--faint)}
+.shup{
+  margin-left:auto; flex:0 0 auto; background:none; border:1px solid var(--line);
+  border-radius:4px; padding:5px 11px; color:var(--muted); cursor:pointer;
+  font-family:inherit; font-size:11.5px;
+}
+.shup:hover{color:var(--text); border-color:var(--accent)}
+.shlist{
+  display:flex; flex-direction:column; gap:1px;
+  background:var(--line); border:1px solid var(--line); border-radius:6px;
+  overflow:hidden;
+}
+.shrow{
+  display:grid; grid-template-columns:26px 1fr auto auto; gap:12px;
+  align-items:center; text-align:left; cursor:pointer;
+  background:var(--raised); border:none; padding:11px 14px;
+  color:var(--text); font-family:inherit; font-size:13.5px;
+}
+.shrow:hover{background:var(--lift)}
+.shrow:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+.shic{display:grid; place-items:center; width:22px; height:22px}
+.shic svg{
+  width:19px; height:19px; fill:none; stroke:var(--accent); stroke-width:1.6;
+  stroke-linejoin:round;
+}
+.shrow.file .shic{
+  width:0; height:0; border-left:9px solid var(--muted);
+  border-top:6px solid transparent; border-bottom:6px solid transparent;
+  margin-left:7px;
+}
+.shrow.file.win .shic{border-left-color:var(--win)}
+.shrow.file.loss .shic{border-left-color:var(--loss)}
+.shn{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.shm,.shs{color:var(--muted); font-size:11.5px; white-space:nowrap}
+@media (max-width:640px){
+  .shrow{grid-template-columns:24px 1fr auto; gap:9px; padding:12px 11px}
+  .shm{display:none}
+}
 
 /* Progress towards a sample worth reading. A bar rather than a number,
    because "47" means nothing on its own and "47 of 100" is a picture. */
@@ -1456,7 +1533,7 @@ def main():
 # and it would not show up until a deploy went out half old and half new.
 MODULES = [
     "engine.js", "chart.js", "levels.js", "revisit.js", "series.js",
-    "clock.js", "vault.js", "draw.js", "profile.js", "whatif.js", "precheck.js",
+    "clock.js", "vault.js", "draw.js", "profile.js", "whatif.js", "precheck.js", "shelf.js",
     "watchlist.js", "lock.js",
     "replay.js", "demo.js", "diary.js", "videos.js", "system.js",
     "dashboard.js",
@@ -1505,7 +1582,7 @@ def stamp_worker(page):
                  "replay.js", "demo.js", "diary.js", "videos.js",
                  "system.js", "dashboard.js", "lock.js", "watchlist.js",
                  "series.js", "clock.js", "vault.js", "draw.js",
-                 "profile.js", "whatif.js", "precheck.js"):
+                 "profile.js", "whatif.js", "precheck.js", "shelf.js"):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())

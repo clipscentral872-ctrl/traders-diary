@@ -208,7 +208,7 @@ const DOORS = [
   ["diary", "Diary", "Watch your trades back on the chart"],
   ["demo", "Demo", "Place a trade on today's market"],
   ["replay", "Replay", "Cut a past session and trade it out"],
-  ["videos", "Videos", "Your winners and losers, side by side"],
+  ["videos", "Videos", "Your winners and losers, in folders"],
   ["system", "System", "What the robot has been doing"],
   ["learn", "Learn", "The method, and what it has cost you"],
 ];

@@ -90,6 +90,10 @@ export async function usage() {
 export function put(name, file) {
   return tx("readwrite", s => s.put({
     name, blob: file, size: file.size,
+    // Where it sat in the folder that was picked, when the browser said. It
+    // is what lets the library show the real folders rather than ones worked
+    // out from the filenames.
+    relative: file.webkitRelativePath || "",
     type: file.type || "video/mp4", added: Date.now(),
   }));
 }
@@ -97,8 +101,8 @@ export function put(name, file) {
 /** Everything held, without pulling the blobs into memory to find out. */
 export function list() {
   return tx("readonly", s => s.getAll()).then(rows =>
-    (rows || []).map(r => ({name: r.name, size: r.size,
-                            type: r.type, added: r.added})));
+    (rows || []).map(r => ({name: r.name, size: r.size, type: r.type,
+                            relative: r.relative || "", added: r.added})));
 }
 
 /** One file's blob, or null. */

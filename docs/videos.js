@@ -15,35 +15,18 @@
  * filenames the renderer already writes.
  */
 import * as V from "./vault.js";
+import * as SH from "./shelf.js";
 
 const $ = id => document.getElementById(id);
 
-// Names the renderer produces, in the order they are worth reviewing.
-const GROUPS = [
-  {key: /All Winners/i, name: "Everything, winners"},
-  {key: /All Losers/i, name: "Everything, losers"},
-  {key: /^Week of/i, name: "By week"},
-  {key: /^(Mondays|Tuesdays|Wednesdays|Thursdays|Fridays)/i, name: "By weekday"},
-  {key: /^Trade /i, name: "Trade by trade"},
-  {key: /./, name: "Day by day"},
-];
-
-let files = [];        // {name, size}
+let files = [];          // {name, size, path}
+let at = [];             // which folder is open
 const urls = new Map();  // name -> object URL, made only when played
 
 const pretty = name => name.replace(/\.mp4$/i, "").replace(/_/g, " ");
-const mb = n => (n / 1048576).toFixed(1) + " MB";
-
-function classOf(name) {
-  if (/winners?|win\b/i.test(name)) return "win";
-  if (/losers?|loss\b/i.test(name)) return "loss";
-  return "";
-}
-
-function groupOf(name) {
-  for (const g of GROUPS) if (g.key.test(name)) return g.name;
-  return "Day by day";
-}
+const mb = SH.mb;
+const esc = t => String(t).replace(/[&<>"]/g,
+  c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
 
 function say(text, bad) {
   const el = $("vmsg");
@@ -53,35 +36,52 @@ function say(text, bad) {
   el.hidden = !text;
 }
 
+const FOLDER_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+
+/* One folder's worth, and the trail back up.
+ *
+ * A flat list of forty one videos under five headings is a wall. This is the
+ * same library shown the way anybody already knows how to look through a lot
+ * of files.
+ */
 function render() {
   const box = $("vlib");
   if (!box) return;
   const wipe = $("vforget");
   if (wipe) wipe.hidden = !files.length;
+  // With a library on the shelf, the shelf leads and the importer moves under
+  // it. An empty tab needs the explanation and the drop zone first; a full one
+  // needs them out of the way.
+  const sec = $("vsec");
+  if (sec) sec.classList.toggle("stocked", !!files.length);
   if (!files.length) { box.innerHTML = ""; return; }
 
-  const byGroup = new Map();
-  for (const f of files) {
-    const g = groupOf(f.name);
-    if (!byGroup.has(g)) byGroup.set(g, []);
-    byGroup.get(g).push(f);
-  }
+  const {folders, files: here} = SH.listing(files, at);
+  const trail = SH.crumbs(at).map((c, i, a) =>
+    i === a.length - 1
+      ? `<span class="crumb on">${esc(c.name)}</span>`
+      : `<button class="crumb" data-go="${i}">${esc(c.name)}</button>`
+        + '<span class="crumbsep">/</span>').join("");
 
-  box.innerHTML = GROUPS.map(g => g.name)
-    .filter((n, i, a) => a.indexOf(n) === i && byGroup.has(n))
-    .map(name => {
-      // Newest first within a group, which is how you actually review.
-      const items = byGroup.get(name).slice().sort((a, b) =>
-        b.name.localeCompare(a.name));
-      return `<div class="vgroup"><h3>${name}</h3><div class="vlist">`
-        + items.map(f =>
-            `<button class="vcut ${classOf(f.name)}" data-name="${
-              f.name.replace(/"/g, "&quot;")}">`
-            + '<span class="vplay" aria-hidden="true"></span>'
-            + `<span class="vn">${pretty(f.name)}</span>`
-            + `<span class="vs">${mb(f.size)}</span></button>`).join("")
-        + "</div></div>";
-    }).join("");
+  const rows = folders.map(f =>
+    `<button class="shrow folder" data-open="${esc(f.name)}">`
+    + `<span class="shic">${FOLDER_ICON}</span>`
+    + `<span class="shn">${esc(f.name)}</span>`
+    + `<span class="shm">${f.files} video${f.files === 1 ? "" : "s"}</span>`
+    + `<span class="shs">${mb(f.bytes)}</span></button>`).join("")
+  + here.map(f =>
+    `<button class="shrow file ${SH.outcome(f.name)}" data-name="${esc(f.name)}">`
+    + '<span class="shic vplay" aria-hidden="true"></span>'
+    + `<span class="shn">${esc(SH.label(f.name, at))}</span>`
+    + '<span class="shm"></span>'
+    + `<span class="shs">${mb(f.size)}</span></button>`).join("");
+
+  box.innerHTML = `<div class="shbar"><div class="shtrail">${trail}</div>`
+    + (at.length ? '<button class="shup" data-up="1">Up one</button>' : "")
+    + "</div>"
+    + `<div class="shlist">${rows
+        || '<p class="booknote">This folder is empty.</p>'}</div>`;
 }
 
 async function play(name) {
@@ -115,8 +115,10 @@ async function tally(extra) {
   const total = files.reduce((n, f) => n + f.size, 0);
   const kept = await V.persist();
   const u = await V.usage();
+  // Its own sentence. Tacked onto the end of the one before it, this read
+  // "settles that., 2971.0 MB of room left".
   const room = u && u.quota
-    ? `, ${mb(u.quota - u.used)} of room left` : "";
+    ? ` ${mb(u.quota - u.used)} of room left.` : "";
   say(`${files.length} video${files.length === 1 ? "" : "s"}, ${mb(total)}`
     + (extra ? ". " + extra : "")
     + (kept
@@ -148,7 +150,8 @@ async function take(list) {
     if (have.has(file.name)) continue;
     try {
       await V.put(file.name, file);
-      files.push({name: file.name, size: file.size});
+      files.push({name: file.name, size: file.size,
+                  path: SH.pathOf(file.name, file.webkitRelativePath)});
       have.add(file.name);
       added++;
     } catch {
@@ -172,6 +175,7 @@ async function forget() {
   for (const u of urls.values()) URL.revokeObjectURL(u);
   urls.clear();
   files = [];
+  at = [];
   close();
   render();
   say("Removed. Add the folder again whenever you want them back.");
@@ -186,6 +190,20 @@ export async function init() {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick.click(); }
   });
   pick.addEventListener("change", () => pick.files.length && take(pick.files));
+
+  /* Picking a whole folder, where the browser allows it.
+   *
+   * This is the one that keeps the real structure: the renderer already
+   * writes Daily, Weekly, Per Trade and the rest, and a folder pick hands
+   * those over as they are instead of them having to be worked out from the
+   * filenames. Safari on a phone will not do it, so it is offered only where
+   * it works rather than sitting there doing nothing. */
+  const dir = $("vpickdir"), dirBtn = $("vdir");
+  if (dir && dirBtn && "webkitdirectory" in dir) {
+    dirBtn.hidden = false;
+    dirBtn.addEventListener("click", e => { e.stopPropagation(); dir.click(); });
+    dir.addEventListener("change", () => dir.files.length && take(dir.files));
+  }
   ["dragenter", "dragover"].forEach(n => drop.addEventListener(n, e => {
     e.preventDefault(); drop.classList.add("over");
   }));
@@ -197,8 +215,13 @@ export async function init() {
   });
 
   $("vlib").addEventListener("click", e => {
-    const b = e.target.closest(".vcut");
-    if (b) play(b.dataset.name);
+    const open = e.target.closest("[data-open]");
+    if (open) { at = [...at, open.dataset.open]; render(); return; }
+    const crumb = e.target.closest("[data-go]");
+    if (crumb) { at = at.slice(0, +crumb.dataset.go); render(); return; }
+    if (e.target.closest("[data-up]")) { at = at.slice(0, -1); render(); return; }
+    const f = e.target.closest(".shrow.file");
+    if (f) play(f.dataset.name);
   });
   $("vclose").addEventListener("click", close);
   const wipe = $("vforget");
@@ -225,7 +248,9 @@ export async function init() {
  */
 export async function reload() {
   try {
-    files = (await V.list()).sort((a, b) => a.name.localeCompare(b.name));
+    files = (await V.list())
+      .map(f => ({...f, path: SH.pathOf(f.name, f.relative)}))
+      .sort((a, b) => a.name.localeCompare(b.name));
   } catch { files = []; }
   for (const u of urls.values()) URL.revokeObjectURL(u);
   urls.clear();
