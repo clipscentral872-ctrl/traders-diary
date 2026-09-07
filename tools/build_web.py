@@ -993,6 +993,11 @@ body{overflow:hidden}
 }
 .dleak p{margin:6px 0 0; color:var(--text); font-size:14px; line-height:1.65}
 .dleak b{color:var(--loss)}
+/* A tested finding is not a warning, so it does not wear the warning
+   colour. It sits in the accent, as a fact rather than a telling off. */
+.dleak.tested{border-left-color:var(--accent)}
+.dleak.tested .dlt{color:var(--accent)}
+.dleak.tested b{color:var(--text)}
 
 /* Six doors into the rest of the app, because the tab strip is a row of words
    and a row of words is not somewhere you want to go. */
@@ -1419,7 +1424,7 @@ def main():
 # and it would not show up until a deploy went out half old and half new.
 MODULES = [
     "engine.js", "chart.js", "levels.js", "revisit.js", "series.js",
-    "clock.js", "vault.js", "draw.js", "profile.js",
+    "clock.js", "vault.js", "draw.js", "profile.js", "whatif.js",
     "watchlist.js", "lock.js",
     "replay.js", "demo.js", "diary.js", "videos.js", "system.js",
     "dashboard.js",
@@ -1468,7 +1473,7 @@ def stamp_worker(page):
                  "replay.js", "demo.js", "diary.js", "videos.js",
                  "system.js", "dashboard.js", "lock.js", "watchlist.js",
                  "series.js", "clock.js", "vault.js", "draw.js",
-                 "profile.js"):
+                 "profile.js", "whatif.js"):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())

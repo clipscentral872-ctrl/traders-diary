@@ -1093,6 +1093,11 @@ body{overflow:hidden}
 }
 .dleak p{margin:6px 0 0; color:var(--text); font-size:14px; line-height:1.65}
 .dleak b{color:var(--loss)}
+/* A tested finding is not a warning, so it does not wear the warning
+   colour. It sits in the accent, as a fact rather than a telling off. */
+.dleak.tested{border-left-color:var(--accent)}
+.dleak.tested .dlt{color:var(--accent)}
+.dleak.tested b{color:var(--text)}
 
 /* Six doors into the rest of the app, because the tab strip is a row of words
    and a row of words is not somewhere you want to go. */
@@ -2091,7 +2096,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=ea085a2e655a","./chart.js":"./chart.js?v=ea085a2e655a","./levels.js":"./levels.js?v=ea085a2e655a","./revisit.js":"./revisit.js?v=ea085a2e655a","./series.js":"./series.js?v=ea085a2e655a","./clock.js":"./clock.js?v=ea085a2e655a","./vault.js":"./vault.js?v=ea085a2e655a","./draw.js":"./draw.js?v=ea085a2e655a","./profile.js":"./profile.js?v=ea085a2e655a","./watchlist.js":"./watchlist.js?v=ea085a2e655a","./lock.js":"./lock.js?v=ea085a2e655a","./replay.js":"./replay.js?v=ea085a2e655a","./demo.js":"./demo.js?v=ea085a2e655a","./diary.js":"./diary.js?v=ea085a2e655a","./videos.js":"./videos.js?v=ea085a2e655a","./system.js":"./system.js?v=ea085a2e655a","./dashboard.js":"./dashboard.js?v=ea085a2e655a"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=aaf690180876","./chart.js":"./chart.js?v=aaf690180876","./levels.js":"./levels.js?v=aaf690180876","./revisit.js":"./revisit.js?v=aaf690180876","./series.js":"./series.js?v=aaf690180876","./clock.js":"./clock.js?v=aaf690180876","./vault.js":"./vault.js?v=aaf690180876","./draw.js":"./draw.js?v=aaf690180876","./profile.js":"./profile.js?v=aaf690180876","./whatif.js":"./whatif.js?v=aaf690180876","./watchlist.js":"./watchlist.js?v=aaf690180876","./lock.js":"./lock.js?v=aaf690180876","./replay.js":"./replay.js?v=aaf690180876","./demo.js":"./demo.js?v=aaf690180876","./diary.js":"./diary.js?v=aaf690180876","./videos.js":"./videos.js?v=aaf690180876","./system.js":"./system.js?v=aaf690180876","./dashboard.js":"./dashboard.js?v=aaf690180876"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -3270,6 +3275,10 @@ function intoDiary(incoming, source) {
 
 RP.setClock(tzOffset);
 RP.init(practice => intoDiary(practice, "replay"));
+
+// The dashboard tests the stop habits against the bars rather than guessing
+// from a comparison between different trades, so it needs them.
+DASH.setBars(sym => BARS[E.FEED[sym]] || []);
 
 DIARY.setClock(tzOffset);
 /* The video of the trade you are looking at, offered only when it is actually

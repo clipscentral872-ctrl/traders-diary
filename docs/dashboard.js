@@ -19,6 +19,7 @@
 import * as E from "./engine.js";
 import * as RV from "./revisit.js";
 import * as P from "./profile.js";
+import * as W from "./whatif.js";
 
 const $ = id => document.getElementById(id);
 
@@ -43,6 +44,15 @@ const FLAG_WORDS = {
 
 const mine = () => (window.TRADES || [])
   .filter(t => (t.source || "live") === "live");
+
+/* Minute bars, for the habits that can actually be tested rather than merely
+   counted. Handed in by the app, which is what loads them. */
+let barsOf = () => [];
+export const setBars = fn => { barsOf = fn || (() => []); };
+
+// The habits that are a stop decision, and so can be replayed with the stop
+// left alone. The rest are counted and said to be counted.
+const TESTABLE = new Set(["trailed early", "right, stopped early"]);
 
 function fig(label, value, cls = "", note = "") {
   return `<div class="fig"><span class="fk">${esc(label)}</span>`
@@ -132,24 +142,47 @@ function leak() {
   if (!top || top[1] < 2) return;
   const [flag, n] = top;
 
-  // What it actually cost, where that is answerable. Only trades carrying the
-  // flag AND an R, so the figure is not quietly averaging in unmeasurable ones.
-  const hit = live.filter(t => (t.flags || []).includes(flag)
-    && t.got_r !== null && t.got_r !== undefined);
-  const rest = live.filter(t => !(t.flags || []).includes(flag)
-    && t.got_r !== null && t.got_r !== undefined);
-  const mean = a => a.reduce((s, t) => s + t.got_r, 0) / a.length;
-  let cost = "";
-  if (hit.length >= 2 && rest.length >= 2) {
-    const gap = mean(rest) - mean(hit);
-    cost = gap > 0.05
-      ? ` Those trades average ${mean(hit).toFixed(2)}R against `
-        + `${mean(rest).toFixed(2)}R for the rest, a gap of ${gap.toFixed(2)}R.`
-      : ` They are not measurably worse than your other trades, so this is a `
-        + `habit to watch rather than a proven leak.`;
+  /* What it actually cost.
+   *
+   * This used to compare the flagged trades against the others and call the
+   * gap a cost. That comparison is not one: they are different trades on
+   * different days, and the habit is one of a hundred things separating
+   * them. It named the trailing as the biggest leak in the record on that
+   * basis, and replaying the same trades with the stop left alone says the
+   * difference is six dollars a trade inside a seven hundred dollar swing.
+   *
+   * So where the habit is a stop decision it is now replayed rather than
+   * correlated, and where it is not, it is reported as a count and called a
+   * count.
+   */
+  const hit = live.filter(t => (t.flags || []).includes(flag));
+  let cost = " Counted, not costed: there is no way to replay this one to "
+           + "see what it was worth.";
+  if (TESTABLE.has(flag)) {
+    const c = W.compare(hit, barsOf);
+    if (c.resolved) cost = " " + W.verdict(c);
+    else cost = " None of them could be replayed against the bars yet, so "
+              + "this is a count rather than a cost.";
   }
-  box.innerHTML = `<div class="dleak"><span class="dlt">Costing you most</span>`
+  let html = `<div class="dleak"><span class="dlt">Happening most</span>`
     + `<p><b>${n} times:</b> ${esc(FLAG_WORDS[flag])}.${esc(cost)}</p></div>`;
+
+  /* And separately, anything that could actually be tested.
+   *
+   * The most COMMON habit is not the most useful thing to say when a less
+   * common one has an answer behind it. A count is a count; a replay against
+   * the bars is evidence, and evidence is worth its own line even when
+   * something else happened more often. */
+  for (const [f, count] of counts) {
+    if (f === flag || !TESTABLE.has(f) || count < 3) continue;
+    const c = W.compare(live.filter(t => (t.flags || []).includes(f)), barsOf);
+    if (!c.resolved) continue;
+    html += `<div class="dleak tested"><span class="dlt">Tested against the `
+      + `bars</span><p><b>${count} times:</b> ${esc(FLAG_WORDS[f])}. `
+      + `${esc(W.verdict(c))}</p></div>`;
+    break;
+  }
+  box.innerHTML = html;
 }
 
 /* ------------------------------------------------------------- the doors */

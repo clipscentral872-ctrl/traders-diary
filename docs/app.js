@@ -1176,6 +1176,10 @@ function intoDiary(incoming, source) {
 RP.setClock(tzOffset);
 RP.init(practice => intoDiary(practice, "replay"));
 
+// The dashboard tests the stop habits against the bars rather than guessing
+// from a comparison between different trades, so it needs them.
+DASH.setBars(sym => BARS[E.FEED[sym]] || []);
+
 DIARY.setClock(tzOffset);
 /* The video of the trade you are looking at, offered only when it is actually
    here. A button that does nothing is worse than no button. */
