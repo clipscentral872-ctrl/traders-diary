@@ -1169,7 +1169,7 @@ showGate("");
  *  Keyed on source as well as symbol and time, so a demo trade and a replay
  *  trade on the same bar stay separate, and sending twice adds nothing. */
 function intoDiary(incoming, source) {
-  const key = t => (t.source || source) + "|" + t.symbol + "|" + t.open_t;
+  const key = t => E.tradeKey(t, source);
   const byKey = new Map(window.TRADES.map(t => [key(t), t]));
   let added = 0;
   for (const t of incoming) {

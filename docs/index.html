@@ -2229,7 +2229,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=20f1572832f0","./chart.js":"./chart.js?v=20f1572832f0","./levels.js":"./levels.js?v=20f1572832f0","./revisit.js":"./revisit.js?v=20f1572832f0","./series.js":"./series.js?v=20f1572832f0","./clock.js":"./clock.js?v=20f1572832f0","./vault.js":"./vault.js?v=20f1572832f0","./draw.js":"./draw.js?v=20f1572832f0","./profile.js":"./profile.js?v=20f1572832f0","./whatif.js":"./whatif.js?v=20f1572832f0","./precheck.js":"./precheck.js?v=20f1572832f0","./shelf.js":"./shelf.js?v=20f1572832f0","./watchlist.js":"./watchlist.js?v=20f1572832f0","./lock.js":"./lock.js?v=20f1572832f0","./replay.js":"./replay.js?v=20f1572832f0","./demo.js":"./demo.js?v=20f1572832f0","./diary.js":"./diary.js?v=20f1572832f0","./videos.js":"./videos.js?v=20f1572832f0","./system.js":"./system.js?v=20f1572832f0","./dashboard.js":"./dashboard.js?v=20f1572832f0"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=43e7be3cb898","./chart.js":"./chart.js?v=43e7be3cb898","./levels.js":"./levels.js?v=43e7be3cb898","./revisit.js":"./revisit.js?v=43e7be3cb898","./series.js":"./series.js?v=43e7be3cb898","./clock.js":"./clock.js?v=43e7be3cb898","./vault.js":"./vault.js?v=43e7be3cb898","./draw.js":"./draw.js?v=43e7be3cb898","./profile.js":"./profile.js?v=43e7be3cb898","./whatif.js":"./whatif.js?v=43e7be3cb898","./precheck.js":"./precheck.js?v=43e7be3cb898","./shelf.js":"./shelf.js?v=43e7be3cb898","./watchlist.js":"./watchlist.js?v=43e7be3cb898","./lock.js":"./lock.js?v=43e7be3cb898","./replay.js":"./replay.js?v=43e7be3cb898","./demo.js":"./demo.js?v=43e7be3cb898","./diary.js":"./diary.js?v=43e7be3cb898","./videos.js":"./videos.js?v=43e7be3cb898","./system.js":"./system.js?v=43e7be3cb898","./dashboard.js":"./dashboard.js?v=43e7be3cb898"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -3402,7 +3402,7 @@ showGate("");
  *  Keyed on source as well as symbol and time, so a demo trade and a replay
  *  trade on the same bar stay separate, and sending twice adds nothing. */
 function intoDiary(incoming, source) {
-  const key = t => (t.source || source) + "|" + t.symbol + "|" + t.open_t;
+  const key = t => E.tradeKey(t, source);
   const byKey = new Map(window.TRADES.map(t => [key(t), t]));
   let added = 0;
   for (const t of incoming) {

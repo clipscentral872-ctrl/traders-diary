@@ -200,6 +200,17 @@ function settle() {
   if (hit) close(hit.price, hit.ms, hit.how);
 }
 
+/* A trade taken here needs an identity of its own.
+ *
+ * The Diary de-duplicates on source, symbol and open time, and open time is
+ * the BAR's time rather than the clock's. Published bars refresh about every
+ * half hour, so every trade opened between two refreshes carries the same
+ * open_t: close one, open another, and the second was dropped on the way to
+ * the Diary as a duplicate of the first. A winning short disappeared that
+ * way while the screen said three trades had been sent and four existed. */
+let seq = 0;
+const newId = () => `demo:${Date.now().toString(36)}:${++seq}`;
+
 function close(price, ms, how) {
   const p = D.pos;
   const pts = p.side === "Long" ? price - p.entry : p.entry - price;
@@ -208,6 +219,7 @@ function close(price, ms, how) {
   const risk = p.risk0 ?? Math.abs(p.entry - p.stop);
 
   const trade = {
+    id: newId(),
     source: "demo",
     symbol: p.symbol, side: p.side, qty: p.qty,
     open_t: p.open_t, close_t: stamp(ms),
@@ -557,7 +569,12 @@ export function init(onSaveToDiary, onTradeClosed) {
   $("dbuy").addEventListener("click", () => open_("Long"));
   $("dsell").addEventListener("click", () => open_("Short"));
   $("dflat").addEventListener("click", () => {
-    const b = last();
+    // The freshest bar, the same one the trade was opened on. Taken from the
+    // chart's bar instead, a trade opened at 13:34 on the minute series was
+    // closed at 13:30 by the still-forming five minute bar: an exit stamped
+    // before its own entry, at a price four minutes stale. An hour stale on
+    // the hourly chart.
+    const b = tip();
     if (D.pos && b) close(b.c, b.ms, "Market");
     render();
   });

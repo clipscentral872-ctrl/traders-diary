@@ -107,12 +107,24 @@ function judge(t, entryIdx, exitIdx) {
   return t;
 }
 
+/* A trade taken here needs an identity of its own.
+ *
+ * The Diary de-duplicates on source, symbol and open time, and open time is
+ * the BAR's time rather than the clock's. Published bars refresh about every
+ * half hour, so every trade opened between two refreshes carries the same
+ * open_t: close one, open another, and the second was dropped on the way to
+ * the Diary as a duplicate of the first. A winning short disappeared that
+ * way while the screen said three trades had been sent and four existed. */
+let seq = 0;
+const newId = () => `replay:${Date.now().toString(36)}:${++seq}`;
+
 function closeAt(price, ms, how) {
   const p = S.pos;
   const pts = p.side === "Long" ? price - p.entry : p.entry - price;
   const pv = E.POINT[S.sym] ?? 1;
   const entryIdx = p.i ?? 0;
   S.done.push(judge({
+    id: newId(),
     source: "replay",
     symbol: S.sym, side: p.side, qty: p.qty,
     open_t: p.open_t, close_t: stamp(ms),

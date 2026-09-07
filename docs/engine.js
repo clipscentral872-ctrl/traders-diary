@@ -592,3 +592,20 @@ export function ingest(files, existing, barsBySymbol, offsetHours) {
   return {trades: all, added, stillOpen, gaps, brokerCount: broker.length,
           startBalance: start, withBars, files: files.length};
 }
+
+/**
+ * What makes a trade the same trade, for the purpose of not storing it twice.
+ *
+ * An id when the trade carries one. Demo and practice trades stamp
+ * themselves, because two of them can honestly share an open time: the open
+ * time is the BAR's, and one bar stays the latest for about half an hour. So
+ * close one, open another, and on the old key the second was dropped on the
+ * way to the Diary as a duplicate of the first. A winning short went that way
+ * while the screen said three trades had been sent and four existed.
+ *
+ * Imported trades have no id and keep the older key of source, symbol and
+ * open time. That is what stops re-importing a session doubling it up, and a
+ * real broker fill genuinely is identified by those three.
+ */
+export const tradeKey = (t, source) =>
+  t.id || ((t.source || source) + "|" + t.symbol + "|" + t.open_t);

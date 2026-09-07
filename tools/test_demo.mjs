@@ -11,6 +11,7 @@
  *   node tools/test_demo.mjs
  */
 import {entryBar, resolve} from "../docs/demo.js";
+import {tradeKey} from "../docs/engine.js";
 
 let failed = 0;
 const check = (name, ok, detail = "") => {
@@ -125,6 +126,37 @@ console.log("\nthe short side is the same rules the other way up");
   const gapped = resolve({...short}, [...ONE, bar(60, 29600, 29605, 29598, 29602)]);
   check("and a short gapping up fills at the open",
         gapped.hit && gapped.hit.price === 29600, String(gapped.hit));
+}
+
+console.log("\ntwo trades on the same bar are two trades");
+{
+  // The open time is the bar's, and one bar stays the latest for about half
+  // an hour, so closing one trade and opening another gives both the same
+  // open_t. On the old key the second was dropped on the way to the Diary.
+  const a = {id: "demo:abc:1", source: "demo", symbol: "NQ",
+             open_t: "2026-09-07 19:34:00"};
+  const b = {id: "demo:abc:2", source: "demo", symbol: "NQ",
+             open_t: "2026-09-07 19:34:00"};
+  check("they are told apart", tradeKey(a) !== tradeKey(b),
+        tradeKey(a) + " vs " + tradeKey(b));
+  check("and the same one sent twice is still one",
+        tradeKey(a) === tradeKey({...a}));
+  check("the old key really did lose one",
+        `${a.source}|${a.symbol}|${a.open_t}`
+          === `${b.source}|${b.symbol}|${b.open_t}`);
+}
+
+console.log("\nan imported trade keeps the older key");
+{
+  const t = {symbol: "NQ", open_t: "2026-09-04 15:53:08"};
+  check("source, symbol and open time",
+        tradeKey(t, "live") === "live|NQ|2026-09-04 15:53:08",
+        tradeKey(t, "live"));
+  check("so importing the same session twice adds nothing",
+        tradeKey(t, "live") === tradeKey({...t}, "live"));
+  check("and its own source wins over the one passed in",
+        tradeKey({...t, source: "demo"}, "live")
+          === "demo|NQ|2026-09-04 15:53:08");
 }
 
 console.log(failed ? `\n${failed} check(s) failed` : "\nall checks passed");
