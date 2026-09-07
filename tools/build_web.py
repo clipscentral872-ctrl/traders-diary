@@ -657,6 +657,18 @@ body{overflow:hidden}
 }
 
 
+/* Progress towards a sample worth reading. A bar rather than a number,
+   because "47" means nothing on its own and "47 of 100" is a picture. */
+.bookbar{
+  height:6px; border-radius:3px; background:var(--lift); overflow:hidden;
+  margin:2px 0 9px;
+}
+.bookbar i{display:block; height:100%; background:var(--accent); width:0}
+.booknote{
+  margin:0; color:var(--muted); font-size:11.5px; line-height:1.5;
+}
+.booknote b{color:var(--text)}
+
 /* the watchlist */
 .wlist{display:flex; flex-direction:column; gap:2px}
 .wl{

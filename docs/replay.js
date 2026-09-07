@@ -76,11 +76,42 @@ function checkFills(b) {
   if (hitTgt) { closeAt(fillPrice(b, p.target, !long), b.ms, "Take Profit"); }
 }
 
+/* Judge a practice trade exactly as a real one is judged.
+ *
+ * Practice that is scored more kindly than the real thing teaches the wrong
+ * lesson twice: it flatters the result and it hides the habit. The bars the
+ * trade lived through are handed to the same excursion analysis the imported
+ * trades go through, so the same stop habits get the same names.
+ */
+function judge(t, entryIdx, exitIdx) {
+  const run = S.bars.slice(entryIdx, exitIdx + 1);
+  if (run.length) {
+    t.bars = run.map(b => ({t: stamp(b.ms).slice(11, 16),
+                            o: b.o, h: b.h, l: b.l, c: b.c}));
+    t.entry_i = 0;
+    t.exit_i = t.bars.length - 1;
+    E.analyseExcursion(t);
+  }
+  // The two that do not need bars, worded and thresholded as the engine does.
+  if (t.planned_rr >= 3.5) t.flags.push("target far out");
+  if (t.held_min <= 1 && t.got_r !== null && t.got_r < 0)
+    t.flags.push("stopped fast");
+  // Closed by hand, and the target came anyway before the bars ran out.
+  if (t.exit_type === "Market") {
+    const long = t.side === "Long";
+    const after = S.bars.slice(exitIdx + 1);
+    if (after.some(b => long ? b.h >= t.target : b.l <= t.target))
+      t.flags.push("cut short");
+  }
+  return t;
+}
+
 function closeAt(price, ms, how) {
   const p = S.pos;
   const pts = p.side === "Long" ? price - p.entry : p.entry - price;
   const pv = E.POINT[S.sym] ?? 1;
-  S.done.push({
+  const entryIdx = p.i ?? 0;
+  S.done.push(judge({
     source: "replay",
     symbol: S.sym, side: p.side, qty: p.qty,
     open_t: p.open_t, close_t: stamp(ms),
@@ -100,7 +131,7 @@ function closeAt(price, ms, how) {
     note: "Practice on replayed bars. Not part of your live record.",
     note_base: "Practice on replayed bars. Not part of your live record.",
     flags_base: [],
-  });
+  }, entryIdx, S.i));
   S.pos = null;
   saveDraft();
 }
@@ -200,6 +231,41 @@ function riskNote() {
     : "";
 }
 
+/* How far off a number that means anything.
+ *
+ * A win rate over nine trades is a story about nine trades. Somewhere around
+ * a hundred it starts to describe what tends to happen instead, and the whole
+ * point of the replay is that a hundred practice trades is an evening rather
+ * than five months. So the count is shown against that, and the expectancy is
+ * shown with the hedging its sample size earns rather than as a fact.
+ */
+const ENOUGH = 100;
+
+function book() {
+  const bar = $("rbookfill"), note = $("rbook");
+  if (!bar || !note) return;
+  const saved = (window.TRADES || []).filter(t => t.source === "replay");
+  const all = saved.concat(S.done);
+  const n = all.length;
+  bar.style.width = Math.min(100, n / ENOUGH * 100).toFixed(1) + "%";
+  if (!n) {
+    note.textContent = `No practice trades yet. Around ${ENOUGH} is where a `
+      + `win rate starts to describe what tends to happen rather than what `
+      + `happened.`;
+    return;
+  }
+  const s = E.summarise(all);
+  const unsaved = S.done.length
+    ? `, ${S.done.length} of them not saved yet` : "";
+  const edge = s.expectancy_r === null ? "no R yet"
+    : `${s.expectancy_r >= 0 ? "+" : ""}${s.expectancy_r.toFixed(2)}R a trade`;
+  note.innerHTML = `<b>${n} of ${ENOUGH}</b> practice trades${unsaved}. `
+    + `${s.win_rate.toFixed(0)}% win rate, ${edge}. `
+    + (n >= ENOUGH
+       ? `Enough to read, though one market is one market.`
+       : `Too few to read yet: ${ENOUGH - n} to go.`);
+}
+
 function results() {
   const s = E.summarise(S.done);
   $("rstats").innerHTML = S.done.length ? [
@@ -221,6 +287,7 @@ function results() {
     + `<span class="rpm ${t.pnl >= 0 ? "win" : "loss"}">${money(t.pnl)}</span>`
     + `<span class="rpt">${t.exit_type}</span></li>`).join("");
   $("rsave").hidden = $("rclear").hidden = !S.done.length;
+  book();
 }
 
 
@@ -307,7 +374,7 @@ function open_(side) {
   const rr = Math.max(0.1, +$("rrr").value || 0);
   const entry = b.c, long = side === "Long";
   S.pos = {
-    side, qty, entry, ms: b.ms, open_t: stamp(b.ms),
+    side, qty, entry, ms: b.ms, open_t: stamp(b.ms), i: S.i,
     stop: Math.round((long ? entry - risk : entry + risk) * 100) / 100,
     target: Math.round((long ? entry + risk * rr : entry - risk * rr) * 100) / 100,
     // R is the risk taken AT ENTRY. Dragging the stop later must not quietly

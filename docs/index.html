@@ -757,6 +757,18 @@ body{overflow:hidden}
 }
 
 
+/* Progress towards a sample worth reading. A bar rather than a number,
+   because "47" means nothing on its own and "47 of 100" is a picture. */
+.bookbar{
+  height:6px; border-radius:3px; background:var(--lift); overflow:hidden;
+  margin:2px 0 9px;
+}
+.bookbar i{display:block; height:100%; background:var(--accent); width:0}
+.booknote{
+  margin:0; color:var(--muted); font-size:11.5px; line-height:1.5;
+}
+.booknote b{color:var(--text)}
+
 /* the watchlist */
 .wlist{display:flex; flex-direction:column; gap:2px}
 .wl{
@@ -1749,6 +1761,11 @@ body{overflow:hidden}
       <p class="trisk" id="rposline"></p>
     </div>
     <div class="pblock">
+      <h4>Practice book</h4>
+      <div class="bookbar"><i id="rbookfill"></i></div>
+      <p class="booknote" id="rbook"></p>
+    </div>
+    <div class="pblock">
       <h4>This session</h4>
       <div class="stats hud" id="rstats"></div>
       <ul class="rplist" id="rplist"></ul>
@@ -2096,7 +2113,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=aaf690180876","./chart.js":"./chart.js?v=aaf690180876","./levels.js":"./levels.js?v=aaf690180876","./revisit.js":"./revisit.js?v=aaf690180876","./series.js":"./series.js?v=aaf690180876","./clock.js":"./clock.js?v=aaf690180876","./vault.js":"./vault.js?v=aaf690180876","./draw.js":"./draw.js?v=aaf690180876","./profile.js":"./profile.js?v=aaf690180876","./whatif.js":"./whatif.js?v=aaf690180876","./watchlist.js":"./watchlist.js?v=aaf690180876","./lock.js":"./lock.js?v=aaf690180876","./replay.js":"./replay.js?v=aaf690180876","./demo.js":"./demo.js?v=aaf690180876","./diary.js":"./diary.js?v=aaf690180876","./videos.js":"./videos.js?v=aaf690180876","./system.js":"./system.js?v=aaf690180876","./dashboard.js":"./dashboard.js?v=aaf690180876"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=215f9ba11b45","./chart.js":"./chart.js?v=215f9ba11b45","./levels.js":"./levels.js?v=215f9ba11b45","./revisit.js":"./revisit.js?v=215f9ba11b45","./series.js":"./series.js?v=215f9ba11b45","./clock.js":"./clock.js?v=215f9ba11b45","./vault.js":"./vault.js?v=215f9ba11b45","./draw.js":"./draw.js?v=215f9ba11b45","./profile.js":"./profile.js?v=215f9ba11b45","./whatif.js":"./whatif.js?v=215f9ba11b45","./watchlist.js":"./watchlist.js?v=215f9ba11b45","./lock.js":"./lock.js?v=215f9ba11b45","./replay.js":"./replay.js?v=215f9ba11b45","./demo.js":"./demo.js?v=215f9ba11b45","./diary.js":"./diary.js?v=215f9ba11b45","./videos.js":"./videos.js?v=215f9ba11b45","./system.js":"./system.js?v=215f9ba11b45","./dashboard.js":"./dashboard.js?v=215f9ba11b45"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
