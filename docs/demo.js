@@ -23,6 +23,7 @@ import * as SER from "./series.js";
 import * as RV from "./revisit.js";
 import * as DRAW from "./draw.js";
 import * as P from "./profile.js";
+import * as PC from "./precheck.js";
 
 const $ = id => document.getElementById(id);
 // The demo account lives under whichever journal is open.
@@ -239,9 +240,43 @@ function ticket() {
       + `<b class="win">${money(win)}</b><br>`
       + `<b>${(lose / acct * 100).toFixed(1)}%</b> of the account`
       + (rr < 1 ? '<span class="rrwarn">Risking more than you stand to make</span>' : "")
-      + (lose / acct > 0.02
-          ? '<span class="rrwarn">Over 2% of the account on one trade</span>' : "")
     : "";
+  precheck();
+}
+
+/** What the list needs to know: the bar, the money, and today so far. */
+function context() {
+  const b = last();
+  const qty = Math.max(1, +$("dqty").value || 1);
+  const risk = Math.max(0.25, +$("drisk").value || 0);
+  const rr = Math.max(0.1, +$("drr").value || 0);
+  const pv = E.POINT[D.sym] ?? 1;
+  const day = b ? C.day(b.ms) : null;
+  return {
+    ms: b ? b.ms : null,
+    risk: risk * pv * qty,
+    reward: risk * rr * pv * qty,
+    balance: D.account.balance,
+    today: (D.account.trades || [])
+      .filter(t => C.day(C.msOf(t.open_t)) === day),
+  };
+}
+
+function precheck() {
+  const box = $("dpre");
+  if (!box) return;
+  /* In a trade, only the release slot is still worth saying.
+   *
+   * Size and session are entry decisions and there is nothing to do about
+   * them now. A scheduled release is different: it is the one thing on this
+   * list that has already taken money out of this account, on a trade that
+   * was open and doing fine until the minute before 08:30. */
+  const list = D.pos
+    ? PC.check(context()).filter(x => /New York/.test(x.text))
+    : PC.check(context());
+  box.hidden = !list.length;
+  box.innerHTML = list.map(x =>
+    `<div class="pcitem ${x.level}">${x.text}</div>`).join("");
 }
 
 function render() {
@@ -380,6 +415,9 @@ function recordMove(which) {
 function open_(side) {
   const b = last();
   if (!b || D.pos) return;
+  // The short list, before the entry rather than after it.
+  const list = PC.check(context());
+  if (PC.holds(list) && !confirm(PC.ask(list))) return;
   const qty = Math.max(1, +$("dqty").value || 1);
   const risk = Math.max(0.25, +$("drisk").value || 0);
   const rr = Math.max(0.1, +$("drr").value || 0);

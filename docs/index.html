@@ -757,6 +757,20 @@ body{overflow:hidden}
 }
 
 
+/* The short list before an entry. Quiet when there is nothing to say, which
+   is most of the time, because a panel that always shows something is a panel
+   that is never read. */
+.precheck{display:flex; flex-direction:column; gap:6px; margin-top:9px}
+.pcitem{
+  display:flex; gap:7px; align-items:flex-start; font-size:11.5px;
+  line-height:1.45; padding:8px 10px; border-radius:4px;
+}
+.pcitem::before{content:""; width:3px; align-self:stretch; border-radius:2px}
+.pcitem.hold{background:rgba(242,54,69,.07); color:var(--text)}
+.pcitem.hold::before{background:var(--loss)}
+.pcitem.note{background:var(--lift); color:var(--muted)}
+.pcitem.note::before{background:var(--line)}
+
 /* Progress towards a sample worth reading. A bar rather than a number,
    because "47" means nothing on its own and "47 of 100" is a picture. */
 .bookbar{
@@ -1683,6 +1697,7 @@ body{overflow:hidden}
       </div>
       <button class="tflat" id="dflat" hidden>Close at market</button>
       <p class="trisk" id="drisknote"></p>
+      <div class="precheck" id="dpre" hidden></div>
     </div>
     <div class="pblock">
       <h4>Account</h4>
@@ -1755,6 +1770,7 @@ body{overflow:hidden}
       </div>
       <button class="tflat" id="rflat" hidden>Close at market</button>
       <p class="trisk" id="rrisknote"></p>
+      <div class="precheck" id="rpre" hidden></div>
     </div>
     <div class="pblock">
       <h4>Position</h4>
@@ -2113,7 +2129,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=215f9ba11b45","./chart.js":"./chart.js?v=215f9ba11b45","./levels.js":"./levels.js?v=215f9ba11b45","./revisit.js":"./revisit.js?v=215f9ba11b45","./series.js":"./series.js?v=215f9ba11b45","./clock.js":"./clock.js?v=215f9ba11b45","./vault.js":"./vault.js?v=215f9ba11b45","./draw.js":"./draw.js?v=215f9ba11b45","./profile.js":"./profile.js?v=215f9ba11b45","./whatif.js":"./whatif.js?v=215f9ba11b45","./watchlist.js":"./watchlist.js?v=215f9ba11b45","./lock.js":"./lock.js?v=215f9ba11b45","./replay.js":"./replay.js?v=215f9ba11b45","./demo.js":"./demo.js?v=215f9ba11b45","./diary.js":"./diary.js?v=215f9ba11b45","./videos.js":"./videos.js?v=215f9ba11b45","./system.js":"./system.js?v=215f9ba11b45","./dashboard.js":"./dashboard.js?v=215f9ba11b45"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=f29d171f60f8","./chart.js":"./chart.js?v=f29d171f60f8","./levels.js":"./levels.js?v=f29d171f60f8","./revisit.js":"./revisit.js?v=f29d171f60f8","./series.js":"./series.js?v=f29d171f60f8","./clock.js":"./clock.js?v=f29d171f60f8","./vault.js":"./vault.js?v=f29d171f60f8","./draw.js":"./draw.js?v=f29d171f60f8","./profile.js":"./profile.js?v=f29d171f60f8","./whatif.js":"./whatif.js?v=f29d171f60f8","./precheck.js":"./precheck.js?v=f29d171f60f8","./watchlist.js":"./watchlist.js?v=f29d171f60f8","./lock.js":"./lock.js?v=f29d171f60f8","./replay.js":"./replay.js?v=f29d171f60f8","./demo.js":"./demo.js?v=f29d171f60f8","./diary.js":"./diary.js?v=f29d171f60f8","./videos.js":"./videos.js?v=f29d171f60f8","./system.js":"./system.js?v=f29d171f60f8","./dashboard.js":"./dashboard.js?v=f29d171f60f8"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.

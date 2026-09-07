@@ -657,6 +657,20 @@ body{overflow:hidden}
 }
 
 
+/* The short list before an entry. Quiet when there is nothing to say, which
+   is most of the time, because a panel that always shows something is a panel
+   that is never read. */
+.precheck{display:flex; flex-direction:column; gap:6px; margin-top:9px}
+.pcitem{
+  display:flex; gap:7px; align-items:flex-start; font-size:11.5px;
+  line-height:1.45; padding:8px 10px; border-radius:4px;
+}
+.pcitem::before{content:""; width:3px; align-self:stretch; border-radius:2px}
+.pcitem.hold{background:rgba(242,54,69,.07); color:var(--text)}
+.pcitem.hold::before{background:var(--loss)}
+.pcitem.note{background:var(--lift); color:var(--muted)}
+.pcitem.note::before{background:var(--line)}
+
 /* Progress towards a sample worth reading. A bar rather than a number,
    because "47" means nothing on its own and "47 of 100" is a picture. */
 .bookbar{
@@ -1436,7 +1450,7 @@ def main():
 # and it would not show up until a deploy went out half old and half new.
 MODULES = [
     "engine.js", "chart.js", "levels.js", "revisit.js", "series.js",
-    "clock.js", "vault.js", "draw.js", "profile.js", "whatif.js",
+    "clock.js", "vault.js", "draw.js", "profile.js", "whatif.js", "precheck.js",
     "watchlist.js", "lock.js",
     "replay.js", "demo.js", "diary.js", "videos.js", "system.js",
     "dashboard.js",
@@ -1485,7 +1499,7 @@ def stamp_worker(page):
                  "replay.js", "demo.js", "diary.js", "videos.js",
                  "system.js", "dashboard.js", "lock.js", "watchlist.js",
                  "series.js", "clock.js", "vault.js", "draw.js",
-                 "profile.js", "whatif.js"):
+                 "profile.js", "whatif.js", "precheck.js"):
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())

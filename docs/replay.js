@@ -17,6 +17,7 @@ import * as RV from "./revisit.js";
 import {createChart} from "./chart.js";
 import * as WL from "./watchlist.js";
 import * as SER from "./series.js";
+import * as PC from "./precheck.js";
 import * as DRAW from "./draw.js";
 import * as P from "./profile.js";
 
@@ -218,7 +219,44 @@ function render() {
   paint();
 }
 
+/** What the list needs to know: the bar, the money, and today so far. */
+function context() {
+  const b = S.bars[S.i];
+  const qty = Math.max(1, +$("rqty").value || 1);
+  const risk = Math.max(0.25, +$("rrisk").value || 0);
+  const rr = Math.max(0.1, +$("rrr").value || 0);
+  const pv = E.POINT[S.sym] ?? 1;
+  const day = b ? C.day(b.ms) : null;
+  return {
+    ms: b ? b.ms : null,
+    risk: risk * pv * qty,
+    reward: risk * rr * pv * qty,
+    // Practice has no account behind it, so the size check has nothing to
+    // measure against and says nothing rather than inventing a balance.
+    balance: null,
+    today: S.done.filter(t => C.day(C.msOf(t.open_t)) === day),
+  };
+}
+
+function precheck() {
+  const box = $("rpre");
+  if (!box) return;
+  /* In a trade, only the release slot is still worth saying.
+   *
+   * Size and session are entry decisions and there is nothing to do about
+   * them now. A scheduled release is different: it is the one thing on this
+   * list that has already taken money out of this account, on a trade that
+   * was open and doing fine until the minute before 08:30. */
+  const list = S.mode !== "replay" ? []
+    : S.pos ? PC.check(context()).filter(x => /New York/.test(x.text))
+    : PC.check(context());
+  box.hidden = !list.length;
+  box.innerHTML = list.map(x =>
+    `<div class="pcitem ${x.level}">${x.text}</div>`).join("");
+}
+
 function riskNote() {
+  precheck();
   const b = S.bars[S.i];
   const qty = Math.max(1, +$("rqty").value || 1);
   const risk = Math.max(0.25, +$("rrisk").value || 0);
@@ -369,6 +407,10 @@ function recordMove(which) {
 function open_(side) {
   const b = S.bars[S.i];
   if (!b || S.pos || S.mode !== "replay") return;
+  // The short list, before the entry rather than after it. Only the items
+  // that have cost real money ask twice; the rest are already on screen.
+  const list = PC.check(context());
+  if (PC.holds(list) && !confirm(PC.ask(list))) return;
   const qty = Math.max(1, +$("rqty").value || 1);
   const risk = Math.max(0.25, +$("rrisk").value || 0);
   const rr = Math.max(0.1, +$("rrr").value || 0);
