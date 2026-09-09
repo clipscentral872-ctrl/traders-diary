@@ -23,15 +23,48 @@ const record = {
   start: 100000,
 };
 
+/* What "hidden" has to mean here, and how long a needle has to be.
+ *
+ * This used to search the stored JSON for "NQ". The ciphertext is base64, so
+ * a two character needle turns up by chance about one run in twenty: sixty
+ * four symbols, one in 4096 per position, across a 268 character envelope.
+ * The suite went red roughly every twentieth run with nothing wrong, on the
+ * one test where a false alarm does the most damage.
+ *
+ * Searching the DECODED bytes instead does not save a short needle. Two
+ * random bytes match one time in 65536, which over a couple of hundred
+ * positions is still often enough to see, and checking twenty envelopes
+ * makes it twenty times more likely again. That is the same bug a second
+ * time, quieter.
+ *
+ * So every needle here is at least five characters. Five random bytes match
+ * one time in a trillion, which is never. The symbol is checked as the JSON
+ * fragment it would actually leak as, rather than as two letters that mean
+ * nothing on their own.
+ */
+const LEAKS = ['"symbol":"NQ"', "29559", "the one that paid", "100000"];
+const readable = text => LEAKS.filter(n => text.includes(n));
+
 console.log("\nlocking hides the record");
 const env = await L.lock(record, "hunter2");
 const asStored = JSON.stringify(env);
+const bytes = Buffer.from(env.ct, "base64").toString("latin1");
 check("marked as locked", env.locked, 1);
-check("the symbol is not in the stored text", asStored.includes("NQ"), false);
-check("nor the entry price", asStored.includes("29559"), false);
-check("nor the note", asStored.includes("the one that paid"), false);
-check("nor the balance", asStored.includes("100000"), false);
+check("nothing readable in the encrypted bytes", readable(bytes), []);
+check("nor anywhere in the stored envelope", readable(asStored), []);
 check("recognised as locked when read back", L.isLocked(asStored), true);
+
+/* And every time, not usually, because the check this replaced was one that
+ * only failed sometimes. */
+console.log("\nand it hides it every time");
+{
+  let leaked = 0;
+  for (let i = 0; i < 20; i++) {
+    const e = await L.lock(record, "hunter2");
+    if (readable(Buffer.from(e.ct, "base64").toString("latin1")).length) leaked++;
+  }
+  check("twenty locks, nothing readable in any of them", leaked, 0);
+}
 
 console.log("\nthe right passcode gets it back exactly");
 check("round trip", await L.unlock(env, "hunter2"), record);
