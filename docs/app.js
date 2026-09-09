@@ -492,6 +492,14 @@ $("loadpick").addEventListener("change", async () => {
     renderPanels();
     storeLine();
     if (warn) { say(warn, true); return; }
+    /* And fetch the candles for what just arrived.
+     *
+     * A backup carries the trades, not the bars, because bars are published
+     * and would double the file for nothing. Without this the restored
+     * trades sat with no chart, saying no candles were stored, until the app
+     * was closed and opened again: the only other place that fills them is
+     * the unlock. Restoring and then looking is the obvious thing to do. */
+    loadBars(feedsFor(window.TRADES)).then(fillCandles);
     say(`Restored ${o.trades.length} trades from the backup.`);
     location.hash = "";
   } catch (e) {

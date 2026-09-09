@@ -2229,7 +2229,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=ab9afb1ff634","./chart.js":"./chart.js?v=ab9afb1ff634","./levels.js":"./levels.js?v=ab9afb1ff634","./revisit.js":"./revisit.js?v=ab9afb1ff634","./series.js":"./series.js?v=ab9afb1ff634","./clock.js":"./clock.js?v=ab9afb1ff634","./vault.js":"./vault.js?v=ab9afb1ff634","./draw.js":"./draw.js?v=ab9afb1ff634","./profile.js":"./profile.js?v=ab9afb1ff634","./whatif.js":"./whatif.js?v=ab9afb1ff634","./precheck.js":"./precheck.js?v=ab9afb1ff634","./shelf.js":"./shelf.js?v=ab9afb1ff634","./watchlist.js":"./watchlist.js?v=ab9afb1ff634","./lock.js":"./lock.js?v=ab9afb1ff634","./replay.js":"./replay.js?v=ab9afb1ff634","./demo.js":"./demo.js?v=ab9afb1ff634","./diary.js":"./diary.js?v=ab9afb1ff634","./videos.js":"./videos.js?v=ab9afb1ff634","./system.js":"./system.js?v=ab9afb1ff634","./dashboard.js":"./dashboard.js?v=ab9afb1ff634"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=fe6da4af1cf4","./chart.js":"./chart.js?v=fe6da4af1cf4","./levels.js":"./levels.js?v=fe6da4af1cf4","./revisit.js":"./revisit.js?v=fe6da4af1cf4","./series.js":"./series.js?v=fe6da4af1cf4","./clock.js":"./clock.js?v=fe6da4af1cf4","./vault.js":"./vault.js?v=fe6da4af1cf4","./draw.js":"./draw.js?v=fe6da4af1cf4","./profile.js":"./profile.js?v=fe6da4af1cf4","./whatif.js":"./whatif.js?v=fe6da4af1cf4","./precheck.js":"./precheck.js?v=fe6da4af1cf4","./shelf.js":"./shelf.js?v=fe6da4af1cf4","./watchlist.js":"./watchlist.js?v=fe6da4af1cf4","./lock.js":"./lock.js?v=fe6da4af1cf4","./replay.js":"./replay.js?v=fe6da4af1cf4","./demo.js":"./demo.js?v=fe6da4af1cf4","./diary.js":"./diary.js?v=fe6da4af1cf4","./videos.js":"./videos.js?v=fe6da4af1cf4","./system.js":"./system.js?v=fe6da4af1cf4","./dashboard.js":"./dashboard.js?v=fe6da4af1cf4"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -2725,6 +2725,14 @@ $("loadpick").addEventListener("change", async () => {
     renderPanels();
     storeLine();
     if (warn) { say(warn, true); return; }
+    /* And fetch the candles for what just arrived.
+     *
+     * A backup carries the trades, not the bars, because bars are published
+     * and would double the file for nothing. Without this the restored
+     * trades sat with no chart, saying no candles were stored, until the app
+     * was closed and opened again: the only other place that fills them is
+     * the unlock. Restoring and then looking is the obvious thing to do. */
+    loadBars(feedsFor(window.TRADES)).then(fillCandles);
     say(`Restored ${o.trades.length} trades from the backup.`);
     location.hash = "";
   } catch (e) {
