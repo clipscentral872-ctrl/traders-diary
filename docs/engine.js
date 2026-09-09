@@ -579,10 +579,20 @@ export function ingest(files, existing, barsBySymbol, offsetHours) {
   }
 
   const all = [...byKey.values()].sort((a, b) => (a.open_t < b.open_t ? -1 : 1));
+  /* How many CAN be drawn, not how many were attached just now.
+   *
+   * attachBars does nothing and returns false when a trade already has its
+   * candles, which is right for its own job and wrong to count. Every
+   * re-import therefore reported every healthy trade as undrawable: import
+   * the same session twice and it said "16 could not be drawn: the published
+   * bars only reach back about ten days" about sixteen trades that all had
+   * their charts. Chris imports on top of what is already there every
+   * session, so that false alarm was the normal case. */
   let withBars = 0;
   for (const t of all) {
-    if (attachBars(t, barsBySymbol[FEED[t.symbol]], offsetHours)) withBars++;
+    attachBars(t, barsBySymbol[FEED[t.symbol]], offsetHours);
     analyseExcursion(t);
+    if (t.bars && t.bars.length) withBars++;
   }
 
   const broker = readBrokerTrades(files);

@@ -84,5 +84,24 @@ console.log(`\n  ${sa.trades} trades, $${sa.pnl.toLocaleString()}, `
   + `expectancy ${sa.expectancy_r === null ? "none" : sa.expectancy_r.toFixed(3) + "R"} `
   + `over the ${sa.scored} with an R`);
 
+console.log("\nimporting the same session again says the same thing");
+{
+  /* Chris imports on top of what is already there, every session, so the
+   * SECOND ingest is the normal case rather than the odd one.
+   *
+   * withBars used to count what attachBars had just done, and attachBars
+   * does nothing and returns false for a trade that already has its candles.
+   * So a re-import reported every healthy trade as undrawable: sixteen
+   * trades with charts, and a line saying sixteen could not be drawn
+   * because the published bars only reach back ten days. */
+  const again = E.ingest(files, out.trades, barsBySymbol, 2);
+  const haveBars = again.trades.filter(t => t.bars && t.bars.length).length;
+  check("nothing is added the second time", again.added, 0);
+  check("the same trades are there", again.trades.length, out.trades.length);
+  check("and the drawable count is what is actually drawable",
+         again.withBars, haveBars);
+  check("which is the same as the first time", again.withBars, out.withBars);
+}
+
 console.log(failed ? `\n${failed} check(s) failed` : "\nall checks passed");
 process.exit(failed ? 1 : 0);
