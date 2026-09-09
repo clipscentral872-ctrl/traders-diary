@@ -11,8 +11,34 @@
 
 const $ = id => document.getElementById(id);
 
-const SRC = "https://raw.githubusercontent.com/clipscentral872-ctrl/"
-          + "aitrader-tjr-demo/main/state/demo_state.json";
+const REPO = "clipscentral872-ctrl/aitrader-tjr-demo";
+
+/* The small file the system now publishes for this page, and the full state
+   it publishes for itself. The full one is 800 KB and four fifths of that is
+   the poller's own log of every setup it was offered, which this page only
+   ever added up into six numbers. The summary carries the six numbers. The
+   full file stays the fallback, because a summary that has not been written
+   yet must not mean an empty screen. */
+const SUMMARY = "state/demo_summary.json";
+const FULL = "state/demo_state.json";
+
+/* Two hosts, because one was not enough.
+ *
+ * raw.githubusercontent went down for every file in every repository on the
+ * morning this was written, and with a single source and no retry the tab
+ * simply died. jsDelivr answers from the same commit and sends the CORS
+ * header, but it caches for hours, so it is the reserve rather than the
+ * source: it is there to answer at all, and what it returns is stamped, so
+ * the page can say how old it is instead of pretending it is live. */
+const HOSTS = [
+  n => `https://raw.githubusercontent.com/${REPO}/main/${n}`,
+  n => `https://cdn.jsdelivr.net/gh/${REPO}@main/${n}`,
+];
+
+// The last thing that loaded, kept so an outage shows yesterday's record
+// rather than an error where the record should be. Public data about a
+// simulated account, so it sits outside the journal and needs no PIN.
+const KEEP = "td.system.last";
 
 const money = v => (v < 0 ? "-" : "+") + "$"
   + Math.abs(v).toLocaleString("en-US", {maximumFractionDigits: 0});
@@ -77,20 +103,34 @@ function renderBooks(d) {
    part that answered why its early record was almost all longs: it was not
    direction, it was the same setup being re-entered before one-setup-one-trade
    existed. */
+/* The six totals, whichever file they arrived in.
+ *
+ * The summary carries them ready-made. The full state carries four thousand
+ * rows to add up. Both have to end at the same numbers, because either one
+ * can be what got through. */
+export function seenTotals(d) {
+  if (d.seen_totals) return {...d.seen_totals};
+  const t = {all: 0, fresh: 0, long: 0, short: 0,
+             fresh_long: 0, fresh_short: 0, observations: 0};
+  for (const s of d.seen || []) {
+    for (const k of ["all", "fresh", "long", "short",
+                     "fresh_long", "fresh_short"])
+      t[k] += s[k] || 0;
+    t.observations++;
+  }
+  return t;
+}
+
 function renderSeen(d) {
-  const seen = d.seen || [];
-  if (!seen.length) {
+  const t = seenTotals(d);
+  if (!t.observations) {
     $("sysseen").innerHTML = stat("setups logged", "0");
     $("sysseenline").textContent =
       "Nothing logged yet. This fills in as the system polls.";
     return;
   }
-  const t = {all: 0, fresh: 0, long: 0, short: 0, fl: 0, fs: 0};
-  for (const s of seen) {
-    t.all += s.all || 0; t.fresh += s.fresh || 0;
-    t.long += s.long || 0; t.short += s.short || 0;
-    t.fl += s.fresh_long || 0; t.fs += s.fresh_short || 0;
-  }
+  t.fl = t.fresh_long;
+  t.fs = t.fresh_short;
   const pct = t.all ? t.fresh / t.all * 100 : 0;
   $("sysseen").innerHTML = [
     stat("setups offered", t.all.toLocaleString("en-US")),
@@ -98,7 +138,7 @@ function renderSeen(d) {
     stat("that is", pct.toFixed(3) + "%"),
     stat("new, long", String(t.fl)),
     stat("new, short", String(t.fs)),
-    stat("observations", seen.length.toLocaleString("en-US")),
+    stat("observations", t.observations.toLocaleString("en-US")),
   ].join("");
 
   // A split of 15 to 9 looks lopsided and is not: on 24 coin flips that
@@ -125,7 +165,7 @@ function renderSeen(d) {
     + `short was taken once.`;
 }
 
-function renderStanding(d, when) {
+function renderStanding(d, when, stale) {
   const bs = books(d);
   const total = bs.reduce((s, b) => s + (b.node.trades || []).length, 0);
   const rows = [];
@@ -156,35 +196,109 @@ function renderStanding(d, when) {
     + "it was left switched off. A news blackout was tested the same way and "
     + "also rejected: the trades it refused made more than the ones it kept."));
 
+  /* When it was reported, and how it got here. A number with no date on it
+     is worse than no number, because it looks current whatever happened on
+     the way to the screen. */
+  const old = when ? ago(when) : null;
   if (when)
-    rows.push(row("ok", "Last reported " + when,
-      "Read live from where the system publishes it, so this cannot quietly go "
-      + "out of date."));
+    rows.push(row(stale ? "warn" : "ok",
+      "Last reported " + when + (old ? ` (${old})` : ""),
+      stale
+        ? `This is ${stale}, because the system's own host could not be `
+          + `reached just now. The date above is the system's, not this `
+          + `page's, so what you are reading is exactly that old.`
+        : "Read live from where the system publishes it, so this cannot "
+          + "quietly go out of date."));
+  else if (stale)
+    rows.push(row("warn", "Read from a fallback",
+      `This is ${stale}. The system's own host could not be reached just now.`));
 
   $("sysstand").innerHTML = rows.join("");
 }
 
 let loaded = false;
 
+/** One file from one host, or null. Never throws, so the caller can just try
+ *  the next thing on the list. */
+async function grab(url) {
+  try {
+    const r = await fetch(url, {cache: "no-cache"});
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j && typeof j === "object" ? j : null;
+  } catch { return null; }
+}
+
+/** The record, from wherever it can be got. */
+async function fetchState() {
+  for (const name of [SUMMARY, FULL])
+    for (const host of HOSTS) {
+      const d = await grab(host(name));
+      if (d) return {d, live: host === HOSTS[0]};
+    }
+  return null;
+}
+
+/* Kept small whichever file arrived.
+ *
+ * The full state is 800 KB and most of it is the poller's own workings. Put
+ * in localStorage as it stands it would be the largest thing this app has
+ * ever written, to hold six numbers it had already worked out. */
+export const slim = d => ({
+  equity: d.equity, position: d.position,
+  trades: (d.trades || []).map(t => ({pnl: t.pnl, r: t.r})),
+  wide: d.wide ? {
+    equity: d.wide.equity, position: d.wide.position,
+    trades: (d.wide.trades || []).map(t => ({pnl: t.pnl, r: t.r})),
+  } : undefined,
+  polls: d.polls, started: d.started, updated: d.updated,
+  seen_totals: seenTotals(d),
+});
+
+const remember = d => {
+  try { localStorage.setItem(KEEP, JSON.stringify(slim(d))); }
+  catch { /* private mode, or full */ }
+};
+const recall = () => {
+  try { return JSON.parse(localStorage.getItem(KEEP)); } catch { return null; }
+};
+
+/** How long ago, said the way a person would say it. */
+function ago(iso) {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return null;
+  const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+  if (m < 60) return `${m} minute${m === 1 ? "" : "s"} ago`;
+  const h = Math.round(m / 60);
+  if (h < 36) return `${h} hour${h === 1 ? "" : "s"} ago`;
+  return `${Math.round(h / 24)} days ago`;
+}
+
 export async function show() {
   if (loaded) return;
   loaded = true;
   $("sysline").textContent = "Reading the live state...";
-  let d;
-  try {
-    const r = await fetch(SRC, {cache: "no-cache"});
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    d = await r.json();
-  } catch (e) {
+
+  const got = await fetchState();
+  /* An outage shows the last record rather than an error where the record
+     should be. It says which it is doing: a figure with no date on it is
+     worse than no figure, because it looks current. */
+  const d = got ? got.d : recall();
+  if (!d) {
     loaded = false;               // let a later visit try again
     $("sysline").textContent =
-      "Could not reach the system's record just now (" + e.message + "). "
-      + "It publishes to a public repository, so this needs a connection. "
-      + "Everything else in this app works offline.";
+      "Could not reach the system's record, and nothing has been read on this "
+      + "device yet to fall back on. It publishes to a public repository, so "
+      + "this needs a connection. Everything else in this app works offline.";
     $("sysstand").innerHTML = row("warn", "Live state unavailable",
       "The rest of this tab fills in once the record can be read.");
     return;
   }
+  if (got) remember(d);
+
+  const stale = !got ? "from the last time this device could reach it"
+    : got.live ? null
+    : "from a cache, so it can be a few hours behind";
 
   const polls = d.polls || 0;
   const bs = books(d);
@@ -206,7 +320,7 @@ export async function show() {
     : `Both books are flat. The system only takes a setup that has not been `
       + `taken before, which is rare: most polls see nothing new.`;
 
-  renderStanding(d, when);
+  renderStanding(d, when, stale);
   renderBooks(d);
   renderSeen(d);
 }
