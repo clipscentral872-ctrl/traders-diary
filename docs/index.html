@@ -2229,7 +2229,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=145e2c20754e","./chart.js":"./chart.js?v=145e2c20754e","./levels.js":"./levels.js?v=145e2c20754e","./revisit.js":"./revisit.js?v=145e2c20754e","./series.js":"./series.js?v=145e2c20754e","./clock.js":"./clock.js?v=145e2c20754e","./vault.js":"./vault.js?v=145e2c20754e","./draw.js":"./draw.js?v=145e2c20754e","./profile.js":"./profile.js?v=145e2c20754e","./whatif.js":"./whatif.js?v=145e2c20754e","./precheck.js":"./precheck.js?v=145e2c20754e","./shelf.js":"./shelf.js?v=145e2c20754e","./watchlist.js":"./watchlist.js?v=145e2c20754e","./lock.js":"./lock.js?v=145e2c20754e","./replay.js":"./replay.js?v=145e2c20754e","./demo.js":"./demo.js?v=145e2c20754e","./diary.js":"./diary.js?v=145e2c20754e","./videos.js":"./videos.js?v=145e2c20754e","./system.js":"./system.js?v=145e2c20754e","./dashboard.js":"./dashboard.js?v=145e2c20754e"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=760d2ad6415d","./chart.js":"./chart.js?v=760d2ad6415d","./levels.js":"./levels.js?v=760d2ad6415d","./revisit.js":"./revisit.js?v=760d2ad6415d","./series.js":"./series.js?v=760d2ad6415d","./clock.js":"./clock.js?v=760d2ad6415d","./vault.js":"./vault.js?v=760d2ad6415d","./draw.js":"./draw.js?v=760d2ad6415d","./profile.js":"./profile.js?v=760d2ad6415d","./whatif.js":"./whatif.js?v=760d2ad6415d","./precheck.js":"./precheck.js?v=760d2ad6415d","./shelf.js":"./shelf.js?v=760d2ad6415d","./watchlist.js":"./watchlist.js?v=760d2ad6415d","./lock.js":"./lock.js?v=760d2ad6415d","./replay.js":"./replay.js?v=760d2ad6415d","./demo.js":"./demo.js?v=760d2ad6415d","./diary.js":"./diary.js?v=760d2ad6415d","./videos.js":"./videos.js?v=760d2ad6415d","./system.js":"./system.js?v=760d2ad6415d","./dashboard.js":"./dashboard.js?v=760d2ad6415d"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -3274,7 +3274,15 @@ $("setform").addEventListener("submit", async e => {
       {trades: window.TRADES, start: window.START, saved: Date.now()}, pin);
     const rekeyed = await PROF.rekey(pin);
     if (!rekeyed) throw new Error("the journal would not take the new PIN");
-    PROF.set(KEY, JSON.stringify(env));
+    // And check that it actually stored. This return value was ignored, and
+    // ignoring it is how the comment above comes true anyway: storage refuses
+    // the write, nothing throws, the journal has moved to the new PIN and the
+    // record inside it is still locked with the old one. Put the PIN back
+    // rather than say Done over a record that can no longer be opened.
+    if (!PROF.set(KEY, JSON.stringify(env))) {
+      rekeyed.undo();
+      throw new Error("there was no room to store the re-locked record");
+    }
     PASSCODE = pin;
     $("setpanel").hidden = true;
     lockState();

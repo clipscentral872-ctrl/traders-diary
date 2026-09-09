@@ -134,15 +134,43 @@ export async function create(code, name) {
  * caller, which does both or neither: a journal whose PIN opens it but whose
  * trades were left under the old one is worse than no change at all.
  */
+/**
+ * Change the PIN this journal opens with.
+ *
+ * Returns an undo, because the caller has a second thing to write after this
+ * and that write can fail. Re-keying the journal and then failing to store
+ * the re-locked record leaves a journal whose PIN opens it and whose trades
+ * it cannot read: the old PIN no longer gets in, and the record inside is
+ * still encrypted with it. That is losing the record, and there is no reset.
+ *
+ * Null when there is no journal to re-key, so a falsy return still means it
+ * did not happen.
+ */
 export async function rekey(code) {
-  if (!active) return false;
+  if (!active) return null;
   const rows = list();
   const row = rows.find(r => r.id === active.id);
-  if (!row) return false;
+  if (!row) return null;
+  const was = row.check;
+  const wasPin = pin;
+  // The id is taken now, not read back later. Undo runs on the failure path,
+  // and reading `active` there would throw if the journal had been closed in
+  // between. A recovery that can itself crash is not a recovery.
+  const id = active.id;
   row.check = await LOCK.lock({who: active.id}, code);
   writeList(rows);
   pin = code;
-  return true;
+  return {
+    undo() {
+      const back = list();
+      const r = back.find(x => x.id === id);
+      if (!r) return false;
+      r.check = was;
+      writeList(back);
+      if (active && active.id === id) pin = wasPin;
+      return true;
+    },
+  };
 }
 
 /** Forget the PIN, without touching anything stored. */

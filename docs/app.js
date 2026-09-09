@@ -1041,7 +1041,15 @@ $("setform").addEventListener("submit", async e => {
       {trades: window.TRADES, start: window.START, saved: Date.now()}, pin);
     const rekeyed = await PROF.rekey(pin);
     if (!rekeyed) throw new Error("the journal would not take the new PIN");
-    PROF.set(KEY, JSON.stringify(env));
+    // And check that it actually stored. This return value was ignored, and
+    // ignoring it is how the comment above comes true anyway: storage refuses
+    // the write, nothing throws, the journal has moved to the new PIN and the
+    // record inside it is still locked with the old one. Put the PIN back
+    // rather than say Done over a record that can no longer be opened.
+    if (!PROF.set(KEY, JSON.stringify(env))) {
+      rekeyed.undo();
+      throw new Error("there was no room to store the re-locked record");
+    }
     PASSCODE = pin;
     $("setpanel").hidden = true;
     lockState();
