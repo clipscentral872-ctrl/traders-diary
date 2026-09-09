@@ -10,37 +10,52 @@ name: Publish the site
 # The copies in docs/bars are a seed. They are what gets served if a fetch
 # fails, and they are what a fresh clone starts from. They are not updated.
 
+# A FEW LONG RUNS A DAY, each publishing repeatedly. Not a frequent cron.
+#
+# This asked for two fires an hour through the session and GitHub delivered
+# almost none of them. On 8 September four of twenty landed. On the 9th none
+# landed at all: the market opened with candles five and a half hours old and
+# the Demo tab correctly refused to trade on them, which is the app being
+# honest about a problem it cannot fix from the browser.
+#
+# That is documented behaviour, not a fault. Scheduled workflows are
+# best-effort, are dropped under load, and high-frequency crons are the first
+# thing throttled. The paper-trading repository on this same account hit the
+# identical wall and settled on two long jobs that poll internally, and those
+# do fire. So this asks for three starts instead of twenty, and each start
+# republishes every 45 minutes for about 4.5 hours. Any single one
+# that lands covers most of a session on its own.
+#
+# The staleness that matters is the Demo tab's 240-minute cutoff, so a gap of
+# 45 minutes leaves a wide margin for a run that dies early.
+#
+# Times are UTC. New York is UTC-4 in summer, so the cash session is
+# 13:30 to 20:00 UTC. The three starts are placed to overlap.
+
 on:
   push:
     branches: [main]
   schedule:
-    # Half hourly through the US session and the hours after it, weekdays
-    # only.
-    #
-    # This was every fifteen minutes and GitHub ran it exactly never: thirty
-    # two pushes and two manual runs in the first day and a half, and not one
-    # scheduled run, including ninety minutes sitting inside the window on a
-    # Monday. High frequency schedules on shared runners are dropped rather
-    # than queued, and dropped silently. Half hourly is the same data an hour
-    # older at worst, and it is a schedule that actually fires.
-    #
-    # Even then, treat this as best effort. GitHub makes no promise about
-    # scheduled jobs and says so. The app already handles missing candles by
-    # saying the numbers are exact and the picture is not.
-    - cron: "5,35 13-22 * * 1-5"
-    # Once before the open, with every timeframe, so the deeper history for
-    # the replay stays current too.
-    - cron: "40 11 * * 1-5"
+    - cron: "13 12 * * 1-5"    # before the open
+    - cron: "41 14 * * 1-5"    # first half of the session
+    - cron: "9 16 * * 1-5"     # second half, into the close
   workflow_dispatch:
+    inputs:
+      cycles:
+        description: "How many times to publish before finishing"
+        default: "1"
+      gap:
+        description: "Seconds between publishes, for testing the loop quickly"
+        default: "2700"
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Never two deploys at once. A queued PUSH can be dropped, because another is
-# usually right behind it. A queued schedule must not be, because it is the
-# only thing that refreshes the candles and the next one is half an hour away.
+# Never two deploys at once. A push cancels a publishing run in progress,
+# because a code change should go out immediately and the next scheduled start
+# picks the candles back up.
 concurrency:
   group: pages
   cancel-in-progress: ${{ github.event_name == 'push' }}
@@ -48,9 +63,16 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # GitHub's ceiling is 360. The cycles below need about 291.
+    timeout-minutes: 331
+    env:
+      # A scheduled start holds the line. A push or a manual run publishes
+      # once and finishes, unless a manual run asks for more.
+      CYCLES: ${{ github.event_name == 'schedule' && 7 || inputs.cycles || 1 }}
+      GAP: ${{ github.event_name == 'schedule' && 2700 || inputs.gap || 2700 }}
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy1.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -58,16 +80,10 @@ jobs:
         with:
           python-version: "3.12"
 
+      # Cycle 1, with every timeframe. The deeper hourly history only changes
+      # slowly, so the later cycles leave it alone.
       - name: Fetch the candles
-        # The quarter-hourly run only needs the minute bars, which are the ones
-        # that go stale. Refetching two years of hourly history every fifteen
-        # minutes would be four times the work for nothing.
-        run: |
-          if [ "${{ github.event.schedule }}" = "5,35 13-22 * * 1-5" ]; then
-            python tools/publish_bars.py --only 1m
-          else
-            python tools/publish_bars.py
-          fi
+        run: python tools/publish_bars.py
 
       - name: Build the page
         # The published HTML is generated, so it is built here rather than
@@ -77,6 +93,165 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs
+          name: github-pages-1
 
-      - id: deploy
+      - id: deploy1
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-1
+
+      # Cycle 2
+      - name: Wait, then refresh again (2)
+        if: fromJSON(env.CYCLES) >= 2
+        run: sleep "$GAP"
+
+      - name: Fetch the minute candles (2)
+        # Only the minute bars go stale between cycles. Refetching two years
+        # of hourly history every time would be work for nothing.
+        if: fromJSON(env.CYCLES) >= 2
+        run: python tools/publish_bars.py --only 1m
+
+      - name: Build the page (2)
+        if: fromJSON(env.CYCLES) >= 2
+        run: python tools/build_web.py
+
+      - if: fromJSON(env.CYCLES) >= 2
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+          name: github-pages-2
+
+      - if: fromJSON(env.CYCLES) >= 2
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-2
+
+      # Cycle 3
+      - name: Wait, then refresh again (3)
+        if: fromJSON(env.CYCLES) >= 3
+        run: sleep "$GAP"
+
+      - name: Fetch the minute candles (3)
+        # Only the minute bars go stale between cycles. Refetching two years
+        # of hourly history every time would be work for nothing.
+        if: fromJSON(env.CYCLES) >= 3
+        run: python tools/publish_bars.py --only 1m
+
+      - name: Build the page (3)
+        if: fromJSON(env.CYCLES) >= 3
+        run: python tools/build_web.py
+
+      - if: fromJSON(env.CYCLES) >= 3
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+          name: github-pages-3
+
+      - if: fromJSON(env.CYCLES) >= 3
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-3
+
+      # Cycle 4
+      - name: Wait, then refresh again (4)
+        if: fromJSON(env.CYCLES) >= 4
+        run: sleep "$GAP"
+
+      - name: Fetch the minute candles (4)
+        # Only the minute bars go stale between cycles. Refetching two years
+        # of hourly history every time would be work for nothing.
+        if: fromJSON(env.CYCLES) >= 4
+        run: python tools/publish_bars.py --only 1m
+
+      - name: Build the page (4)
+        if: fromJSON(env.CYCLES) >= 4
+        run: python tools/build_web.py
+
+      - if: fromJSON(env.CYCLES) >= 4
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+          name: github-pages-4
+
+      - if: fromJSON(env.CYCLES) >= 4
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-4
+
+      # Cycle 5
+      - name: Wait, then refresh again (5)
+        if: fromJSON(env.CYCLES) >= 5
+        run: sleep "$GAP"
+
+      - name: Fetch the minute candles (5)
+        # Only the minute bars go stale between cycles. Refetching two years
+        # of hourly history every time would be work for nothing.
+        if: fromJSON(env.CYCLES) >= 5
+        run: python tools/publish_bars.py --only 1m
+
+      - name: Build the page (5)
+        if: fromJSON(env.CYCLES) >= 5
+        run: python tools/build_web.py
+
+      - if: fromJSON(env.CYCLES) >= 5
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+          name: github-pages-5
+
+      - if: fromJSON(env.CYCLES) >= 5
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-5
+
+      # Cycle 6
+      - name: Wait, then refresh again (6)
+        if: fromJSON(env.CYCLES) >= 6
+        run: sleep "$GAP"
+
+      - name: Fetch the minute candles (6)
+        # Only the minute bars go stale between cycles. Refetching two years
+        # of hourly history every time would be work for nothing.
+        if: fromJSON(env.CYCLES) >= 6
+        run: python tools/publish_bars.py --only 1m
+
+      - name: Build the page (6)
+        if: fromJSON(env.CYCLES) >= 6
+        run: python tools/build_web.py
+
+      - if: fromJSON(env.CYCLES) >= 6
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+          name: github-pages-6
+
+      - if: fromJSON(env.CYCLES) >= 6
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-6
+
+      # Cycle 7
+      - name: Wait, then refresh again (7)
+        if: fromJSON(env.CYCLES) >= 7
+        run: sleep "$GAP"
+
+      - name: Fetch the minute candles (7)
+        # Only the minute bars go stale between cycles. Refetching two years
+        # of hourly history every time would be work for nothing.
+        if: fromJSON(env.CYCLES) >= 7
+        run: python tools/publish_bars.py --only 1m
+
+      - name: Build the page (7)
+        if: fromJSON(env.CYCLES) >= 7
+        run: python tools/build_web.py
+
+      - if: fromJSON(env.CYCLES) >= 7
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+          name: github-pages-7
+
+      - if: fromJSON(env.CYCLES) >= 7
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-7
