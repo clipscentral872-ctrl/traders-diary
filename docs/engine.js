@@ -252,6 +252,13 @@ const f2 = v => v.toLocaleString("en-US",
 const sgn = v => (v >= 0 ? "+" : "") + v.toFixed(2);
 
 /** Turn one round trip into facts, flags and a plain-English read. */
+/* Every field analyse() owns. A repair copies exactly these and nothing
+   else, so anything else on a stored trade, above all the note Chris typed
+   into it, is left exactly where it was. */
+const ANALYSED = ["trail", "initial_stop", "final_stop", "stop_moved", "stop",
+  "target", "risk_pts", "reward_pts", "planned_rr", "got_r", "got_pts",
+  "held_min", "flags", "flags_base", "note", "note_base"];
+
 export function analyse(t, moves, spans) {
   const {entry, exit: exit_, side} = t;
   const short = side === "Short";
@@ -570,10 +577,39 @@ export function ingest(files, existing, barsBySymbol, offsetHours) {
   const {trades: fresh, stillOpen} = pairTrades(fills);
 
   const byKey = new Map(existing.map(t => [t.symbol + "|" + t.open_t, t]));
-  let added = 0;
+  let added = 0, repaired = 0;
   for (const t of fresh) {
     const k = t.symbol + "|" + t.open_t;
-    if (byKey.has(k)) continue;
+    const had = byKey.get(k);
+    if (had) {
+      /* A trade already here can still be missing its stop, and this import
+       * may be the one that has it.
+       *
+       * The stop comes from the activity log, and TradingView's activity log
+       * only holds about the last hour. Export mid-session and the early
+       * trades arrive with no stop and no R. Export again at the end of the
+       * session, the fuller log is right there in the files, and the old code
+       * threw it away because the trade was "already here". So the advice to
+       * export at the end fixed tomorrow's trades and could never repair
+       * yesterday's. Imported in one go, Chris's own exports give 13 of 16
+       * trades an R. Imported the way he actually imports, a session at a
+       * time, they gave 7.
+       *
+       * Only ever FILLS a missing R, never replaces one. The first stop on
+       * record is the risk taken at entry, and a later, longer log could show
+       * only where it was trailed to. And it copies the analysed fields onto
+       * the stored trade rather than swapping the trade out, because the
+       * stored one carries what an import cannot rebuild: the note you typed,
+       * and candles that may no longer be published. */
+      if (had.got_r == null) {
+        const now = analyse({...t}, moves, spans);
+        if (now.got_r != null) {
+          for (const f of ANALYSED) had[f] = now[f];
+          repaired++;
+        }
+      }
+      continue;
+    }
     byKey.set(k, analyse(t, moves, spans));
     added++;
   }
@@ -599,8 +635,9 @@ export function ingest(files, existing, barsBySymbol, offsetHours) {
   const gaps = reconcile(all, broker);
   const start = readStartBalance(files);
 
-  return {trades: all, added, stillOpen, gaps, brokerCount: broker.length,
-          startBalance: start, withBars, files: files.length};
+  return {trades: all, added, repaired, stillOpen, gaps,
+          brokerCount: broker.length, startBalance: start, withBars,
+          files: files.length};
 }
 
 /**

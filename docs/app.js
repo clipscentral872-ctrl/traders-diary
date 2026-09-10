@@ -387,6 +387,11 @@ async function handle(fileHandles) {
       ? `${out.added} new trade${out.added === 1 ? "" : "s"} added. `
         + `${out.trades.length} on record.`
       : `Nothing new. All ${out.trades.length} of those trades were already here.`);
+    // Said out loud, because it changes numbers you have already seen.
+    if (out.repaired)
+      lines.push(`${out.repaired} earlier trade${out.repaired === 1 ? " now has its" : "s now have their"} `
+        + `stop, from the fuller activity log in these files, so ${out.repaired === 1 ? "it has" : "they have"} `
+        + `an R where before ${out.repaired === 1 ? "it" : "they"} had none.`);
 
     const today = out.trades.filter(t => t.open_t.slice(0, 10)
       === out.trades[out.trades.length - 1]?.open_t.slice(0, 10));

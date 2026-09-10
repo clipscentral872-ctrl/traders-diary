@@ -103,5 +103,49 @@ console.log("\nimporting the same session again says the same thing");
   check("which is the same as the first time", again.withBars, out.withBars);
 }
 
+console.log("\na later, fuller activity log repairs trades already here");
+{
+  /* How Chris actually imports: a session at a time, often mid-session, so
+   * the early trades arrive before the activity log that holds their stop.
+   * Imported in one go these files give 13 of 16 trades an R. Imported in
+   * pieces they gave 7, because a trade already present was skipped and the
+   * fuller log that arrived later was thrown away. */
+  const thin = files.filter(f => !/activity-log/i.test(f.name)
+                                 || /2026-09-04/.test(f.name));
+  const first = E.ingest(thin, [], barsBySymbol, 2);
+  const withR = ts => ts.filter(t => t.got_r != null).length;
+  const before = withR(first.trades);
+  check("the thin import really is missing stops", before < withR(out.trades), true);
+
+  /* Something only the stored trade has: the note Chris typed into it.
+   *
+   * Put on a trade that the fuller log DOES repair. The first version of
+   * this test took the first trade with no R, which turned out to be one of
+   * the three with no stop in any file, so nothing ever touched it and the
+   * note survived by being ignored. That proved nothing about a repair. */
+  const fullR = new Map(out.trades.map(t => [t.symbol + "|" + t.open_t, t.got_r]));
+  const noted = first.trades.find(t => t.got_r == null
+    && fullR.get(t.symbol + "|" + t.open_t) != null);
+  check("there is a trade the fuller log repairs", !!noted, true);
+  noted.mine = "saw the sweep, entered too early";
+
+  const second = E.ingest(files, first.trades, barsBySymbol, 2);
+  check("nothing new is added", second.added, 0);
+  check("the repair is counted", second.repaired, withR(out.trades) - before);
+  check("and ends where a single full import ends",
+        withR(second.trades), withR(out.trades));
+  check("with the same R on every trade",
+        second.trades.map(t => t.got_r), out.trades.map(t => t.got_r));
+  const kept = second.trades.find(t => t.symbol === noted.symbol
+                                        && t.open_t === noted.open_t);
+  check("that trade was repaired", kept.got_r != null, true);
+  check("and the note you typed on it is still there", kept.mine,
+        "saw the sweep, entered too early");
+
+  // A stop already on record is never replaced, even by a longer log.
+  const third = E.ingest(files, second.trades, barsBySymbol, 2);
+  check("importing once more changes nothing", third.repaired, 0);
+}
+
 console.log(failed ? `\n${failed} check(s) failed` : "\nall checks passed");
 process.exit(failed ? 1 : 0);
