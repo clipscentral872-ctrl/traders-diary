@@ -58,7 +58,7 @@ export function toRelease(ms, within = NEWS_MIN) {
  */
 export function check(ctx) {
   const out = [];
-  const {ms, risk, reward, balance, today = []} = ctx;
+  const {ms, risk, reward, balance, today = [], now = null} = ctx;
 
   // Arithmetic, true whatever the record says.
   if (risk > 0 && reward > 0 && reward < risk)
@@ -91,7 +91,24 @@ export function check(ctx) {
                     + `resting stops.`});
 
     const mins = C.minutes(ms);
-    if (mins < OPEN) {
+    /* The price and the clock are not the same moment on the Demo tab.
+     *
+     * The published minute bars run about twelve minutes behind, so ten
+     * minutes after the open the freshest price is still from 09:28, and
+     * judged on that bar alone this said "the cash session has not opened
+     * yet" to someone watching it open. The bar's time is still the right
+     * thing to judge, since that is the price the trade would be taken at,
+     * but when the clock says otherwise the sentence has to say both. The
+     * Replay passes no clock, because there the bar IS the moment. */
+    const lagging = now != null && C.day(now) === C.day(ms)
+      && C.minutes(now) >= OPEN && mins < OPEN;
+    if (lagging) {
+      const since = C.minutes(now) - OPEN;
+      out.push({level: "note",
+                text: `The session opened ${since} minute${since === 1 ? "" : "s"} `
+                    + `ago, but the last published price is from `
+                    + `${C.hhmm(ms)}, before it opened.`});
+    } else if (mins < OPEN) {
       // Said the way a person would say it. "550 minutes early" is correct
       // and is not how anybody thinks about nine hours.
       const gap = OPEN - mins;

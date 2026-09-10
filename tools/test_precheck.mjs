@@ -54,6 +54,29 @@ console.log("\nthe release slots are the ones that cost money here");
   check("10:00 is a slot too", PC.holds(ten), words(ten));
 }
 
+console.log("\na delayed price is not the same as a closed market");
+{
+  // Ten minutes after the open, with a price from 09:28: the Demo tab's
+  // normal state, since the published bars run about twelve minutes behind.
+  const lag = PC.check({ms: ny(9, 28), now: ny(9, 38), risk: 200, reward: 400,
+                        balance: 100000});
+  check("it says the session opened", /session opened 8 minutes ago/.test(words(lag)),
+        words(lag));
+  check("and that the price is from before it", /before it opened/.test(words(lag)),
+        words(lag));
+  check("and not that the market is still shut",
+        !/has not opened yet/.test(words(lag)), words(lag));
+  // With no clock, as the Replay calls it, the bar is the moment.
+  const replay = PC.check({ms: ny(9, 28), risk: 200, reward: 400, balance: 100000});
+  check("the Replay still says not open yet", /has not opened yet/.test(words(replay)),
+        words(replay));
+  // And a clock that is also before the open changes nothing.
+  const early = PC.check({ms: ny(9, 10), now: ny(9, 20), risk: 200, reward: 400,
+                          balance: 100000});
+  check("before the open is still before the open",
+        /has not opened yet/.test(words(early)), words(early));
+}
+
 console.log("\nsize is arithmetic and does not need a record");
 {
   const big = PC.check({ms: ny(11, 0), risk: 2500, reward: 5000, balance: 100000});

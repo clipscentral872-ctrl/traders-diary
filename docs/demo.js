@@ -328,6 +328,9 @@ function context() {
   const day = b ? C.day(b.ms) : null;
   return {
     ms: b ? b.ms : null,
+    // The clock as well as the bar, because here they can disagree: the
+    // published price runs behind the market.
+    now: Date.now(),
     risk: risk * pv * qty,
     reward: risk * rr * pv * qty,
     balance: D.account.balance,
