@@ -10,8 +10,10 @@
  *   Crosshair that follows the cursor with the bar's open, high, low, close
  *   under it, and price and time tags pinned on the axes.
  *   Drag the chart to pan, wheel to zoom about the cursor.
- *   Drag the price axis to stretch or flatten the move.
- *   Double-click, or the reset button, to fit everything again.
+ *   Wheel or drag the price scale to stretch or flatten the move. Doing so
+ *   takes the scale off auto, and A, or a double-click on it, puts it back.
+ *   Drag the time scale to fit more bars in or spread them out.
+ *   Double-click the chart, or the reset button, to fit everything again.
  *   Touch: one finger pans, two fingers pinch, on the same code paths.
  *
  * It draws to a canvas and owns none of the page around it, so the diary, the
@@ -26,6 +28,43 @@ const PAD = {left: 6, right: 78, top: 10, bottom: 26};
 const FONT = '11px Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,sans-serif';
 const MIN_BARS = 12;          // how far zooming in is allowed to go
 const MAX_BARS = 3000;        // and out
+// Empty slots left to the right of the newest bar, the way a chart leaves
+// room to see where the price is heading rather than pinning it to the edge.
+const RIGHT_MARGIN = 5;
+
+/* Round numbers for a scale, the way every charting platform labels one.
+ *
+ * Labels spaced evenly across whatever range happened to be on screen came
+ * out as 29,612.74 and 29,565.25: accurate, and useless to read. A person
+ * reads a scale by its round numbers, and TradingView tightens them as you
+ * zoom: tens, then fives, then fours. */
+export function niceStep(raw) {
+  if (!(raw > 0) || !Number.isFinite(raw)) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const n = raw / p;
+  const m = n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10;
+  return m * p;
+}
+
+/** Round prices inside lo..hi, roughly `want` of them. */
+export function priceTicks(lo, hi, want) {
+  const step = niceStep((hi - lo) / Math.max(1, want));
+  const out = [];
+  // Counted in whole steps, not added up, so a long run of 0.05s does not
+  // drift into 1.1500000000000001.
+  for (let k = Math.ceil(lo / step - 1e-9); k * step <= hi + 1e-9; k++)
+    out.push(Math.round(k * step * 1e6) / 1e6);
+  return out;
+}
+
+/* Minutes between time labels, from a short list of round intervals, so a
+   label lands on the hour or the quarter hour rather than wherever the
+   thirty-seventh bar happened to fall. */
+const TIME_STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 180, 240, 360, 720, 1440];
+export function timeEvery(minutesPerSlot, slotsPerLabel) {
+  const want = minutesPerSlot * slotsPerLabel;
+  return TIME_STEPS.find(v => v >= want) || 1440;
+}
 
 export function createChart(canvas, opts = {}) {
   const state = {
@@ -35,10 +74,16 @@ export function createChart(canvas, opts = {}) {
     // so a resize does not move the view.
     right: 0,
     count: 140,
-    // Vertical. `zoom` of 1 fits the visible range; above 1 stretches it.
-    // `shift` moves the middle, in fractions of the fitted range.
-    zoom: 1,
-    shift: 0,
+    /* The price scale, in one of two modes, the way TradingView has it.
+     * Auto fits whatever bars are on screen and refits as you pan. Manual is
+     * a fixed range of prices, entered the moment you scale or drag the
+     * price yourself, and it stays exactly where you put it as you pan until
+     * you press A or double-click the scale. Refitting underneath somebody
+     * who has just set the scale by hand undoes what they did on the next
+     * pan, which is what this did before. */
+    auto: true,
+    manual: null,        // {lo, hi} while the scale is manual
+    hoverAxis: false,    // the cursor is over the price scale, so A shows
     follow: true,          // stay pinned to the newest bar until dragged back
     limit: null,           // replay: nothing at or past this index exists yet
     levels: [],
@@ -58,13 +103,20 @@ export function createChart(canvas, opts = {}) {
   const lastIndex = () =>
     state.limit == null ? state.bars.length : Math.min(state.limit, state.bars.length);
 
+  /* `right` can run past the last bar into empty space, the way a chart
+   * leaves room to the right of the price. The bars keep their slots from
+   * the left, so the gap is simply the slots with nothing in them yet. */
   function visible() {
-    const end = Math.max(1, Math.min(state.right, lastIndex()));
-    const start = Math.max(0, Math.round(end - state.count));
+    const last = lastIndex();
+    const right = Math.max(1, Math.round(state.right));
+    const start = Math.max(0, Math.min(last - 1, right - Math.round(state.count)));
+    const end = Math.max(start + 1, Math.min(right, last));
     return {start, end, bars: state.bars.slice(start, end)};
   }
 
   function priceRange(bars) {
+    // A scale set by hand stays set, whatever is on screen.
+    if (!state.auto && state.manual) return {...state.manual};
     let lo = Infinity, hi = -Infinity;
     for (const b of bars) { lo = Math.min(lo, b.l); hi = Math.max(hi, b.h); }
     const p = state.position, t = state.trade;
@@ -75,9 +127,8 @@ export function createChart(canvas, opts = {}) {
     if (hi === lo) { hi += 1; lo -= 1; }
 
     const mid = (hi + lo) / 2;
-    const half = (hi - lo) / 2 * 1.12 / state.zoom;
-    const move = state.shift * half * 2;
-    return {lo: mid - half + move, hi: mid + half + move};
+    const half = (hi - lo) / 2 * 1.12;
+    return {lo: mid - half, hi: mid + half};
   }
 
   const xOf = i => plot.x + (i + 0.5) * (plot.w / Math.max(1, state.count));
@@ -155,7 +206,10 @@ export function createChart(canvas, opts = {}) {
     scale = {r, start: v.start};
     const Y = p => plot.y + plot.h - (p - r.lo) / (r.hi - r.lo) * plot.h;
 
-    grid(x, r, Y, v);
+    // Worked out once a frame and shared, because the grid and the labels
+    // both need them and each costs a clock lookup per slot.
+    const tt = timeTicks(v);
+    grid(x, r, Y, v, tt);
     if (opts.beforeCandles) opts.beforeCandles({x, Y, plot, css, visible: v, range: r});
     zones(x, Y);
     levels(x, Y);
@@ -166,11 +220,12 @@ export function createChart(canvas, opts = {}) {
     // notes about the candles, below the crosshair because the crosshair is
     // where the cursor is and must never be hidden.
     if (opts.overlay) opts.overlay(api);
-    axes(x, r, Y, v);
+    axes(x, r, Y, v, tt);
     // After the candles and after the axis, so an order is never buried by
     // the price it is waiting for, nor by the last-price tag.
     orders(x, Y);
     crosshair(x, Y, v, r);
+    autoButton(x);
     cutter(x, v);
   }
 
@@ -218,12 +273,18 @@ export function createChart(canvas, opts = {}) {
     x.restore();
   }
 
-  function grid(x, r, Y) {
+  // At the round prices and round times the labels sit on, so a line on
+  // the chart can be read against the scale.
+  function grid(x, r, Y, v, tt) {
     x.strokeStyle = css("--line-soft");
     x.lineWidth = 1;
-    for (let g = 0; g <= 5; g++) {
-      const yy = Math.round(plot.y + plot.h * g / 5) + 0.5;
+    for (const p of priceTicks(r.lo, r.hi, Math.max(2, Math.floor(plot.h / 42)))) {
+      const yy = Math.round(Y(p)) + 0.5;
       x.beginPath(); x.moveTo(plot.x, yy); x.lineTo(plot.x + plot.w, yy); x.stroke();
+    }
+    for (const t of tt) {
+      const xx = Math.round(t.x) + 0.5;
+      x.beginPath(); x.moveTo(xx, plot.y); x.lineTo(xx, plot.y + plot.h); x.stroke();
     }
   }
 
@@ -414,19 +475,40 @@ export function createChart(canvas, opts = {}) {
   const fmtPrice = p => p.toLocaleString("en-US",
     {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
-  function axes(x, r, Y, v) {
+  function axes(x, r, Y, v, tt) {
     x.font = FONT;
     x.textBaseline = "middle";
     x.fillStyle = css("--muted");
-    for (let g = 0; g <= 5; g++) {
-      const p = r.hi - (r.hi - r.lo) * g / 5;
-      x.fillText(fmtPrice(p), plot.x + plot.w + 8, plot.y + plot.h * g / 5);
-    }
     const b = v.bars[v.bars.length - 1];
-    tag(x, Y(b.c), fmtPrice(b.c), css("--accent"), css("--ground"));
+    const lastY = Y(b.c);
+    for (const p of priceTicks(r.lo, r.hi, Math.max(2, Math.floor(plot.h / 42)))) {
+      const yy = Y(p);
+      // Never half off the top or the bottom of the scale.
+      if (yy < plot.y + 6 || yy > plot.y + plot.h - 6) continue;
+      // Nor half under the last-price tag. TradingView drops the round label
+      // there rather than print a number peeking out from behind the one
+      // that matters.
+      if (Math.abs(yy - lastY) < 11) continue;
+      x.fillText(fmtPrice(p), plot.x + plot.w + 8, yy);
+    }
+    tag(x, lastY, fmtPrice(b.c), css("--accent"), css("--ground"));
 
-    x.fillStyle = css("--faint");
     x.textBaseline = "alphabetic";
+    if (tt.length) {
+      for (const t of tt) {
+        // A new day is its date, in bold, the way a time scale marks one.
+        x.font = t.bold ? FONT.replace("11px", "600 11px") : FONT;
+        x.fillStyle = t.bold ? css("--text") : css("--muted");
+        const w = x.measureText(t.text).width;
+        const lx = Math.max(plot.x, Math.min(plot.x + plot.w - w, t.x - w / 2));
+        x.fillText(t.text, lx, H - 8);
+      }
+      x.font = FONT;
+      return;
+    }
+    // A chart given no way to read the clock still says where it starts and
+    // where it ends.
+    x.fillStyle = css("--faint");
     const stamp = opts.timeLabel || (ms => new Date(ms).toISOString().slice(11, 16));
     const first = stamp(v.bars[0].ms);
     const lastT = stamp(b.ms);
@@ -437,9 +519,10 @@ export function createChart(canvas, opts = {}) {
   function crosshair(x, Y, v, r) {
     const c = state.cross;
     if (!c) return;
-    const k = Math.max(0, Math.min(v.bars.length - 1, indexAt(c.x)));
-    const b = v.bars[k];
-    if (!b) return;
+    // Out into the empty space on the right as well, the way TradingView's
+    // crosshair runs on past the last bar.
+    const k = Math.max(0, Math.min(Math.round(state.count) - 1, indexAt(c.x)));
+    const b = k < v.bars.length ? v.bars[k] : null;
     const cx = xOf(k);
     x.save();
     x.strokeStyle = css("--faint");
@@ -458,8 +541,16 @@ export function createChart(canvas, opts = {}) {
     // label. A crosshair with no numbers on it is decoration.
     const price = r.hi - (c.y - plot.y) / plot.h * (r.hi - r.lo);
     tag(x, c.y, fmtPrice(price), css("--text"), css("--ground"));
-    if (opts.timeLabel) timeTag(x, cx, opts.timeLabel(b.ms));
-    if (opts.onHover) opts.onHover(b, v.start + k);
+    const ms = b ? b.ms : v.bars[v.bars.length - 1].ms
+      + (k - (v.bars.length - 1)) * barStep(v.bars);
+    // The whole date on the time scale, "Thu 10 Sep '26  03:15", as
+    // TradingView prints it, rather than a bare time that could be any day.
+    if (opts.timeParts) timeTag(x, cx, fullStamp(ms));
+    else if (opts.timeLabel) timeTag(x, cx, opts.timeLabel(ms));
+    // The bar before goes too, so a readout can show the change the way a
+    // chart legend does.
+    if (opts.onHover)
+      opts.onHover(b, v.start + k, b ? state.bars[v.start + k - 1] || null : null);
   }
 
   /* ------------------------------------------------------------- gestures */
@@ -474,8 +565,11 @@ export function createChart(canvas, opts = {}) {
      * which is choosing which bars to slice. */
     state.count = Math.max(MIN_BARS, Math.min(MAX_BARS, state.count));
     const end = lastIndex();
+    // Into the empty space on the right, but never so far that the last bar
+    // leaves the screen: a chart scrolled to nothing is a blank canvas.
+    const room = Math.floor(state.count * 0.8);
     state.right = Math.max(Math.min(state.count, end),
-                           Math.min(state.right, end));
+                           Math.min(state.right, end + room));
     state.follow = state.right >= end;
   }
 
@@ -521,6 +615,119 @@ export function createChart(canvas, opts = {}) {
     return r.hi - (y - plot.y) / plot.h * (r.hi - r.lo);
   };
 
+  /* Take the scale off auto, starting from exactly what is on screen, so
+     the first touch never makes the chart jump. */
+  function freeze() {
+    if (state.auto && scale) state.manual = {...scale.r};
+    state.auto = false;
+  }
+  function unfreeze() { state.auto = true; state.manual = null; }
+
+  /* Stretch or flatten the price about the middle of what is showing. Above
+     1 flattens, with more price on screen; below 1 stretches it taller. */
+  function scalePrice(factor) {
+    if (!scale) return;
+    freeze();
+    const r = state.manual || scale.r;
+    const mid = (r.lo + r.hi) / 2;
+    const half = Math.max(1e-6, (r.hi - r.lo) / 2 * factor);
+    state.manual = {lo: mid - half, hi: mid + half};
+    draw();
+  }
+
+  /* The A at the foot of the price scale.
+   *
+   * TradingView shows it while you hover the scale, lit when auto is on.
+   * Here it also stays up whenever the scale is manual, because a frozen
+   * scale with no visible way back is how somebody ends up reloading the
+   * page to get their chart to fit again. */
+  const autoBox = () => ({x: plot.x + plot.w + 8, y: plot.y + plot.h - 24, w: 20, h: 18});
+  const inAuto = p => {
+    const b = autoBox();
+    return p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
+  };
+  function autoButton(x) {
+    if (state.auto && !state.hoverAxis) return;
+    const b = autoBox();
+    x.save();
+    x.fillStyle = state.auto ? css("--accent") : css("--raised") || "#fff";
+    x.strokeStyle = state.auto ? css("--accent") : css("--line");
+    x.lineWidth = 1;
+    x.fillRect(b.x, b.y, b.w, b.h);
+    x.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
+    // White on the lit button: the fill is the accent in both themes.
+    x.fillStyle = state.auto ? "#fff" : css("--text");
+    x.font = FONT.replace("11px", "600 11px");
+    x.textAlign = "center";
+    x.textBaseline = "middle";
+    x.fillText("A", b.x + b.w / 2, b.y + b.h / 2 + 1);
+    x.restore();
+  }
+
+  /* The shortest gap between two bars, which is the bar's own length. Gaps
+     for the weekend and the daily break are longer, so the shortest is the
+     honest one. */
+  function barStep(bars) {
+    let s = Infinity;
+    for (let i = 1; i < Math.min(bars.length, 60); i++) {
+      const d = bars[i].ms - bars[i - 1].ms;
+      if (d > 0 && d < s) s = d;
+    }
+    return Number.isFinite(s) ? s : 60000;
+  }
+
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const hm = m => String(Math.floor(m / 60)).padStart(2, "0") + ":"
+                + String(m % 60).padStart(2, "0");
+
+  function fullStamp(ms) {
+    const t = opts.timeParts(ms);
+    const [yy, mm, dd] = t.day.split("-").map(Number);
+    const wd = DAYS[new Date(Date.UTC(yy, mm - 1, dd)).getUTCDay()];
+    return `${wd} ${dd} ${MONTHS[mm - 1]} '${String(yy).slice(2)}  ${hm(t.min)}`;
+  }
+
+  /* Time labels at round times, the way a time scale reads: every quarter
+   * hour zoomed in, every few hours zoomed out, the date where a day begins
+   * and the month where a month does. This used to print the first time and
+   * the last time and nothing between, which says nothing about where on the
+   * chart anything happened. Carried on into the empty space on the right,
+   * because that space is time too. Needs the caller's clock, since the
+   * scale has to agree with every other time in the app. */
+  function timeTicks(v) {
+    if (!opts.timeParts || !v.bars.length) return [];
+    const bw = barWidth();
+    if (!(bw > 0)) return [];
+    const minPx = 64;
+    const step = barStep(v.bars);
+    const stepMin = Math.max(1, Math.round(step / 60000));
+    const every = timeEvery(stepMin, Math.max(1, Math.ceil(minPx / bw)));
+    const lastBar = v.bars[v.bars.length - 1];
+    const out = [];
+    let prev = null, lastX = -Infinity;
+    const slots = Math.round(state.count);
+    for (let k = 0; k < slots; k++) {
+      const ms = k < v.bars.length ? v.bars[k].ms
+        : lastBar.ms + (k - (v.bars.length - 1)) * step;
+      const t = opts.timeParts(ms);
+      const newDay = prev !== null && t.day !== prev.day;
+      const newMonth = newDay && t.day.slice(5, 7) !== prev.day.slice(5, 7);
+      prev = t;
+      const on = newDay
+        || (every < 1440 && (every <= stepMin || t.min % every === 0));
+      if (!on) continue;
+      const cx = xOf(k);
+      if (cx - lastX < minPx) continue;
+      out.push({x: cx, bold: newDay,
+                text: newMonth ? MONTHS[+t.day.slice(5, 7) - 1]
+                  : newDay ? String(+t.day.slice(8, 10)) : hm(t.min)});
+      lastX = cx;
+    }
+    return out;
+  }
+
   let drag = null;
   let pressed = null;   // a press the drawing layer took
   const pos = e => {
@@ -538,6 +745,12 @@ export function createChart(canvas, opts = {}) {
     // The drawing layer gets first refusal. It takes the press when a tool is
     // armed or when one of its own shapes was hit, and declines otherwise so
     // the chart still pans normally.
+    // The A button, before anything else can take the press.
+    if ((!state.auto || state.hoverAxis) && inAuto(p)) {
+      unfreeze();
+      draw();
+      return;
+    }
     if (opts.onPress && opts.onPress(p.x, p.y)) {
       // Remembered so the release knows whether the press travelled. A drag
       // that went somewhere finishes a drawing; one that did not is still
@@ -563,9 +776,13 @@ export function createChart(canvas, opts = {}) {
       if (e.preventDefault) e.preventDefault();
       return;
     }
+    // Where the press lands decides what the drag does: the price scale
+    // stretches price, the time scale stretches time, the chart pans.
+    const onTime = !onAxis(p.x) && p.y > plot.y + plot.h;
     drag = {...p, count: state.count, right: state.right,
-            zoom: state.zoom, shift: state.shift, axis: onAxis(p.x), moved: false};
-    canvas.style.cursor = drag.axis ? "ns-resize" : "grabbing";
+            r: scale ? {...scale.r} : null, axis: onAxis(p.x), time: onTime,
+            vert: false, moved: false};
+    canvas.style.cursor = drag.axis ? "ns-resize" : onTime ? "ew-resize" : "grabbing";
   }
 
   function move(e) {
@@ -580,11 +797,13 @@ export function createChart(canvas, opts = {}) {
     }
     if (!drag) {
       const near = levelAt(p);
-      if (near !== state.nearLevel) {
-        state.nearLevel = near;
-        canvas.style.cursor = near ? "ns-resize" : "crosshair";
-      }
-      state.cross = p.x < plot.x + plot.w ? p : null;
+      const axis = onAxis(p.x);
+      const time = !axis && p.y > plot.y + plot.h;
+      state.hoverAxis = axis;
+      state.nearLevel = near;
+      canvas.style.cursor = near || axis ? (inAuto(p) ? "pointer" : "ns-resize")
+        : time ? "ew-resize" : "crosshair";
+      state.cross = p.x < plot.x + plot.w && p.y <= plot.y + plot.h ? p : null;
       draw();
       return;
     }
@@ -599,12 +818,38 @@ export function createChart(canvas, opts = {}) {
     const dx = p.x - drag.x, dy = p.y - drag.y;
     if (Math.abs(dx) > 2 || Math.abs(dy) > 2) drag.moved = true;
 
-    if (drag.axis) {
-      // Dragging the price axis stretches the move rather than moving it.
-      state.zoom = Math.max(0.25, Math.min(12, drag.zoom * (1 + dy / 220)));
+    if (drag.axis && drag.r) {
+      /* The price scale, TradingView's way round: pull it down to flatten
+       * the move, push it up to stretch it. It went the other way here, so
+       * the same hand movement did opposite things on the two charts. */
+      state.auto = false;
+      const f = Math.exp(dy / 200);
+      const mid = (drag.r.lo + drag.r.hi) / 2;
+      const half = Math.max(1e-6, (drag.r.hi - drag.r.lo) / 2 * f);
+      state.manual = {lo: mid - half, hi: mid + half};
+    } else if (drag.time) {
+      // The time scale: drag right to spread the bars out, left to fit more
+      // in, keeping the right-hand edge where it is.
+      state.count = drag.count * Math.exp(-dx / 180);
+      state.right = drag.right;
+      clampView();
     } else {
       state.right = Math.round(drag.right - dx / barWidth());
-      state.shift = drag.shift + dy / plot.h * 0.9;
+      /* Up and down moves the price too, and a scale moved by hand is no
+       * longer fitted, so it goes manual, starting from exactly what was on
+       * screen at that moment so nothing jumps. Only past a few pixels, so a
+       * sideways pan with a wobble in it does not freeze the scale. */
+      if (!drag.vert && Math.abs(dy) > 6 && scale) {
+        drag.vert = true;
+        drag.vr = {...scale.r};
+        drag.vy = p.y;
+      }
+      if (drag.vert) {
+        const per = (drag.vr.hi - drag.vr.lo) / plot.h;
+        const d = p.y - drag.vy;
+        state.auto = false;
+        state.manual = {lo: drag.vr.lo + d * per, hi: drag.vr.hi + d * per};
+      }
       clampView();
     }
     state.cross = null;
@@ -648,6 +893,16 @@ export function createChart(canvas, opts = {}) {
     e.preventDefault();
     const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
     const dx = e.deltaX * unit, dy = e.deltaY * unit;
+
+    /* Over the price scale the wheel stretches or flattens the price, the
+     * way it does on TradingView: up to stretch the move taller, down to
+     * flatten it. It used to zoom time wherever the cursor was, including
+     * over the one part of the chart where nobody means that. */
+    if (onAxis(pos(e).x)) {
+      if (!dy) return;
+      scalePrice(Math.exp(Math.max(-MAX_STEP, Math.min(MAX_STEP, dy)) * SENSITIVITY));
+      return;
+    }
 
     // A sideways flick pans, the way it does everywhere else, and does not
     // also zoom on the way past.
@@ -703,10 +958,15 @@ export function createChart(canvas, opts = {}) {
   });
   addEventListener("mouseup", up);
   canvas.addEventListener("mouseleave", () => {
-    if (!drag) { state.cross = null; state.hoverIndex = null; draw(); if (opts.onHover) opts.onHover(null); }
+    if (!drag) { state.cross = null; state.hoverIndex = null; state.hoverAxis = false; draw(); if (opts.onHover) opts.onHover(null); }
   });
   canvas.addEventListener("wheel", wheel, {passive: false});
-  canvas.addEventListener("dblclick", () => api.fit());
+  // Double-click the price scale to put it back on auto, as TradingView
+  // does. Anywhere else, fit the whole chart again.
+  canvas.addEventListener("dblclick", e => {
+    if (onAxis(pos(e).x)) { unfreeze(); draw(); return; }
+    api.fit();
+  });
   canvas.addEventListener("touchstart", touchStart, {passive: true});
   canvas.addEventListener("touchmove", touchMove, {passive: false});
   canvas.addEventListener("touchend", () => { pinch = null; up(); });
@@ -757,10 +1017,13 @@ export function createChart(canvas, opts = {}) {
       const wasFollowing = state.follow;
       state.bars = bars || [];
       if (!keepView || state.right === 0) {
-        state.right = lastIndex();
+        state.right = lastIndex() + RIGHT_MARGIN;
         state.follow = true;
+        // New data is a new contract or timeframe, so it is fitted again.
+        state.auto = true;
+        state.manual = null;
       } else if (wasFollowing) {
-        state.right = lastIndex();
+        state.right = lastIndex() + RIGHT_MARGIN;
       }
       clampView();
       draw();
@@ -769,7 +1032,7 @@ export function createChart(canvas, opts = {}) {
     /** Replay: nothing at or past this index has happened yet. */
     setLimit(i) {
       state.limit = i;
-      if (state.follow) state.right = lastIndex();
+      if (state.follow) state.right = lastIndex() + RIGHT_MARGIN;
       clampView();
       draw();
       return api;
@@ -802,10 +1065,13 @@ export function createChart(canvas, opts = {}) {
     setTrade(t) { state.trade = t || null; draw(); return api; },
     /** Fit everything again, which is what double-click and reset do. */
     fit(count) {
-      state.zoom = 1;
-      state.shift = 0;
+      state.auto = true;
+      state.manual = null;
       state.count = count || Math.min(180, Math.max(MIN_BARS, lastIndex()));
-      state.right = lastIndex();
+      // Asked to fit everything: widen by the margin, so the first bar does
+      // not fall off the left to make room for the space on the right.
+      if (state.count >= lastIndex()) state.count = lastIndex() + RIGHT_MARGIN;
+      state.right = lastIndex() + RIGHT_MARGIN;
       state.follow = true;
       clampView();
       draw();

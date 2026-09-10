@@ -198,15 +198,21 @@ function paint() {
 
 /* -------------------------------------------------------------- render */
 
-function ohlc(b) {
+function ohlc(b, prev) {
   const box = $("rohlc");
   if (!b) { box.innerHTML = ""; return; }
   const up = b.c >= b.o;
+  // The change on the bar before, the way a chart legend shows it.
+  const ch = prev ? b.c - prev.c : null;
   box.innerHTML = '<span class="pohlc">'
     + `<span>${clock(b.ms)}</span>`
     + `<span>O <b>${px(b.o)}</b></span><span>H <b>${px(b.h)}</b></span>`
     + `<span>L <b>${px(b.l)}</b></span>`
-    + `<span class="${up ? "up" : "dn"}">C <b>${px(b.c)}</b></span></span>`;
+    + `<span class="${up ? "up" : "dn"}">C <b>${px(b.c)}</b></span>`
+    + (ch == null ? "" : `<span class="${ch >= 0 ? "up" : "dn"}">`
+        + `${ch >= 0 ? "+" : ""}${px(ch)} `
+        + `(${ch >= 0 ? "+" : ""}${(ch / prev.c * 100).toFixed(2)}%)</span>`)
+    + '</span>';
 }
 
 function render() {
@@ -590,7 +596,8 @@ function restoreDraft() {
 export function init(onSave) {
   chart = createChart($("rc"), {
     timeLabel: ms => C.label(ms),
-    onHover: b => ohlc(b || S.bars[S.i]),
+    timeParts: ms => ({day: C.day(ms), min: C.minutes(ms)}),
+    onHover: (b, i, prev) => ohlc(b || S.bars[S.i], b ? prev : null),
     onLevelMove: levelMoved,
     onLevelDrop: which => { recordMove(which); render(); },
     onPick: i => { armed(false); cutAt(i); },

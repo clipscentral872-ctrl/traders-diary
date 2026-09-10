@@ -940,10 +940,18 @@ body{overflow:hidden}
 .ptools{
   position:absolute; top:10px; left:10px; display:flex; gap:5px; z-index:2;
 }
+/* The replay's play buttons float over the chart, the way TradingView's
+   navigation strip does, but above the time scale rather than on it, and
+   only the buttons take a click. Stretched the full width with a z-index,
+   the strip sat on top of the whole bottom edge of the chart: it hid the
+   date on the time scale and swallowed the click on the A button, because
+   the empty middle of a flex row is still the topmost thing there. */
 .ptransport{
-  position:absolute; bottom:10px; left:10px; right:10px;
+  position:absolute; bottom:36px; left:10px; right:10px;
   display:flex; gap:5px; align-items:center; z-index:2;
+  pointer-events:none;
 }
+.ptransport > :not(.pspacer){pointer-events:auto}
 .pspacer{flex:1}
 .ptool{
   background:var(--raised); border:1px solid var(--line); border-radius:4px;

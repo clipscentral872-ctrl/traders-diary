@@ -1052,10 +1052,18 @@ body{overflow:hidden}
 .ptools{
   position:absolute; top:10px; left:10px; display:flex; gap:5px; z-index:2;
 }
+/* The replay's play buttons float over the chart, the way TradingView's
+   navigation strip does, but above the time scale rather than on it, and
+   only the buttons take a click. Stretched the full width with a z-index,
+   the strip sat on top of the whole bottom edge of the chart: it hid the
+   date on the time scale and swallowed the click on the A button, because
+   the empty middle of a flex row is still the topmost thing there. */
 .ptransport{
-  position:absolute; bottom:10px; left:10px; right:10px;
+  position:absolute; bottom:36px; left:10px; right:10px;
   display:flex; gap:5px; align-items:center; z-index:2;
+  pointer-events:none;
 }
+.ptransport > :not(.pspacer){pointer-events:auto}
 .pspacer{flex:1}
 .ptool{
   background:var(--raised); border:1px solid var(--line); border-radius:4px;
@@ -2229,7 +2237,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=484128815658","./chart.js":"./chart.js?v=484128815658","./levels.js":"./levels.js?v=484128815658","./revisit.js":"./revisit.js?v=484128815658","./series.js":"./series.js?v=484128815658","./clock.js":"./clock.js?v=484128815658","./vault.js":"./vault.js?v=484128815658","./draw.js":"./draw.js?v=484128815658","./profile.js":"./profile.js?v=484128815658","./whatif.js":"./whatif.js?v=484128815658","./precheck.js":"./precheck.js?v=484128815658","./shelf.js":"./shelf.js?v=484128815658","./watchlist.js":"./watchlist.js?v=484128815658","./lock.js":"./lock.js?v=484128815658","./replay.js":"./replay.js?v=484128815658","./demo.js":"./demo.js?v=484128815658","./diary.js":"./diary.js?v=484128815658","./videos.js":"./videos.js?v=484128815658","./system.js":"./system.js?v=484128815658","./dashboard.js":"./dashboard.js?v=484128815658"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=bbb78ea56074","./chart.js":"./chart.js?v=bbb78ea56074","./levels.js":"./levels.js?v=bbb78ea56074","./revisit.js":"./revisit.js?v=bbb78ea56074","./series.js":"./series.js?v=bbb78ea56074","./clock.js":"./clock.js?v=bbb78ea56074","./vault.js":"./vault.js?v=bbb78ea56074","./draw.js":"./draw.js?v=bbb78ea56074","./profile.js":"./profile.js?v=bbb78ea56074","./whatif.js":"./whatif.js?v=bbb78ea56074","./precheck.js":"./precheck.js?v=bbb78ea56074","./shelf.js":"./shelf.js?v=bbb78ea56074","./watchlist.js":"./watchlist.js?v=bbb78ea56074","./lock.js":"./lock.js?v=bbb78ea56074","./replay.js":"./replay.js?v=bbb78ea56074","./demo.js":"./demo.js?v=bbb78ea56074","./diary.js":"./diary.js?v=bbb78ea56074","./videos.js":"./videos.js?v=bbb78ea56074","./system.js":"./system.js?v=bbb78ea56074","./dashboard.js":"./dashboard.js?v=bbb78ea56074"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.

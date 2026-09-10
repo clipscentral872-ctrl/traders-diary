@@ -190,14 +190,20 @@ export function init() {
   if (!$("dchart")) return;
   chart = createChart($("dchart"), {
     timeLabel: ms => C.hhmm(ms),
-    onHover: b => {
+    timeParts: ms => ({day: C.day(ms), min: C.minutes(ms)}),
+    onHover: (b, i, prev) => {
       const box = $("dohlc2");
       if (!box) return;
       if (!b) { box.innerHTML = ""; return; }
+      const ch = prev ? b.c - prev.c : null;
       box.innerHTML = '<span class="pohlc">'
         + `<span>O <b>${px(b.o)}</b></span><span>H <b>${px(b.h)}</b></span>`
         + `<span>L <b>${px(b.l)}</b></span>`
-        + `<span class="${b.c >= b.o ? "up" : "dn"}">C <b>${px(b.c)}</b></span></span>`;
+        + `<span class="${b.c >= b.o ? "up" : "dn"}">C <b>${px(b.c)}</b></span>`
+        + (ch == null ? "" : `<span class="${ch >= 0 ? "up" : "dn"}">`
+            + `${ch >= 0 ? "+" : ""}${px(ch)} `
+            + `(${ch >= 0 ? "+" : ""}${(ch / prev.c * 100).toFixed(2)}%)</span>`)
+        + '</span>';
     },
   });
 

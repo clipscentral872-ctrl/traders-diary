@@ -287,16 +287,22 @@ function paint() {
   chart.setPosition(withWorth(D.pos));
 }
 
-function ohlc(b) {
+function ohlc(b, prev) {
   const box = $("dohlc");
   if (!box) return;
   if (!b) { box.innerHTML = ""; return; }
   const up = b.c >= b.o;
+  // The change on the bar before, the way a chart legend shows it.
+  const ch = prev ? b.c - prev.c : null;
   box.innerHTML = '<span class="pohlc">'
     + `<span>${C.hhmm(b.ms)}</span>`
     + `<span>O <b>${px(b.o)}</b></span><span>H <b>${px(b.h)}</b></span>`
     + `<span>L <b>${px(b.l)}</b></span>`
-    + `<span class="${up ? "up" : "dn"}">C <b>${px(b.c)}</b></span></span>`;
+    + `<span class="${up ? "up" : "dn"}">C <b>${px(b.c)}</b></span>`
+    + (ch == null ? "" : `<span class="${ch >= 0 ? "up" : "dn"}">`
+        + `${ch >= 0 ? "+" : ""}${px(ch)} `
+        + `(${ch >= 0 ? "+" : ""}${(ch / prev.c * 100).toFixed(2)}%)</span>`)
+    + '</span>';
 }
 
 /* -------------------------------------------------------------- render */
@@ -539,11 +545,12 @@ export function init(onSaveToDiary, onTradeClosed) {
 
   chart = createChart($("dc"), {
     timeLabel: ms => C.label(ms),
+    timeParts: ms => ({day: C.day(ms), min: C.minutes(ms)}),
     overlay: c => DRAW.paint(c),
     onPress: (px, py) => DRAW.down(px, py, chart),
     onDrag: (px, py) => DRAW.move(px, py, chart),
     onRelease: moved => { if (DRAW.release(moved)) chart.repaint(); },
-    onHover: b => ohlc(b || last()),
+    onHover: (b, i, prev) => ohlc(b || last(), b ? prev : null),
     onLevelMove: levelMoved,
     onLevelDrop: which => { recordMove(which); saveAccount(); render(); },
   });
