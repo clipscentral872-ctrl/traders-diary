@@ -679,6 +679,10 @@ export function init(onSave) {
     const pane = document.querySelector('.tabpane[data-tab="replay"]');
     if (!pane || pane.hidden) return;
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+    // Alt+R puts the chart back the way it started, time and price together,
+    // as TradingView's shortcut does. Matched on the key, not the character,
+    // because Alt+R types something else on some keyboards.
+    if (e.altKey && e.code === "KeyR") { e.preventDefault(); chart.fit(160); return; }
     if (e.key === "Escape" && DRAW.cancel()) { litTools(); paint(); }
     if ((e.key === "Delete" || e.key === "Backspace") && DRAW.hasSelection()) {
       e.preventDefault();

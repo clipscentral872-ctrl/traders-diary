@@ -230,6 +230,10 @@ export function init() {
     const pane = document.querySelector('.tabpane[data-tab="diary"]');
     if (!pane || pane.hidden) return;
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+    // Alt+R puts the chart back the way it started, time and price together,
+    // as TradingView's shortcut does. Matched on the key, not the character,
+    // because Alt+R types something else on some keyboards.
+    if (e.altKey && e.code === "KeyR") { e.preventDefault(); pick(S.i); return; }
     if (e.key === "ArrowRight") { e.preventDefault(); pick(S.i + 1); }
     if (e.key === "ArrowLeft") { e.preventDefault(); pick(S.i - 1); }
   });
