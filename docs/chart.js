@@ -94,6 +94,7 @@ export function createChart(canvas, opts = {}) {
     grab: null,          // "stop" or "target" while one is being dragged
     nearLevel: null,     // and which one the cursor is hovering
     picking: false,      // choosing where to cut the chart for a replay
+    water: null,         // a word faint behind the candles, "Replay"
   };
 
   let W = 0, H = 0, plot = {x: 0, y: 0, w: 0, h: 0}, scale = null;
@@ -210,6 +211,7 @@ export function createChart(canvas, opts = {}) {
     // both need them and each costs a clock lookup per slot.
     const tt = timeTicks(v);
     grid(x, r, Y, v, tt);
+    watermark(x);
     if (opts.beforeCandles) opts.beforeCandles({x, Y, plot, css, visible: v, range: r});
     zones(x, Y);
     volume(x, v);
@@ -240,11 +242,15 @@ export function createChart(canvas, opts = {}) {
     if (!b) return;
     const cx = Math.round(xOf(k)) + 0.5;
 
-    // Everything after the cut is what would be hidden, shown greyed so the
-    // choice is visible before it is made.
+    // Everything after the cut is what would be hidden, shown faded so the
+    // choice is visible before it is made, the way TradingView fades it. It
+    // was a near-black sheet from the old dark theme, which on the white
+    // chart read as a grey wall rather than as the future.
     x.save();
-    x.fillStyle = "rgba(5,7,12,.62)";
+    x.globalAlpha = 0.72;
+    x.fillStyle = css("--ground");
     x.fillRect(cx, plot.y, plot.x + plot.w - cx, plot.h);
+    x.globalAlpha = 1;
     x.strokeStyle = css("--accent");
     x.lineWidth = 1.5;
     x.beginPath();
@@ -264,13 +270,47 @@ export function createChart(canvas, opts = {}) {
     x.arc(cx + 5, cy + 7, 2.6, 0, Math.PI * 2);
     x.stroke();
 
-    x.font = '600 10.5px "Chakra Petch", sans-serif';
-    x.fillStyle = css("--accent");
+    x.restore();
+    // The date of the cut on the time scale, in the blue TradingView uses
+    // while you choose, over the crosshair's own label for the same bar.
+    const label = opts.timeParts ? fullStamp(b.ms)
+      : (opts.timeLabel || (ms => String(ms)))(b.ms);
+    timeTag(x, cx, label, css("--accent"), "#FFFFFF");
+  }
+
+  /* "Replay" written faint across the middle, behind the candles, the way
+     TradingView marks a chart that is being replayed, so it is never taken
+     for the live market at a glance. */
+  function watermark(x) {
+    if (!state.water) return;
+    const size = Math.round(Math.max(22, Math.min(52, plot.w / 10)));
+    x.save();
+    x.font = `600 ${size}px Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,sans-serif`;
     x.textBaseline = "middle";
-    const label = (opts.timeLabel || (ms => String(ms)))(b.ms);
-    const w = x.measureText(label).width;
-    const lx = cx + 9 + w > plot.x + plot.w ? cx - 9 - w : cx + 9;
-    x.fillText(label, lx, plot.y + plot.h - 12);
+    const w = x.measureText(state.water).width;
+    const r = size * 0.42;
+    const gap = size * 0.3;
+    const left = plot.x + (plot.w - (2 * r + gap + w)) / 2;
+    const cy = plot.y + plot.h * 0.42;
+    x.globalAlpha = 0.16;
+    x.fillStyle = css("--text");
+    // The rewind mark: a disc with two triangles pointing back.
+    x.beginPath();
+    x.arc(left + r, cy, r, 0, Math.PI * 2);
+    x.fill();
+    x.fillText(state.water, left + 2 * r + gap, cy);
+    x.globalAlpha = 1;
+    x.fillStyle = css("--ground");
+    const t = r * 0.42;
+    for (const dx of [-t * 0.55, t * 0.75]) {
+      const tip = left + r + dx - t * 0.6;
+      x.beginPath();
+      x.moveTo(tip, cy);
+      x.lineTo(tip + t * 1.2, cy - t);
+      x.lineTo(tip + t * 1.2, cy + t);
+      x.closePath();
+      x.fill();
+    }
     x.restore();
   }
 
@@ -345,7 +385,9 @@ export function createChart(canvas, opts = {}) {
     if (!src || typeof src.entry !== "number") return;
     const live = !!(state.position && opts.onLevelMove);
     for (const [key, v, col, hue, dash, worth] of [
-      ["entry", src.entry, css("--text"), css("--text"), [], null],
+      // The entry carries what the trade is making right now, as
+      // TradingView's position line does, when the caller knows it.
+      ["entry", src.entry, css("--text"), css("--text"), [], src.openMoney],
       ["stop", src.stop, css("--loss-faded"), css("--loss"), [5, 4], src.stopMoney],
       ["target", src.target, css("--win-faded"), css("--win"), [5, 4], src.targetMoney],
     ]) {
@@ -363,7 +405,7 @@ export function createChart(canvas, opts = {}) {
       x.stroke();
       x.setLineDash([]);
       x.lineWidth = 1;
-      if (key !== "entry" && worth) badge(x, y, worth, hue, hot);
+      if (worth) badge(x, y, worth, hue, hot);
       tag(x, y, fmtPrice(v), hue, key === "entry" ? css("--ground") : "#fff");
     }
   }
@@ -459,7 +501,7 @@ export function createChart(canvas, opts = {}) {
       x.strokeStyle = css("--ground");
       x.lineWidth = 1.5;
       x.beginPath(); x.arc(cx, cy, 4.5, 0, Math.PI * 2); x.stroke();
-      x.font = '600 10px "Chakra Petch", sans-serif';
+      x.font = "600 " + FONT;
       x.textBaseline = "bottom";
       x.fillStyle = colour;
       x.fillText(label, cx + 7, cy - 3);
@@ -482,15 +524,15 @@ export function createChart(canvas, opts = {}) {
 
   /** The same, on the time axis. Centred on the cursor and kept inside the
    *  plot, because a label half off the edge is worse than no label. */
-  function timeTag(x, cx, text) {
+  function timeTag(x, cx, text, bg = css("--text"), fg = css("--ground")) {
     x.font = FONT;
     const w = x.measureText(text).width + 12;
     const left = Math.max(plot.x,
       Math.min(plot.x + plot.w - w, cx - w / 2));
     const top = plot.y + plot.h + 3;
-    x.fillStyle = css("--text");
+    x.fillStyle = bg;
     x.fillRect(left, top, w, 17);
-    x.fillStyle = css("--ground");
+    x.fillStyle = fg;
     x.textBaseline = "middle";
     x.textAlign = "center";
     x.fillText(text, left + w / 2, top + 8.5);
@@ -783,12 +825,18 @@ export function createChart(canvas, opts = {}) {
       pressed = {x: p.x, y: p.y, moved: false};
       return;
     }
-    if (state.picking) {
-      const v = visible();
-      const k = Math.max(0, Math.min(v.bars.length - 1, indexAt(p.x)));
-      state.picking = false;
-      canvas.style.cursor = "crosshair";
-      if (opts.onPick) opts.onPick(v.start + k);
+    /* Choosing where to cut. The press no longer cuts on the spot: it pans
+       like any other press, and only a press that comes back up where it went
+       down is the choice, in up(). Cutting on the press meant a phone could
+       not scroll back to the day it wanted, because the first touch of the
+       scroll was taken as the cut, and a mouse could only get there with the
+       wheel. TradingView's Select bar lets you drag the chart the same way. */
+    if (state.picking && !onAxis(p.x) && p.y <= plot.y + plot.h) {
+      drag = {...p, count: state.count, right: state.right,
+              r: scale ? {...scale.r} : null, axis: false, time: false,
+              vert: false, moved: false, pick: true, far: 0};
+      // A finger has no hover, so the line shows under it while it is down.
+      state.cross = p;
       draw();
       return;
     }
@@ -842,6 +890,7 @@ export function createChart(canvas, opts = {}) {
 
     const dx = p.x - drag.x, dy = p.y - drag.y;
     if (Math.abs(dx) > 2 || Math.abs(dy) > 2) drag.moved = true;
+    if (drag.pick) drag.far = Math.max(drag.far, Math.hypot(dx, dy));
 
     if (drag.axis && drag.r) {
       /* The price scale, TradingView's way round: pull it down to flatten
@@ -888,6 +937,19 @@ export function createChart(canvas, opts = {}) {
       if (opts.onRelease) opts.onRelease(was.moved);
     }
     if (drag && drag.level && opts.onLevelDrop) opts.onLevelDrop(drag.level);
+    // A press that stayed put while choosing is the cut. A fingertip wobbles
+    // a few pixels on a tap, so it has more room than the pan's own test.
+    if (drag && drag.pick && drag.far < 8 && state.picking) {
+      const v = visible();
+      const k = Math.max(0, Math.min(v.bars.length - 1, indexAt(drag.x)));
+      state.picking = false;
+      drag = null;
+      state.cross = null;
+      canvas.style.cursor = "crosshair";
+      if (opts.onPick) opts.onPick(v.start + k);
+      draw();
+      return;
+    }
     drag = null;
     state.grab = null;
     canvas.style.cursor = state.nearLevel ? "ns-resize" : "crosshair";
@@ -1054,15 +1116,23 @@ export function createChart(canvas, opts = {}) {
       draw();
       return api;
     },
-    /** Replay: nothing at or past this index has happened yet. */
-    setLimit(i) {
+    /** Replay: nothing at or past this index has happened yet. keepView
+     *  leaves the chart where it is, for lifting the limit to choose a new
+     *  cut without being thrown to the far end of the series. */
+    setLimit(i, {keepView = false} = {}) {
       state.limit = i;
-      if (state.follow) state.right = lastIndex() + RIGHT_MARGIN;
+      if (state.follow && !keepView) state.right = lastIndex() + RIGHT_MARGIN;
       clampView();
       draw();
       return api;
     },
     setLevels(list) { state.levels = list || []; draw(); return api; },
+    setWatermark(text) {
+      if ((text || null) === state.water) return api;
+      state.water = text || null;
+      draw();
+      return api;
+    },
     /** Choose where to cut the chart. The next click on it picks a bar. */
     pick(on) {
       state.picking = !!on;

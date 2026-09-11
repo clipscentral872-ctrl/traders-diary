@@ -67,9 +67,8 @@
       <div class="tfrow" id="dtf" role="group" aria-label="Timeframe"></div>
       <span class="pstale" id="dread"></span>
       <span class="pclock" id="dclock"></span>
-      <div class="pgrow" id="dohlc"></div>
     </div>
-    <div class="wsstage"><canvas id="dc"></canvas></div>
+    <div class="wsstage"><canvas id="dc"></canvas><div class="plegend" id="dohlc"></div></div>
     <div class="wsfoot"><span id="dposline"></span></div>
   </div>
 
@@ -128,20 +127,31 @@
               title="Cut the chart and hide everything after it">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.6 7.5 20 18M8.6 16.5 20 6"/></svg>Cut
       </button>
+      <button class="pbtn cuttool" id="rrandom"
+              title="Start on a random day, just before the New York open">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.3" fill="currentColor"/><circle cx="15" cy="15" r="1.3" fill="currentColor"/><circle cx="15" cy="9" r="1.3" fill="currentColor"/><circle cx="9" cy="15" r="1.3" fill="currentColor"/></svg>Random
+      </button>
       <input type="date" id="rdate" class="psel" aria-label="Start from">
       <button class="pbtn go" id="rgo">Start</button>
-      <div class="pgrow" id="rohlc"></div>
     </div>
     <div class="wsstage">
       <canvas id="rc"></canvas>
+      <div class="plegend" id="rohlc"></div>
       <div class="cuthint" id="rcuthint" hidden>Click the chart where you
       want the future to stop</div>
-      <div class="ptransport" id="rpctl" hidden>
-        <button class="ptool" id="rstep1" title="One bar">&#9654;</button>
-        <button class="ptool" id="rstep5" title="Five bars">&#9654;&#9654;</button>
-        <button class="ptool" id="rstep20" title="Twenty bars">&#9654;&#9654;&#9654;</button>
-        <button class="ptool" id="rplay">Auto</button>
-      </div>
+    </div>
+    <div class="ptransport" id="rpctl" role="group" aria-label="Replay controls" hidden>
+        <button class="ptool picon" id="rplay" title="Play (Shift+Down)" aria-label="Play"></button>
+        <button class="ptool picon" id="rstep1" title="Forward one bar (Shift+Right)"
+                aria-label="Forward one bar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6v12l9-6z"/><path d="M18 6v12"/></svg></button>
+        <select class="ptool pspeed" id="rspeed" title="Replay speed" aria-label="Replay speed">
+          <option value="10">10x</option><option value="7">7x</option>
+          <option value="5">5x</option><option value="3">3x</option>
+          <option value="1" selected>1x</option><option value="0.5">0.5x</option>
+          <option value="0.3">0.3x</option><option value="0.2">0.2x</option>
+          <option value="0.1">0.1x</option>
+        </select>
+        <span class="ppnl" id="rpnl" aria-live="polite"></span>
     </div>
     <div class="wsfoot"><span id="rpread"></span></div>
   </div>

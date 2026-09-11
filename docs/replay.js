@@ -37,6 +37,7 @@ const load = SER.load;
 const S = {
   sym: "NQ", tf: "5m", bars: [], i: 0, mode: "browse",
   pos: null, done: [], timer: null, levels: true,
+  speed: 1,              // bars a second while it plays, TradingView's 1x
   model: null, modelKey: null,
 };
 
@@ -184,16 +185,39 @@ function overlayLevels() {
 function withWorth(p) {
   if (!p) return null;
   const pv = E.POINT[S.sym] ?? 1;
+  const open = openPnl();
   return {...p,
     stopMoney: money(-Math.abs(p.entry - p.stop) * pv * p.qty),
-    targetMoney: money(Math.abs(p.target - p.entry) * pv * p.qty)};
+    targetMoney: money(Math.abs(p.target - p.entry) * pv * p.qty),
+    openMoney: open == null ? null : money(open)};
+}
+
+/** What the open trade is making at the close of the bar you are on. */
+function openPnl() {
+  const p = S.pos, b = S.bars[S.i];
+  if (!p || !b) return null;
+  const pts = p.side === "Long" ? b.c - p.entry : p.entry - b.c;
+  return pts * (E.POINT[S.sym] ?? 1) * p.qty;
+}
+
+/* Beside the play buttons, as TradingView keeps it: the open trade while
+   there is one, and the practice so far once you are flat again. */
+function pnlStrip() {
+  const el = $("rpnl");
+  const open = openPnl();
+  const net = S.done.length ? E.summarise(S.done).pnl : null;
+  const v = open != null ? open : net;
+  el.textContent = v == null ? "" : (open != null ? "Open " : "Net ") + money(v);
+  el.className = "ppnl" + (v == null ? "" : v >= 0 ? " win" : " loss");
 }
 
 function paint() {
   if (!chart) return;
   chart.setLevels(overlayLevels());
   chart.setPosition(withWorth(S.pos));
-  chart.setLimit(S.mode === "replay" ? S.i + 1 : null);
+  // While choosing a new cut the whole series stays in view; see armCut.
+  if (!chart.picking) chart.setLimit(S.mode === "replay" ? S.i + 1 : null);
+  chart.setWatermark(S.mode === "replay" ? "Replay" : null);
 }
 
 /* -------------------------------------------------------------- render */
@@ -210,6 +234,7 @@ function ohlc(b, prev) {
   // The change on the bar before, the way a chart legend shows it.
   const ch = prev ? b.c - prev.c : null;
   box.innerHTML = '<span class="pohlc">'
+    + `<span><b>${S.sym}</b> ${S.tf}</span>`
     + `<span>${clock(b.ms)}</span>`
     + `<span>O <b>${px(b.o)}</b></span><span>H <b>${px(b.h)}</b></span>`
     + `<span>L <b>${px(b.l)}</b></span>`
@@ -227,8 +252,9 @@ function render() {
   $("rpread").textContent = b
     ? `${S.sym} ${S.tf}   ${C.full(b.ms)} ${C.zoneName(b.ms)}   `
       + (S.mode === "browse"
-         ? "the whole series. Press Cut, then click the chart where you "
-           + "want the future to stop."
+         ? "the whole series. Press Cut and click the chart where you "
+           + "want the future to stop, or press Random for a day you did "
+           + "not choose."
          : `bar ${S.i + 1} of ${S.bars.length}`)
     // "Loading" was a lie whenever the bars were already here and the index
     // was not, which is a different problem and needs a different sentence.
@@ -246,12 +272,16 @@ function render() {
     : S.mode === "replay" ? "Flat. Step forward, or take a side." : "";
   $("rflat").hidden = !p;
   $("rbuy").disabled = $("rsell").disabled = !!p || S.mode !== "replay";
+  // Start before a replay; Play and Pause during one. See its handler.
+  $("rgo").textContent = S.mode === "replay" && !S.dateEdited
+    ? (S.timer ? "Pause" : "Play") : "Start";
   if (b) {
     $("rbuypx").textContent = px(b.c);
     $("rsellpx").textContent = px(b.c);
     ohlc(b, S.bars[S.i - 1]);
   }
 
+  pnlStrip();
   if (p) dragNote(); else riskNote();
   results();
   paint();
@@ -478,7 +508,52 @@ function step(n) {
 }
 
 function stopAuto() {
-  if (S.timer) { clearInterval(S.timer); S.timer = null; $("rplay").textContent = "Auto"; }
+  if (S.timer) { clearInterval(S.timer); S.timer = null; }
+  playButton();
+}
+
+/* The play button shows what pressing it will do, as TradingView's does: a
+   triangle while stopped, two bars while playing. */
+const PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"/></svg>';
+const PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12M15 6v12"/></svg>';
+function playButton() {
+  const b = $("rplay");
+  const on = !!S.timer;
+  b.innerHTML = on ? PAUSE : PLAY;
+  b.title = on ? "Pause (Shift+Down)" : "Play (Shift+Down)";
+  b.setAttribute("aria-label", on ? "Pause" : "Play");
+}
+
+/* Play and pause. Shared by the play button and by Start during a replay,
+   so the two can never disagree about whether it is running. */
+function toggleAuto() {
+  if (S.mode !== "replay") return;
+  if (S.timer) { stopAuto(); render(); return; }
+  // At the last bar there is nothing to play, and a timer would only stop
+  // itself on its first tick.
+  if (S.i >= S.bars.length - 1) return;
+  S.timer = setInterval(() => step(1), 1000 / S.speed);
+  playButton();
+  render();
+}
+
+/* One bar and no more. It pauses a running replay first, because the point
+   of stepping is to be the one deciding when the next candle comes. */
+function forward() {
+  stopAuto();
+  step(1);
+}
+
+function setSpeed(v) {
+  const n = Number(v);
+  if (!(n > 0)) return;
+  S.speed = n;
+  P.set("replaySpeed", String(n));
+  // A change while it plays takes effect at once, not after a pause.
+  if (S.timer) {
+    clearInterval(S.timer);
+    S.timer = setInterval(() => step(1), 1000 / S.speed);
+  }
 }
 
 /** Load the contract and show it whole, so there is something to cut into.
@@ -548,6 +623,11 @@ function cutAt(i) {
   S.i = Math.max(0, Math.min(Math.max(30, i), S.bars.length - 1));
   S.mode = "replay";
   S.pos = null;
+  // The date box follows the cut, so it never shows a day you are not on,
+  // and Start plays on from here instead of jumping to a stale date.
+  if (S.bars[S.i]) $("rdate").value = C.day(S.bars[S.i].ms);
+  S.dateEdited = false;
+  stopAuto();
   chart.setLimit(S.i + 1);
   chart.fit(160);
   render();
@@ -564,6 +644,13 @@ function armed(on) {
 async function armCut() {
   if (chart.picking) { armed(false); render(); return; }
   if (!S.bars.length && !(await browse())) return;
+  stopAuto();
+  // Choosing again in the middle of a replay shows the whole series, the
+  // part after the cursor faded, as TradingView's Select bar does, so the
+  // new start can be later than where you are as well as earlier. The chart
+  // stays where it is rather than jumping to the far end. Cancelling puts
+  // the limit back through render().
+  if (S.mode === "replay") chart.setLimit(null, {keepView: true});
   armed(true);
   $("rpread").textContent = "Scroll back to the moment you want, then click "
     + "the chart. Everything after that point is hidden until you play it "
@@ -582,6 +669,59 @@ async function startFromDate() {
   let i = S.bars.findIndex(b => b.ms >= want);
   if (i < 0) i = S.bars.length - 1;
   cutAt(i);
+}
+
+/* New York's own clock, whatever zone the times on screen are shown in,
+   because the open is at 09:30 in New York wherever you are sitting. */
+const NYF = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York", hourCycle: "h23", weekday: "short",
+  year: "numeric", month: "2-digit", day: "2-digit",
+  hour: "2-digit", minute: "2-digit"});
+function nyAt(ms) {
+  const o = {};
+  for (const p of NYF.formatToParts(new Date(ms))) o[p.type] = p.value;
+  return {day: `${o.year}-${o.month}-${o.day}`, wd: o.weekday,
+          min: (+o.hour % 24) * 60 + +o.minute};
+}
+
+/**
+ * A random weekday, cut just before the New York open.
+ *
+ * TradingView's Random bar, aimed at the moment TJR practises: the open is
+ * the next thing to happen, with the night's highs and lows already on the
+ * chart. A day you choose is a day you may remember, and knowing how it went
+ * spoils the practice. The last two days are left out so there is always a
+ * session ahead to play.
+ *
+ * The cut is the last bar that had closed by 09:30. On five minutes that is
+ * the 09:25 bar; on the hour it is 08:00, because the 09:00 bar has the open
+ * inside it.
+ */
+async function randomStart() {
+  if (!S.bars.length && !(await browse())) return;
+  armed(false);
+  const bars = S.bars;
+  const cuts = [];
+  let seen = null;
+  for (let k = 2; k < bars.length; k++) {
+    const t = nyAt(bars[k].ms);
+    if (t.day === seen || t.min < 570) continue;
+    seen = t.day;
+    if (t.wd === "Sat" || t.wd === "Sun") continue;
+    const cut = t.min === 570 ? k - 1 : k - 2;
+    if (cut >= 30) cuts.push(cut);
+  }
+  cuts.splice(-2);
+  if (!cuts.length) {
+    $("rpread").textContent = "Not enough days loaded to pick one at random.";
+    return;
+  }
+  // Not the day you were just given, if there is any other.
+  let pick;
+  do pick = cuts[Math.floor(Math.random() * cuts.length)];
+  while (cuts.length > 1 && pick === S.lastRandom);
+  S.lastRandom = pick;
+  cutAt(pick);
 }
 
 function reset() {
@@ -636,16 +776,26 @@ export function init(onSave) {
     reload();
   });
 
-  $("rgo").addEventListener("click", startFromDate);
-  $("rcut").addEventListener("click", armCut);
-  $("rstep1").addEventListener("click", () => step(1));
-  $("rstep5").addEventListener("click", () => step(5));
-  $("rstep20").addEventListener("click", () => step(20));
-  $("rplay").addEventListener("click", () => {
-    if (S.timer) { stopAuto(); return; }
-    S.timer = setInterval(() => step(1), 420);
-    $("rplay").textContent = "Stop";
+  /* Start means start. Before a replay it jumps to the date in the box.
+     Once a replay was cut, with the scissors or by date, pressing it again
+     re-cut at the date box, which the scissors never updated: it threw the
+     cut away and jumped to midnight of whatever day the box still showed.
+     Now it plays on from where you are, and only a date you have changed
+     since sends it anywhere else. */
+  $("rgo").addEventListener("click", () => {
+    if (S.mode === "replay" && !S.dateEdited) { toggleAuto(); return; }
+    startFromDate();
   });
+  $("rdate").addEventListener("input", () => { S.dateEdited = true; render(); });
+  $("rcut").addEventListener("click", armCut);
+  $("rrandom").addEventListener("click", randomStart);
+  $("rstep1").addEventListener("click", forward);
+  $("rplay").addEventListener("click", toggleAuto);
+  S.speed = Number(P.get("replaySpeed")) || 1;
+  $("rspeed").value = String(S.speed);
+  if ($("rspeed").value !== String(S.speed)) { S.speed = 1; $("rspeed").value = "1"; }
+  $("rspeed").addEventListener("change", e => setSpeed(e.target.value));
+  playButton();
   /* The drawing rail, the way a platform puts it: down the left, one icon a
      tool, the armed one lit. */
   $("rtools").innerHTML = DRAW.TOOLS.map(t =>
@@ -683,6 +833,7 @@ export function init(onSave) {
     // as TradingView's shortcut does. Matched on the key, not the character,
     // because Alt+R types something else on some keyboards.
     if (e.altKey && e.code === "KeyR") { e.preventDefault(); chart.fit(160); return; }
+    if (e.key === "Escape" && chart.picking) { armed(false); render(); return; }
     if (e.key === "Escape" && DRAW.cancel()) { litTools(); paint(); }
     if ((e.key === "Delete" || e.key === "Backspace") && DRAW.hasSelection()) {
       e.preventDefault();
@@ -713,12 +864,15 @@ export function init(onSave) {
     $(id).addEventListener("input", riskNote);
 
   // On a laptop, stepping with the arrow keys is the difference between
-  // studying a session and clicking three hundred times.
+  // studying a session and clicking three hundred times. Shift+Right and
+  // Shift+Down are TradingView's own replay keys, forward one bar and play
+  // or pause, so the hand that learned them there works here.
   addEventListener("keydown", e => {
     const pane = document.querySelector('.tabpane[data-tab="replay"]');
     if (!pane || pane.hidden) return;
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
-    if (e.key === "ArrowRight") { e.preventDefault(); step(e.shiftKey ? 5 : 1); }
+    if (e.key === "ArrowDown" && e.shiftKey) { e.preventDefault(); toggleAuto(); return; }
+    if (e.key === "ArrowRight") { e.preventDefault(); forward(); }
     if (e.key === "ArrowLeft") { e.preventDefault(); chart.panBy(e.shiftKey ? -5 : -1); }
   });
 

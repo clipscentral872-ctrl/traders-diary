@@ -125,10 +125,10 @@ TRADEVIEW = """<div class="ws">
       <button class="ptool" id="dnext" title="Next trade">&#9654;</button>
       <div class="srcrow mini" id="srcrow2"></div>
       <div class="chead" id="dhead"></div>
-      <div class="pgrow" id="dohlc2"></div>
     </div>
     <div class="wsstage">
       <canvas id="dchart"></canvas>
+      <div class="plegend" id="dohlc2"></div>
       <p class="nobars" id="dnobars" hidden>No candles were stored for this
       trade. The published bars reach back about ten days, so import each
       session while it is recent. The numbers are exact either way.</p>
@@ -580,11 +580,18 @@ body{overflow:hidden}
 @media (max-width:900px){ .rtool{width:44px; height:44px} }
 
 .wsmain{display:flex; flex-direction:column; min-width:0; min-height:0}
+/* One row when it fits, a second when it does not. It was one row with the
+   overflow cut off, so on a laptop a little under 1100 pixels wide the
+   Replay's date box was half gone and its Start button not there at all. */
 .wstop{
-  flex:none; display:flex; align-items:center; gap:12px; flex-wrap:nowrap;
-  padding:0 12px; height:40px; border-bottom:1px solid var(--line);
-  background:var(--raised); overflow:hidden;
+  flex:none; display:flex; align-items:center; gap:6px 12px; flex-wrap:wrap;
+  padding:1px 12px; min-height:40px; border-bottom:1px solid var(--line);
+  background:var(--raised);
 }
+/* The Diary's trade heading keeps the padding it has as a card heading
+   elsewhere, which in this bar made it taller than the bar itself. The cut
+   off overflow used to hide that. */
+.wstop .chead{padding:0; border-bottom:none}
 .wsstage{flex:1; min-height:0; position:relative; background:var(--ground)}
 .wsstage canvas{position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none}
 .wsfoot{
@@ -613,16 +620,19 @@ body{overflow:hidden}
   .ws{
     display:flex; flex-direction:column; min-height:0;
   }
+  /* The rail wraps onto a second row rather than scrolling. It scrolled
+     sideways with its scrollbar hidden, so Clear, Levels, the zoom buttons
+     and Fit sat off the right of a phone with no sign they were there. */
   .wsrail{
     flex:none; flex-direction:row; border-right:none; align-items:center;
-    border-bottom:1px solid var(--line); overflow-x:auto; scrollbar-width:none;
+    border-bottom:1px solid var(--line); flex-wrap:wrap;
   }
   .wsrail::-webkit-scrollbar{display:none}
   /* The drawing tools are a column on a desktop and have to become part of
      the same row on a phone. Left as a column they were one very tall item
      inside a horizontal rail, which took most of the screen and pushed the
      chart off the bottom. */
-  .drawrail{flex-direction:row; flex:none}
+  .drawrail{display:contents}
   .raildiv{height:24px; width:1px; margin:0 4px; flex:none}
   .railgap{display:none}
   .wsmain{flex:none}
@@ -921,6 +931,17 @@ body{overflow:hidden}
   overflow:hidden; text-overflow:ellipsis;
 }
 .pohlc b{color:var(--text); font-weight:500}
+/* The readout inside the chart, top left, where TradingView keeps its legend.
+   In the toolbar it came after the last control with overflow hidden, so on
+   the Replay it was cut off at "13:40 O" and none of the prices showed at
+   all. Here it has the chart's width, wraps onto a second line on a phone
+   rather than vanishing, and takes no clicks, so it never gets between you
+   and the chart. The faint backing keeps it readable over a candle. */
+.plegend{position:absolute; left:8px; top:6px; z-index:3; pointer-events:none;
+  max-width:calc(100% - 96px); padding:2px 6px; border-radius:4px;
+  background:rgba(255,255,255,.8)}
+.plegend:empty{display:none}
+.plegend .pohlc{flex-wrap:wrap; row-gap:2px; overflow:visible}
 .pohlc .up{color:var(--candle-up)} .pohlc .dn{color:var(--candle-dn)}
 .pstale{
   font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:11.5px; color:var(--muted);
@@ -945,19 +966,29 @@ body{overflow:hidden}
 .ptools{
   position:absolute; top:10px; left:10px; display:flex; gap:5px; z-index:2;
 }
-/* The replay's play buttons float over the chart, the way TradingView's
-   navigation strip does, but above the time scale rather than on it, and
-   only the buttons take a click. Stretched the full width with a z-index,
-   the strip sat on top of the whole bottom edge of the chart: it hid the
-   date on the time scale and swallowed the click on the A button, because
-   the empty middle of a flex row is still the topmost thing there. */
+/* The replay's controls, in a strip of their own under the chart, the way
+   TradingView lays them out and TJR uses them: play or pause, one bar
+   forward, the speed, and what the practice is making. Under the chart
+   rather than on it, so no candle is ever behind a button. Floating over the
+   chart it covered the newest candles on a phone, and before that, left in
+   the flow inside the chart's box, it sat underneath the chart canvas and
+   could not be tapped at all. */
 .ptransport{
-  position:absolute; bottom:36px; left:10px; right:10px;
-  display:flex; gap:5px; align-items:center; z-index:2;
-  pointer-events:none;
+  flex:none; display:flex; align-items:center; justify-content:center;
+  gap:2px; padding:3px 8px; border-top:1px solid var(--line);
+  background:var(--raised);
 }
-.ptransport > :not(.pspacer){pointer-events:auto}
-.pspacer{flex:1}
+.ppnl{margin-left:14px; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
+  font-size:12.5px; font-weight:600; font-variant-numeric:tabular-nums; color:var(--muted)}
+.ppnl:empty{display:none}
+.ppnl.win{color:var(--win)}
+.ppnl.loss{color:var(--loss)}
+.ptransport .ptool{border-color:transparent; box-shadow:none; background:none}
+.ptransport .ptool:hover{background:var(--lift); border-color:transparent}
+.picon{display:inline-flex; align-items:center; justify-content:center; padding:0 8px}
+.picon svg{width:20px; height:20px; fill:none; stroke:currentColor;
+  stroke-width:1.7; stroke-linejoin:round; stroke-linecap:round}
+.pspeed{padding:0 6px; font-variant-numeric:tabular-nums; color:var(--text)}
 .ptool{
   background:var(--raised); border:1px solid var(--line); border-radius:4px;
   box-shadow:var(--shadow);
@@ -1025,7 +1056,6 @@ body{overflow:hidden}
   }
   .pstage{overflow:visible}
   .pstage canvas{height:clamp(280px, 46vh, 420px)}
-  .ptransport{position:static; margin:10px; flex-wrap:wrap}
   .tbtns{grid-template-columns:1fr 1fr}
   .pbar{gap:9px}
 }

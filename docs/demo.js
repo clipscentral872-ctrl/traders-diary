@@ -276,9 +276,16 @@ function overlayLevels() {
 function withWorth(p) {
   if (!p) return null;
   const pv = E.POINT[p.symbol] ?? 1;
+  // What it is making now, on the entry line, when the chart is showing the
+  // contract the trade is in. On any other contract the last price on screen
+  // is not this trade's price.
+  const t = p.symbol === D.sym ? tip() : null;
+  const open = t ? (p.side === "Long" ? t.c - p.entry : p.entry - t.c) * pv * p.qty
+    : null;
   return {...p,
     stopMoney: money(-Math.abs(p.entry - p.stop) * pv * p.qty),
-    targetMoney: money(Math.abs(p.target - p.entry) * pv * p.qty)};
+    targetMoney: money(Math.abs(p.target - p.entry) * pv * p.qty),
+    openMoney: open == null ? null : money(open)};
 }
 
 function paint() {
@@ -300,6 +307,7 @@ function ohlc(b, prev) {
   // The change on the bar before, the way a chart legend shows it.
   const ch = prev ? b.c - prev.c : null;
   box.innerHTML = '<span class="pohlc">'
+    + `<span><b>${D.sym}</b> ${D.tf}</span>`
     + `<span>${C.hhmm(b.ms)}</span>`
     + `<span>O <b>${px(b.o)}</b></span><span>H <b>${px(b.h)}</b></span>`
     + `<span>L <b>${px(b.l)}</b></span>`
