@@ -8,7 +8,7 @@
  *
  *   node tools/test_series.mjs
  */
-import {resample, bucketIndex, formingBar, stitchHours} from "../docs/series.js";
+import {resample, bucketIndex, formingBar, stitchHours, vwap, vwapWith} from "../docs/series.js";
 
 let failed = 0;
 const check = (name, ok, detail = "") => {
@@ -181,6 +181,34 @@ console.log("\nthe hour is stitched from the finest bars held");
   const none = stitchHours(h1, []);
   check("with no five minute bars it is the hourly file",
         none.fine === h1 && none.hours === h1);
+}
+
+console.log("\nsession VWAP");
+{
+  // 17:50 to 18:10 New York on 2 September (EDT, UTC-4): 21:50 to 22:10 UTC.
+  const t0 = Date.parse("2026-09-02T21:50:00Z");
+  const bars = [
+    {ms: t0, o: 10, h: 12, l: 9, c: 11, v: 100},             // tp 32/3
+    {ms: t0 + 5 * MIN, o: 11, h: 14, l: 11, c: 14, v: 300},  // tp 13
+    {ms: t0 + 10 * MIN, o: 20, h: 21, l: 18, c: 21, v: 50},  // 18:00, new session, tp 20
+    {ms: t0 + 15 * MIN, o: 21, h: 24, l: 21, c: 24, v: 0},   // no volume
+    {ms: t0 + 20 * MIN, o: 24, h: 27, l: 24, c: 27, v: 150}, // tp 26
+  ];
+  const w = vwap(bars);
+  const near = (a, b) => Math.abs(a - b) < 1e-9;
+  check("the first bar is its own typical price", near(w.val[0], 32 / 3), w.val[0]);
+  check("the second is weighted by volume",
+        near(w.val[1], (32 / 3 * 100 + 13 * 300) / 400), w.val[1]);
+  check("it starts again at 18:00 New York", near(w.val[2], 20), w.val[2]);
+  check("a bar with no volume changes nothing", near(w.val[3], 20), w.val[3]);
+  check("and the next one counts", near(w.val[4], (20 * 50 + 26 * 150) / 200), w.val[4]);
+  const forming = {ms: bars[4].ms, o: 24, h: 25, l: 24, c: 25, v: 50};
+  check("a forming candle is added to the bar before it",
+        near(vwapWith(w, 4, forming), (20 * 50 + (74 / 3) * 50) / 100),
+        vwapWith(w, 4, forming));
+  check("asking again is the same answer, kept", vwap(bars) === w);
+  const none = vwap(bars.map(b => ({...b, v: null})));
+  check("no volume at all is no VWAP", Number.isNaN(none.val[0]) && Number.isNaN(none.val[4]));
 }
 
 console.log(failed ? `\n${failed} check(s) failed` : "\nall checks passed");

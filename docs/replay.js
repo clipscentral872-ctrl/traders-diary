@@ -243,6 +243,7 @@ function paint() {
   if (!chart) return;
   chart.setLevels(overlayLevels());
   chart.setVolume(IND.isOn("vol"));
+  chart.setLines(vwapLine(S));
   chart.setPosition(withWorth(S.pos));
   // While choosing a new cut the whole series stays in view; see armCut.
   if (!chart.picking) chart.setLimit(S.mode === "replay" ? S.i + 1 : null);
@@ -257,9 +258,31 @@ function paint() {
 const vol = n => n >= 1e6 ? (n / 1e6).toFixed(2) + "M"
   : n >= 1e4 ? (n / 1e3).toFixed(1) + "K" : String(n);
 
-function ohlc(b, prev) { ohlcInto($("rohlc"), S.sym, S.tf, b, prev); }
+function ohlc(b, prev, i = S.i) {
+  ohlcInto($("rohlc"), S.sym, S.tf, b, prev, vwapAt(S, i));
+}
 
-function ohlcInto(box, sym, tf, b, prev) {
+/* The VWAP for a series held the way S holds one, as a line for the chart,
+   with the candle still forming added in rather than the finished one. */
+function vwapLine(X) {
+  if (!IND.isOn("vwap") || !X.full || !X.full.length) return [];
+  const w = SER.vwap(X.full);
+  let values = w.val;
+  if (X.grouped && X.touched != null) {
+    values = w.val.slice();
+    values[X.touched] = SER.vwapWith(w, X.touched, X.bars[X.touched]);
+  }
+  return [{values, sess: w.sess, colour: IND.colour("vwap")}];
+}
+
+function vwapAt(X, i) {
+  if (!X.full || !X.full[i]) return NaN;
+  const w = SER.vwap(X.full);
+  return X.grouped && i === X.touched
+    ? SER.vwapWith(w, i, X.bars[i]) : w.val[i];
+}
+
+function ohlcInto(box, sym, tf, b, prev, vw = NaN) {
   if (!box) return;
   if (!b) { box.innerHTML = ""; return; }
   const up = b.c >= b.o;
@@ -277,7 +300,8 @@ function ohlcInto(box, sym, tf, b, prev) {
     + '</span>'
     // The indicators, a row each with its eye, the way TradingView lists
     // them under the prices. The volume reads on its own row there too.
-    + IND.rows({vol: b.v != null ? vol(b.v) : ""});
+    + IND.rows({vol: b.v != null ? vol(b.v) : "",
+                vwap: Number.isFinite(vw) ? px(vw) : ""});
 }
 
 function render() {
@@ -964,8 +988,9 @@ function compareSync() {
     CMP.chart.setLevels([]);
     CMP.chart.setLimit(null);
     if (!CMP.fitted) { CMP.chart.fit(200); CMP.fitted = true; }
+    CMP.chart.setLines(vwapLine(CMP));
     ohlcInto($("rohlc2"), CMP.sym, CMP.tf, CMP.bars[CMP.bars.length - 1],
-             CMP.bars[CMP.bars.length - 2]);
+             CMP.bars[CMP.bars.length - 2], vwapAt(CMP, CMP.bars.length - 1));
     return;
   }
   // Nothing of this contract had happened yet at that moment.
@@ -979,9 +1004,11 @@ function compareSync() {
   CMP.chart.setVolume(IND.isOn("vol"));
   CMP.chart.setLevels(!IND.isOn("levels") ? [] : levelsAt(CMP.base, CMP.base[CMP.j].ms)
     .map(m => ({...m, colour: FAMILY_COLOUR[m.family]})));
+  CMP.chart.setLines(vwapLine(CMP));
   CMP.chart.setLimit(CMP.i + 1);
   if (!CMP.fitted) { CMP.chart.fit(160); CMP.fitted = true; }
-  ohlcInto($("rohlc2"), CMP.sym, CMP.tf, CMP.bars[CMP.i], CMP.bars[CMP.i - 1]);
+  ohlcInto($("rohlc2"), CMP.sym, CMP.tf, CMP.bars[CMP.i], CMP.bars[CMP.i - 1],
+           vwapAt(CMP, CMP.i));
 }
 
 /** The button names the contract it will bring up. */
@@ -1001,7 +1028,8 @@ function setCompare(on) {
       timeLabel: ms => C.label(ms),
       timeParts: ms => ({day: C.day(ms), min: C.minutes(ms)}),
       onHover: (b, i, prev) => ohlcInto($("rohlc2"), CMP.sym, CMP.tf,
-        b || CMP.bars[CMP.i], b ? prev : CMP.bars[CMP.i - 1]),
+        b || CMP.bars[CMP.i], b ? prev : CMP.bars[CMP.i - 1],
+        vwapAt(CMP, b ? i : CMP.i)),
     });
   }
   compareLoad();
@@ -1022,7 +1050,8 @@ export function init(onSave) {
   chart = createChart($("rc"), {
     timeLabel: ms => C.label(ms),
     timeParts: ms => ({day: C.day(ms), min: C.minutes(ms)}),
-    onHover: (b, i, prev) => ohlc(b || S.bars[S.i], b ? prev : S.bars[S.i - 1]),
+    onHover: (b, i, prev) => ohlc(b || S.bars[S.i], b ? prev : S.bars[S.i - 1],
+                                  b ? i : S.i),
     onLevelMove: levelMoved,
     onLevelDrop: which => { recordMove(which); render(); },
     onPick: i => { armed(false); cutAt(i); },

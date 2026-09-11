@@ -96,6 +96,7 @@ export function createChart(canvas, opts = {}) {
     picking: false,      // choosing where to cut the chart for a replay
     water: null,         // a word faint behind the candles, "Replay"
     showVol: true,       // the volume indicator, which can be switched off
+    lines: [],           // indicator lines, a value per bar: the VWAP
   };
 
   let W = 0, H = 0, plot = {x: 0, y: 0, w: 0, h: 0}, scale = null;
@@ -218,6 +219,7 @@ export function createChart(canvas, opts = {}) {
     volume(x, v);
     levels(x, Y);
     candles(x, Y, v);
+    lines(x, Y, v);
     tradeMarks(x, Y, v);
     // Anything drawn ON the chart rather than under it: the boxes, lines and
     // levels you put there yourself. Above the candles because they are
@@ -490,6 +492,38 @@ export function createChart(canvas, opts = {}) {
       x.fillRect(cx - body / 2, y1, body, Math.max(1, y2 - y1));
       x.globalAlpha = 1;
     });
+  }
+
+  /* Indicator lines over the candles, the way TradingView draws a VWAP: a
+     value per bar, joined, lifted wherever a bar has none and wherever its
+     session starts again, so the reset at 18:00 is a gap and not a cliff. */
+  function lines(x, Y, v) {
+    if (!state.lines.length) return;
+    x.save();
+    x.beginPath();
+    x.rect(plot.x, plot.y, plot.w, plot.h);
+    x.clip();
+    x.lineWidth = 1.5;
+    x.lineJoin = "round";
+    for (const ln of state.lines) {
+      if (!ln || !ln.values) continue;
+      x.strokeStyle = ln.colour || css("--accent");
+      x.beginPath();
+      let pen = false, last = null;
+      v.bars.forEach((b, k) => {
+        const i = v.start + k;
+        const val = ln.values[i];
+        const s = ln.sess ? ln.sess[i] : 0;
+        if (!Number.isFinite(val) || s !== last) pen = false;
+        last = s;
+        if (!Number.isFinite(val)) return;
+        const px = xOf(k), py = Y(val);
+        if (pen) x.lineTo(px, py); else x.moveTo(px, py);
+        pen = true;
+      });
+      x.stroke();
+    }
+    x.restore();
   }
 
   function tradeMarks(x, Y, v) {
@@ -1189,6 +1223,12 @@ export function createChart(canvas, opts = {}) {
       return api;
     },
     setLevels(list) { state.levels = list || []; draw(); return api; },
+    /** Indicator lines: [{values, sess, colour}], values by bar index. */
+    setLines(list) {
+      state.lines = list || [];
+      draw();
+      return api;
+    },
     setVolume(on) {
       if (!!on === state.showVol) return api;
       state.showVol = !!on;

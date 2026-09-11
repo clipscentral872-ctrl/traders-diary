@@ -293,6 +293,9 @@ function paint() {
   if (!chart) return;
   chart.setLevels(overlayLevels());
   chart.setVolume(IND.isOn("vol"));
+  chart.setLines(IND.isOn("vwap") && D.bars.length
+    ? [{values: SER.vwap(D.bars).val, sess: SER.vwap(D.bars).sess,
+        colour: IND.colour("vwap")}] : []);
   chart.setPosition(withWorth(D.pos));
 }
 
@@ -301,7 +304,8 @@ function paint() {
 const vol = n => n >= 1e6 ? (n / 1e6).toFixed(2) + "M"
   : n >= 1e4 ? (n / 1e3).toFixed(1) + "K" : String(n);
 
-function ohlc(b, prev) {
+function ohlc(b, prev, i = D.bars.length - 1) {
+  const vw = D.bars[i] ? SER.vwap(D.bars).val[i] : NaN;
   const box = $("dohlc");
   if (!box) return;
   if (!b) { box.innerHTML = ""; return; }
@@ -319,7 +323,8 @@ function ohlc(b, prev) {
         + `(${ch >= 0 ? "+" : ""}${(ch / prev.c * 100).toFixed(2)}%)</span>`)
     + '</span>'
     // The indicators, a row each with its eye, as TradingView lists them.
-    + IND.rows({vol: b.v != null ? vol(b.v) : ""});
+    + IND.rows({vol: b.v != null ? vol(b.v) : "",
+                vwap: Number.isFinite(vw) ? px(vw) : ""});
 }
 
 /* -------------------------------------------------------------- render */
@@ -567,7 +572,8 @@ export function init(onSaveToDiary, onTradeClosed) {
     onPress: (px, py) => DRAW.down(px, py, chart),
     onDrag: (px, py) => DRAW.move(px, py, chart),
     onRelease: moved => { if (DRAW.release(moved)) chart.repaint(); },
-    onHover: (b, i, prev) => ohlc(b || last(), b ? prev : D.bars[D.bars.length - 2]),
+    onHover: (b, i, prev) => ohlc(b || last(), b ? prev : D.bars[D.bars.length - 2],
+                                  b ? i : D.bars.length - 1),
     onLevelMove: levelMoved,
     onLevelDrop: which => { recordMove(which); saveAccount(); render(); },
   });

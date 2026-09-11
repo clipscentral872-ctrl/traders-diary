@@ -10,8 +10,12 @@ import * as P from "./profile.js";
 
 export const LIST = [
   {id: "vol", name: "Volume"},
+  {id: "vwap", name: "VWAP", colour: "#D6336C"},
   {id: "levels", name: "Session levels"},
 ];
+
+/** The colour an indicator draws in, for its line and its value. */
+export const colour = id => (LIST.find(x => x.id === id) || {}).colour;
 
 const KEY = "indicators";
 let on = null;
@@ -60,7 +64,9 @@ export function rows(values = {}, only = LIST.map(x => x.id)) {
     const v = values[x.id];
     return `<div class="pind${shown ? "" : " off"}">`
       + `<span class="pn">${x.name}</span>`
-      + (shown && v != null && v !== "" ? `<span class="pv">${v}</span>` : "")
+      + (shown && v != null && v !== ""
+         ? `<span class="pv"${x.colour ? ` style="color:${x.colour}"` : ""}>${v}</span>`
+         : "")
       + `<button class="peye" type="button" data-ind="${x.id}"`
       + ` aria-pressed="${shown}" title="${shown ? "Hide" : "Show"} ${x.name}"`
       + ` aria-label="${shown ? "Hide" : "Show"} ${x.name}">`

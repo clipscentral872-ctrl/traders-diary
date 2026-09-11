@@ -187,6 +187,59 @@ export function stitchHours(h1, m5) {
   };
 }
 
+/**
+ * The session VWAP, as TradingView's VWAP with its anchor on Session.
+ *
+ * The average price paid since the session opened, each bar's typical price
+ * (high + low + close) / 3 weighted by its volume, starting again at 18:00
+ * New York when the futures day begins. Bars with no volume add nothing, and
+ * a session with no volume at all has no VWAP rather than a made up one.
+ *
+ * Kept per series, because the replay asks on every step and the finished
+ * bars never change. Returns the running sums as well as the values, so the
+ * candle still forming can be added to the bar before it without doing the
+ * session again: see vwapWith.
+ */
+const vwapCache = new WeakMap();
+const DAY = 24 * 60 * MIN;
+
+export function vwap(bars) {
+  const hit = vwapCache.get(bars);
+  if (hit && hit.n === bars.length) return hit;
+  const n = bars.length;
+  const val = new Float64Array(n).fill(NaN);
+  const pv = new Float64Array(n), vv = new Float64Array(n);
+  const sess = new Float64Array(n);
+  // The New York offset only moves twice a year, so it is asked once a day.
+  const offs = new Map();
+  let cpv = 0, cv = 0, cur = null;
+  for (let i = 0; i < n; i++) {
+    const b = bars[i];
+    const d = Math.floor(b.ms / DAY);
+    let off = offs.get(d);
+    if (off === undefined) { off = nyOffsetMin(b.ms); offs.set(d, off); }
+    const key = Math.floor((b.ms + (off - SESSION_OPEN_H * 60) * MIN) / DAY);
+    if (key !== cur) { cur = key; cpv = 0; cv = 0; }
+    if (b.v > 0) { cpv += (b.h + b.l + b.c) / 3 * b.v; cv += b.v; }
+    pv[i] = cpv; vv[i] = cv; sess[i] = key;
+    if (cv > 0) val[i] = cpv / cv;
+  }
+  const out = {n, val, pv, vv, sess};
+  vwapCache.set(bars, out);
+  return out;
+}
+
+/**
+ * The VWAP at bar i if that bar were `b` instead: the candle still forming.
+ * Everything before it in its session, plus it.
+ */
+export function vwapWith(w, i, b, sessOf = w.sess[i]) {
+  const same = i > 0 && w.sess[i - 1] === sessOf;
+  const pv = (same ? w.pv[i - 1] : 0) + (b.v > 0 ? (b.h + b.l + b.c) / 3 * b.v : 0);
+  const vv = (same ? w.vv[i - 1] : 0) + (b.v > 0 ? b.v : 0);
+  return vv > 0 ? pv / vv : NaN;
+}
+
 /** Bars for a symbol at a timeframe, built if it is not one that is published. */
 export async function load(sym, tf) {
   const spec = TIMEFRAMES.find(t => t.key === tf) || TIMEFRAMES[0];
