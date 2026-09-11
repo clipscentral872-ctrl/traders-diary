@@ -9,6 +9,7 @@ import * as E from "./engine.js";
 import * as C from "./clock.js";
 import * as PROF from "./profile.js";
 import * as RP from "./replay.js";
+import * as IND from "./inds.js";
 import * as SYS from "./system.js";
 import * as LOCK from "./lock.js";
 import * as DEMO from "./demo.js";
@@ -917,6 +918,7 @@ async function opened(pin) {
   lockState();
   DEMO.reload();
   RP.reopen();
+  IND.reopen();
   // The video library belongs to the journal too, and init() ran before there
   // was one.
   // Re-ask whether the trade on screen has a video, now that the library has

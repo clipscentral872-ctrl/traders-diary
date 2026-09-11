@@ -68,8 +68,11 @@ function upTo(bars, ms) {
 }
 
 // Redraws land on the same bar again and again, so the whole answer is kept
-// against it rather than rebuilt per frame.
-let _cache = {key: null, val: []};
+// against it rather than rebuilt per frame. One entry per series: the replay
+// draws two contracts at once, and NQ and ES can hold the same number of bars
+// ending at the same minute, which one entry keyed on those alone would have
+// answered with the other contract's levels.
+const _cache = new WeakMap();
 
 /** Which trading day a bar belongs to for a session that wraps midnight.
  *  A bar at 19:00 belongs to the NEXT day's Asia session, the way a trader
@@ -94,7 +97,8 @@ export function levelsAt(bars, atMs) {
   if (hi < 0) return [];
 
   const ck = bars.length + "@" + bars[hi].ms;
-  if (_cache.key === ck) return _cache.val;
+  const hit = _cache.get(bars);
+  if (hit && hit.key === ck) return hit.val;
 
   const now = nyParts(bars[hi].ms);
   const sessions = new Map();     // "asia|2026-09-04" -> {h, l, closed}
@@ -168,6 +172,6 @@ export function levelsAt(bars, atMs) {
     out.push({family: "day", label: "Prev Day High", price: d.h},
              {family: "day", label: "Prev Day Low", price: d.l});
   }
-  _cache = {key: ck, val: out};
+  _cache.set(bars, {key: ck, val: out});
   return out;
 }

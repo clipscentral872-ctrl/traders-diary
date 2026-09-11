@@ -95,6 +95,7 @@ export function createChart(canvas, opts = {}) {
     nearLevel: null,     // and which one the cursor is hovering
     picking: false,      // choosing where to cut the chart for a replay
     water: null,         // a word faint behind the candles, "Replay"
+    showVol: true,       // the volume indicator, which can be switched off
   };
 
   let W = 0, H = 0, plot = {x: 0, y: 0, w: 0, h: 0}, scale = null;
@@ -451,6 +452,7 @@ export function createChart(canvas, opts = {}) {
    * because it is context for the price rather than the price. Bars from
    * before the files carried volume have none, and draw nothing. */
   function volume(x, v) {
+    if (!state.showVol) return;
     let top = 0;
     for (const b of v.bars) if (b.v > top) top = b.v;
     if (!top) return;
@@ -854,9 +856,31 @@ export function createChart(canvas, opts = {}) {
     const onTime = !onAxis(p.x) && p.y > plot.y + plot.h;
     drag = {...p, count: state.count, right: state.right,
             r: scale ? {...scale.r} : null, axis: onAxis(p.x), time: onTime,
-            vert: false, moved: false};
+            vert: false, moved: false, touch: !!e.touches, far: 0};
     canvas.style.cursor = drag.axis ? "ns-resize" : onTime ? "ew-resize" : "grabbing";
+    /* A finger has no hover, so on a phone the crosshair, with the time on
+       the bottom scale and the price on the right one, never appeared at
+       all. As on TradingView, holding a finger still brings it up and
+       sliding then moves it instead of the chart. A quick tap shows it
+       where you tapped, and another tap puts it away. */
+    clearTimeout(holdTimer);
+    if (drag.touch && !drag.axis && !drag.time) {
+      holdTimer = setTimeout(() => {
+        if (!drag || !drag.touch || drag.far >= TAP_SLOP) return;
+        drag.cross = true;
+        state.cross = {x: drag.x, y: drag.y};
+        draw();
+      }, HOLD_MS);
+    }
   }
+
+  const HOLD_MS = 320;   // how long a still finger waits for the crosshair
+  const TAP_SLOP = 8;    // how far a finger can wobble and still be still
+  let holdTimer = null;
+
+  /** Keep a finger's crosshair on the chart, not off over the scales. */
+  const inPlot = p => ({x: Math.max(plot.x, Math.min(plot.x + plot.w - 1, p.x)),
+                        y: Math.max(plot.y, Math.min(plot.y + plot.h, p.y))});
 
   function move(e) {
     const p = pos(e);
@@ -889,8 +913,22 @@ export function createChart(canvas, opts = {}) {
     }
 
     const dx = p.x - drag.x, dy = p.y - drag.y;
+    if (drag.pick || drag.touch) drag.far = Math.max(drag.far, Math.hypot(dx, dy));
+    // The finger's crosshair moves; the chart under it stays put.
+    if (drag.cross) {
+      if (e.preventDefault) e.preventDefault();
+      state.cross = inPlot(p);
+      draw();
+      return;
+    }
+    // A finger still settling is not yet a pan, or the crosshair it is
+    // waiting for would arrive on a chart that had already slid away.
+    if (drag.touch && drag.far < TAP_SLOP) return;
     if (Math.abs(dx) > 2 || Math.abs(dy) > 2) drag.moved = true;
-    if (drag.pick) drag.far = Math.max(drag.far, Math.hypot(dx, dy));
+    if (drag.touch && state.cross) {
+      state.cross = null;
+      if (opts.onHover) opts.onHover(null);
+    }
 
     if (drag.axis && drag.r) {
       /* The price scale, TradingView's way round: pull it down to flatten
@@ -936,7 +974,27 @@ export function createChart(canvas, opts = {}) {
       pressed = null;
       if (opts.onRelease) opts.onRelease(was.moved);
     }
+    clearTimeout(holdTimer);
     if (drag && drag.level && opts.onLevelDrop) opts.onLevelDrop(drag.level);
+    // A finger lifted off its crosshair leaves it where it was, to be read.
+    if (drag && drag.cross) {
+      drag = null;
+      draw();
+      return;
+    }
+    // A quick tap: the crosshair there, or away if one is showing.
+    if (drag && drag.touch && !drag.pick && !drag.axis && !drag.time
+        && drag.far < TAP_SLOP) {
+      if (state.cross) {
+        state.cross = null;
+        if (opts.onHover) opts.onHover(null);
+      } else {
+        state.cross = inPlot(drag);
+      }
+      drag = null;
+      draw();
+      return;
+    }
     // A press that stayed put while choosing is the cut. A fingertip wobbles
     // a few pixels on a tap, so it has more room than the pan's own test.
     if (drag && drag.pick && drag.far < 8 && state.picking) {
@@ -1012,7 +1070,11 @@ export function createChart(canvas, opts = {}) {
   const spread = t => Math.hypot(t[0].clientX - t[1].clientX,
                                  t[0].clientY - t[1].clientY);
   function touchStart(e) {
-    if (e.touches.length === 2) { pinch = {d: spread(e.touches), count: state.count}; return; }
+    if (e.touches.length === 2) {
+      clearTimeout(holdTimer);
+      pinch = {d: spread(e.touches), count: state.count};
+      return;
+    }
     pinch = null;
     down(e);
   }
@@ -1127,6 +1189,12 @@ export function createChart(canvas, opts = {}) {
       return api;
     },
     setLevels(list) { state.levels = list || []; draw(); return api; },
+    setVolume(on) {
+      if (!!on === state.showVol) return api;
+      state.showVol = !!on;
+      draw();
+      return api;
+    },
     setWatermark(text) {
       if ((text || null) === state.water) return api;
       state.water = text || null;

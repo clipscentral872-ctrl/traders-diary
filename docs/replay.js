@@ -20,6 +20,7 @@ import * as SER from "./series.js";
 import * as PC from "./precheck.js";
 import * as DRAW from "./draw.js";
 import * as P from "./profile.js";
+import * as IND from "./inds.js";
 
 const $ = id => document.getElementById(id);
 // Practice trades live under whichever journal is open.
@@ -188,7 +189,7 @@ function modelFor() {
 }
 
 function overlayLevels() {
-  if (!S.levels || !S.base.length) return [];
+  if (!IND.isOn("levels") || !S.base.length) return [];
   // From the fine bars up to the moment. The chart's own bars would count
   // the whole of the candle still forming, which has not all happened.
   const now = cur();
@@ -241,10 +242,12 @@ function pnlStrip() {
 function paint() {
   if (!chart) return;
   chart.setLevels(overlayLevels());
+  chart.setVolume(IND.isOn("vol"));
   chart.setPosition(withWorth(S.pos));
   // While choosing a new cut the whole series stays in view; see armCut.
   if (!chart.picking) chart.setLimit(S.mode === "replay" ? S.i + 1 : null);
   chart.setWatermark(S.mode === "replay" ? "Replay" : null);
+  compareSync();
 }
 
 /* -------------------------------------------------------------- render */
@@ -254,14 +257,16 @@ function paint() {
 const vol = n => n >= 1e6 ? (n / 1e6).toFixed(2) + "M"
   : n >= 1e4 ? (n / 1e3).toFixed(1) + "K" : String(n);
 
-function ohlc(b, prev) {
-  const box = $("rohlc");
+function ohlc(b, prev) { ohlcInto($("rohlc"), S.sym, S.tf, b, prev); }
+
+function ohlcInto(box, sym, tf, b, prev) {
+  if (!box) return;
   if (!b) { box.innerHTML = ""; return; }
   const up = b.c >= b.o;
   // The change on the bar before, the way a chart legend shows it.
   const ch = prev ? b.c - prev.c : null;
   box.innerHTML = '<span class="pohlc">'
-    + `<span><b>${S.sym}</b> ${S.tf}</span>`
+    + `<span><b>${sym}</b> ${tf}</span>`
     + `<span>${clock(b.ms)}</span>`
     + `<span>O <b>${px(b.o)}</b></span><span>H <b>${px(b.h)}</b></span>`
     + `<span>L <b>${px(b.l)}</b></span>`
@@ -269,9 +274,10 @@ function ohlc(b, prev) {
     + (ch == null ? "" : `<span class="${ch >= 0 ? "up" : "dn"}">`
         + `${ch >= 0 ? "+" : ""}${px(ch)} `
         + `(${ch >= 0 ? "+" : ""}${(ch / prev.c * 100).toFixed(2)}%)</span>`)
-    // The bar's volume, when the bars carry it, as the legend shows it.
-    + (b.v != null ? `<span>Vol <b>${vol(b.v)}</b></span>` : "")
-    + '</span>';
+    + '</span>'
+    // The indicators, a row each with its eye, the way TradingView lists
+    // them under the prices. The volume reads on its own row there too.
+    + IND.rows({vol: b.v != null ? vol(b.v) : ""});
 }
 
 function render() {
@@ -548,24 +554,27 @@ function step(n) {
 function cur() { return S.base[S.j]; }
 
 /** How long fine bar m lasts. The hourly chart's fine bars are hours before
- *  the five minute bars begin and five minutes after. */
-function durAt(m) {
-  if (S.base[m] && S.base[m].ms < S.split) return 60 * 60000;
-  const spec = SER.TIMEFRAMES.find(t => t.key === S.tf) || SER.TIMEFRAMES[0];
+ *  the five minute bars begin and five minutes after. Written for any
+ *  series held the way S holds one, so the compared chart can use it. */
+function durIn(X, m) {
+  if (X.base[m] && X.base[m].ms < X.split) return 60 * 60000;
+  const spec = SER.TIMEFRAMES.find(t => t.key === X.tf) || SER.TIMEFRAMES[0];
   return spec.key === "1h" || spec.key === "4h" ? 5 * 60000
     : SER.STEP_MS[spec.from] || 5 * 60000;
 }
+const durAt = m => durIn(S, m);
 
 /** The forming candle where the clock is, the finished one back where it
  *  was. */
-function sync() {
-  if (!S.grouped) { S.i = S.j; return; }
-  if (S.touched != null && S.touched !== S.k[S.j])
-    S.bars[S.touched] = S.full[S.touched];
-  S.i = S.k[S.j];
-  S.bars[S.i] = SER.formingBar(S.base, S.k, S.j, S.full[S.i].ms);
-  S.touched = S.i;
+function syncIn(X) {
+  if (!X.grouped) { X.i = X.j; return; }
+  if (X.touched != null && X.touched !== X.k[X.j])
+    X.bars[X.touched] = X.full[X.touched];
+  X.i = X.k[X.j];
+  X.bars[X.i] = SER.formingBar(X.base, X.k, X.j, X.full[X.i].ms);
+  X.touched = X.i;
 }
+function sync() { syncIn(S); }
 
 /** The last index in an ascending run of numbers whose value passes. */
 function lastWhere(n, ok) {
@@ -581,8 +590,9 @@ function lastWhere(n, ok) {
 const lastFineOf = i => S.grouped ? lastWhere(S.k.length, m => S.k[m] <= i) : i;
 
 /** The last fine bar that had closed by this moment. */
-const fineClosedBy = ms =>
-  lastWhere(S.base.length, m => S.base[m].ms + durAt(m) <= ms);
+const closedByIn = (X, ms) =>
+  lastWhere(X.base.length, m => X.base[m].ms + durIn(X, m) <= ms);
+const fineClosedBy = ms => closedByIn(S, ms);
 
 /** The fine bar a moment falls in. */
 const fineAt = ms => lastWhere(S.base.length, m => S.base[m].ms <= ms);
@@ -643,31 +653,26 @@ function setSpeed(v) {
   }
 }
 
-/** Load the contract and show it whole, so there is something to cut into.
- *
- *  Browsing used to show an empty chart and a date box, which meant choosing
- *  a starting point blind. The whole series is on screen now, right up to the
- *  last bar published, and you scroll back to the bit you want. */
 /* The bars the replay steps through, and the ones it draws. Built fresh on
    each load: stitching and indexing a couple of years of bars is a few
    milliseconds, and a copy kept here would miss newly published bars. */
-async function loadSeries() {
-  const spec = SER.TIMEFRAMES.find(t => t.key === S.tf) || SER.TIMEFRAMES[0];
+async function loadSeries(sym, tf) {
+  const spec = SER.TIMEFRAMES.find(t => t.key === tf) || SER.TIMEFRAMES[0];
   let got;
   if (spec.key === "1h" || spec.key === "4h") {
-    const h1 = await load(S.sym, "1h");
+    const h1 = await load(sym, "1h");
     if (!h1 || !h1.length) return null;
-    const m5 = await load(S.sym, "5m").catch(() => null);
+    const m5 = await load(sym, "5m").catch(() => null);
     const st = SER.stitchHours(h1, m5);
     const full = spec.key === "1h" ? st.hours
       : SER.resample(st.hours, 60 * 60000, 4, true);
     got = {full, base: st.fine, k: SER.bucketIndex(st.fine, full), split: st.split};
   } else {
-    const full = await load(S.sym, S.tf);
+    const full = await load(sym, tf);
     if (!full || !full.length) return null;
     if (spec.group === 1) got = {full, base: full, k: null, split: -Infinity};
     else {
-      const base = await load(S.sym, spec.from);
+      const base = await load(sym, spec.from);
       if (!base || !base.length) return null;
       got = {full, base, k: SER.bucketIndex(base, full), split: -Infinity};
     }
@@ -675,9 +680,14 @@ async function loadSeries() {
   return got;
 }
 
+/** Load the contract and show it whole, so there is something to cut into.
+ *
+ *  Browsing used to show an empty chart and a date box, which meant choosing
+ *  a starting point blind. The whole series is on screen now, right up to the
+ *  last bar published, and you scroll back to the bit you want. */
 async function browse() {
   const seq = ++S.seq;
-  const got = await loadSeries().catch(() => null);
+  const got = await loadSeries(S.sym, S.tf).catch(() => null);
   // Another contract or timeframe was asked for while this one loaded, and
   // arriving second must not put this one back on screen over it.
   if (seq !== S.seq) return null;
@@ -706,6 +716,7 @@ async function browse() {
   chart.setLimit(null);
   chart.fit(200);
   render();
+  if (CMP.on) compareLoad();
   return S.bars;
 }
 
@@ -795,6 +806,7 @@ function enter(j) {
   stopAuto();
   chart.setLimit(S.i + 1);
   chart.fit(160);
+  CMP.fitted = false;
   render();
 }
 
@@ -896,6 +908,105 @@ function reset() {
   browse();
 }
 
+/* ------------------------------------------------------------ compare */
+
+/* The other index underneath, at the same moment.
+ *
+ * TJR reads NQ against ES at the open: one takes out a high or a low that
+ * the other does not, and that divergence is half of his entry. Flipping
+ * between the two works, but what is being compared is the two together, so
+ * this draws the second one under the first. It runs on the replay's clock,
+ * forms its own candle, and shows its own session levels, which is where the
+ * divergence is read from. It trades nothing and takes no drawings. */
+const CMP = {
+  on: false, sym: null, tf: null, chart: null, fitted: false, seq: 0,
+  bars: [], full: [], base: [], k: null, grouped: false, split: -Infinity,
+  i: 0, j: 0, touched: null,
+};
+
+/** ES is read against NQ, and everything else against ES. */
+const sisterOf = sym => sym === "ES" ? "NQ" : "ES";
+
+async function compareLoad() {
+  const seq = ++CMP.seq;
+  CMP.sym = sisterOf(S.sym);
+  CMP.tf = S.tf;
+  label();
+  const got = await loadSeries(CMP.sym, CMP.tf).catch(() => null);
+  if (seq !== CMP.seq || !CMP.on) return;
+  if (!got) {
+    CMP.base = [];
+    ohlcInto($("rohlc2"), CMP.sym, CMP.tf, null);
+    return;
+  }
+  CMP.full = got.full;
+  CMP.base = got.base;
+  CMP.k = got.k;
+  CMP.split = got.split;
+  CMP.grouped = !!got.k;
+  CMP.bars = CMP.grouped ? got.full.slice() : got.full;
+  CMP.touched = null;
+  CMP.fitted = false;
+  CMP.chart.setData(CMP.bars);
+  compareSync();
+}
+
+/** Bring the compared chart to the replay's moment. */
+function compareSync() {
+  if (!CMP.on || !CMP.chart || !CMP.base.length) return;
+  const at = S.mode === "replay" ? S.clock : null;
+  if (at == null) {
+    // Browsing: the whole series, as the chart above it is showing.
+    if (CMP.touched != null) {
+      CMP.bars[CMP.touched] = CMP.full[CMP.touched];
+      CMP.touched = null;
+    }
+    CMP.chart.setLevels([]);
+    CMP.chart.setLimit(null);
+    if (!CMP.fitted) { CMP.chart.fit(200); CMP.fitted = true; }
+    ohlcInto($("rohlc2"), CMP.sym, CMP.tf, CMP.bars[CMP.bars.length - 1],
+             CMP.bars[CMP.bars.length - 2]);
+    return;
+  }
+  // Nothing of this contract had happened yet at that moment.
+  if (CMP.base[0].ms + durIn(CMP, 0) > at) {
+    CMP.chart.setLimit(0);
+    ohlcInto($("rohlc2"), CMP.sym, CMP.tf, null);
+    return;
+  }
+  CMP.j = closedByIn(CMP, at);
+  syncIn(CMP);
+  CMP.chart.setVolume(IND.isOn("vol"));
+  CMP.chart.setLevels(!IND.isOn("levels") ? [] : levelsAt(CMP.base, CMP.base[CMP.j].ms)
+    .map(m => ({...m, colour: FAMILY_COLOUR[m.family]})));
+  CMP.chart.setLimit(CMP.i + 1);
+  if (!CMP.fitted) { CMP.chart.fit(160); CMP.fitted = true; }
+  ohlcInto($("rohlc2"), CMP.sym, CMP.tf, CMP.bars[CMP.i], CMP.bars[CMP.i - 1]);
+}
+
+/** The button names the contract it will bring up. */
+function label() {
+  const el = $("rsmtlbl");
+  if (el) el.textContent = "vs " + sisterOf(S.sym);
+}
+
+function setCompare(on) {
+  CMP.on = !!on;
+  $("rsmt").setAttribute("aria-pressed", String(CMP.on));
+  $("rcomp").hidden = !CMP.on;
+  P.set("replayCompare", CMP.on ? "1" : "");
+  if (!CMP.on) { CMP.seq++; return; }
+  if (!CMP.chart) {
+    CMP.chart = createChart($("rc2"), {
+      timeLabel: ms => C.label(ms),
+      timeParts: ms => ({day: C.day(ms), min: C.minutes(ms)}),
+      onHover: (b, i, prev) => ohlcInto($("rohlc2"), CMP.sym, CMP.tf,
+        b || CMP.bars[CMP.i], b ? prev : CMP.bars[CMP.i - 1]),
+    });
+  }
+  compareLoad();
+}
+
 function saveDraft() {
   P.set("replay", JSON.stringify(S.done));
 }
@@ -949,6 +1060,8 @@ export function init(onSave) {
   $("rdate").addEventListener("input", () => { S.dateEdited = true; render(); });
   $("rcut").addEventListener("click", armCut);
   $("rrandom").addEventListener("click", randomStart);
+  $("rsmt").addEventListener("click", () => setCompare(!CMP.on));
+  label();
   $("rstep1").addEventListener("click", forward);
   $("rplay").addEventListener("click", toggleAuto);
   S.speed = Number(P.get("replaySpeed")) || 1;
@@ -1012,10 +1125,13 @@ export function init(onSave) {
     if (S.pos && b) closeAt(b.c, b.ms, "Market");
     render();
   });
-  $("rlevels").addEventListener("click", () => {
-    S.levels = !S.levels;
-    $("rlevels").setAttribute("aria-pressed", String(S.levels));
-    paint();
+  // The rail's Lv button and the eye on the legend are one switch.
+  $("rlevels").addEventListener("click", () => IND.toggle("levels"));
+  IND.wire($("rohlc"));
+  IND.wire($("rohlc2"));
+  IND.onChange(() => {
+    $("rlevels").setAttribute("aria-pressed", String(IND.isOn("levels")));
+    render();
   });
   $("rzin").addEventListener("click", () => chart.zoomIn());
   $("rzout").addEventListener("click", () => chart.zoomOut());
@@ -1071,6 +1187,7 @@ export const inTrade = () => !!S.pos;
  * then saved the empty list plus itself over the ones that were waiting. */
 export function reopen() {
   restoreDraft();
+  if (P.get("replayCompare") === "1" && !CMP.on) setCompare(true);
   const sp = Number(P.get("replaySpeed")) || 1;
   $("rspeed").value = String(sp);
   S.speed = $("rspeed").value === String(sp) ? sp : 1;

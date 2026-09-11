@@ -131,6 +131,10 @@
               title="Start on a random day, just before the New York open">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.3" fill="currentColor"/><circle cx="15" cy="15" r="1.3" fill="currentColor"/><circle cx="15" cy="9" r="1.3" fill="currentColor"/><circle cx="9" cy="15" r="1.3" fill="currentColor"/></svg>Random
       </button>
+      <button class="pbtn cuttool" id="rsmt" aria-pressed="false"
+              title="Show the other index underneath, at the same moment">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="17" height="7" rx="1.5"/><rect x="3.5" y="13" width="17" height="7" rx="1.5"/></svg><span id="rsmtlbl">vs ES</span>
+      </button>
       <input type="date" id="rdate" class="psel" aria-label="Start from">
       <button class="pbtn go" id="rgo">Start</button>
     </div>
@@ -139,6 +143,10 @@
       <div class="plegend" id="rohlc"></div>
       <div class="cuthint" id="rcuthint" hidden>Click the chart where you
       want the future to stop</div>
+    </div>
+    <div class="wsstage wscomp" id="rcomp" hidden>
+      <canvas id="rc2"></canvas>
+      <div class="plegend" id="rohlc2"></div>
     </div>
     <div class="ptransport" id="rpctl" role="group" aria-label="Replay controls" hidden>
         <button class="ptool picon" id="rplay" title="Play (Shift+Down)" aria-label="Play"></button>

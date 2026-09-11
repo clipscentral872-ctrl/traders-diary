@@ -23,6 +23,7 @@ import * as SER from "./series.js";
 import * as RV from "./revisit.js";
 import * as DRAW from "./draw.js";
 import * as P from "./profile.js";
+import * as IND from "./inds.js";
 import * as PC from "./precheck.js";
 
 const $ = id => document.getElementById(id);
@@ -253,7 +254,7 @@ function close(price, ms, how) {
 let chart = null;
 
 function overlayLevels() {
-  if (!D.levels || !D.bars.length) return [];
+  if (!IND.isOn("levels") || !D.bars.length) return [];
   const atMs = last() ? last().ms : null;
   const marks = levelsAt(D.bars, atMs)
     .map(m => ({...m, colour: FAMILY_COLOUR[m.family]}));
@@ -291,6 +292,7 @@ function withWorth(p) {
 function paint() {
   if (!chart) return;
   chart.setLevels(overlayLevels());
+  chart.setVolume(IND.isOn("vol"));
   chart.setPosition(withWorth(D.pos));
 }
 
@@ -315,9 +317,9 @@ function ohlc(b, prev) {
     + (ch == null ? "" : `<span class="${ch >= 0 ? "up" : "dn"}">`
         + `${ch >= 0 ? "+" : ""}${px(ch)} `
         + `(${ch >= 0 ? "+" : ""}${(ch / prev.c * 100).toFixed(2)}%)</span>`)
-    // The bar's volume, when the bars carry it, as the legend shows it.
-    + (b.v != null ? `<span>Vol <b>${vol(b.v)}</b></span>` : "")
-    + '</span>';
+    + '</span>'
+    // The indicators, a row each with its eye, as TradingView lists them.
+    + IND.rows({vol: b.v != null ? vol(b.v) : ""});
 }
 
 /* -------------------------------------------------------------- render */
@@ -617,10 +619,13 @@ export function init(onSaveToDiary, onTradeClosed) {
     if (D.pos && b) close(b.c, b.ms, "Market");
     render();
   });
-  $("dlevels").addEventListener("click", () => {
-    D.levels = !D.levels;
-    $("dlevels").setAttribute("aria-pressed", String(D.levels));
+  // The rail's Lv button and the eye on the legend are one switch.
+  $("dlevels").addEventListener("click", () => IND.toggle("levels"));
+  IND.wire($("dohlc"));
+  IND.onChange(() => {
+    $("dlevels").setAttribute("aria-pressed", String(IND.isOn("levels")));
     paint();
+    render();
   });
   for (const id of ["dqty", "drisk", "drr"])
     $(id).addEventListener("input", ticket);

@@ -594,6 +594,9 @@ body{overflow:hidden}
 .wstop .chead{padding:0; border-bottom:none}
 .wsstage{flex:1; min-height:0; position:relative; background:var(--ground)}
 .wsstage canvas{position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none}
+/* The compared index under the replay's chart. A little shorter than the one
+   being traded, which stays the one the eye goes to: two thirds of it. */
+.wscomp{flex:.66 1 0; border-top:1px solid var(--line)}
 .wsfoot{
   flex:none; display:flex; align-items:center; gap:14px; padding:0 12px;
   height:34px; border-top:1px solid var(--line); background:var(--raised);
@@ -636,7 +639,11 @@ body{overflow:hidden}
   .raildiv{height:24px; width:1px; margin:0 4px; flex:none}
   .railgap{display:none}
   .wsmain{flex:none}
-  .wsstage{height:46vh; min-height:260px}
+  /* Its own height, not a share. As a flex item with a zero basis in a box
+     that is only as tall as its content, the 46vh was ignored and every
+     phone chart sat at the 260 pixel floor. */
+  .wsstage{flex:none; height:46vh; min-height:260px}
+  .wscomp{height:32vh; min-height:200px}
   .wspanel{
     flex:none; border-left:none; border-top:1px solid var(--line);
     overflow:visible;
@@ -942,6 +949,24 @@ body{overflow:hidden}
   background:rgba(255,255,255,.8)}
 .plegend:empty{display:none}
 .plegend .pohlc{flex-wrap:wrap; row-gap:2px; overflow:visible}
+/* The indicators under the prices, a row each with an eye, as TradingView
+   lists them. Only the eye takes a click; the rest of the legend lets the
+   chart underneath have it. */
+.pinds{display:flex; flex-direction:column; margin-top:2px}
+.pind{display:flex; align-items:center; gap:6px; min-height:20px;
+  font-size:11px; color:var(--muted)}
+.pind .pn{color:var(--text)}
+.pind .pv{color:var(--text); font-variant-numeric:tabular-nums}
+.pind.off .pn{color:var(--faint)}
+.peye{pointer-events:auto; display:inline-flex; align-items:center;
+  justify-content:center; width:24px; height:20px; padding:0; border:0;
+  border-radius:3px; background:none; color:var(--muted); cursor:pointer}
+.peye:hover{background:var(--lift); color:var(--text)}
+.peye:focus-visible{outline:2px solid var(--accent); outline-offset:0}
+.peye svg{width:15px; height:15px; fill:none; stroke:currentColor;
+  stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
+/* Room for a fingertip, without making every row a toolbar. */
+@media (pointer:coarse){ .peye{width:38px; height:30px} .pind{min-height:30px} }
 .pohlc .up{color:var(--candle-up)} .pohlc .dn{color:var(--candle-dn)}
 .pstale{
   font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:11.5px; color:var(--muted);
@@ -1578,7 +1603,7 @@ def main():
 MODULES = [
     "engine.js", "chart.js", "levels.js", "revisit.js", "series.js",
     "clock.js", "vault.js", "draw.js", "profile.js", "whatif.js", "precheck.js", "shelf.js",
-    "watchlist.js", "lock.js",
+    "watchlist.js", "lock.js", "inds.js",
     "replay.js", "demo.js", "diary.js", "videos.js", "system.js",
     "dashboard.js",
 ]
@@ -1622,11 +1647,9 @@ def stamp_worker(page):
     """
     import hashlib
     parts = [page]
-    for name in ("engine.js", "chart.js", "levels.js", "revisit.js",
-                 "replay.js", "demo.js", "diary.js", "videos.js",
-                 "system.js", "dashboard.js", "lock.js", "watchlist.js",
-                 "series.js", "clock.js", "vault.js", "draw.js",
-                 "profile.js", "whatif.js", "precheck.js", "shelf.js"):
+    # Every module, from the one list, so a new file changes the version the
+    # moment it changes. A second hand-kept list here would miss it.
+    for name in MODULES:
         f = os.path.join(DOCS, name)
         if os.path.exists(f):
             parts.append(io.open(f, encoding="utf-8").read())
