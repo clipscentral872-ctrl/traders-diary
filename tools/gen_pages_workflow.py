@@ -44,16 +44,29 @@ HEAD = '''name: Publish the site
 # The staleness that matters is the Demo tab's 240-minute cutoff, so a gap of
 # %(gap)d minutes leaves a wide margin for a run that dies early.
 #
+# THE STARTS LAND THREE TO FOUR HOURS LATE, and consistently. Over 9 and 10
+# September the 12:13 slot fired at 16:20, 14:41 at 17:51 and 16:09 at 19:04.
+# So a start meant for "before the open" never arrived before the open, and
+# the open was only fresh when somebody happened to push. Two answers:
+#
+#   The early starts are scheduled for the delay, not for the clock. 08:07
+#   and 09:37 UTC, landing somewhere around 11:00 to 13:30.
+#
+#   And a run hands over to a fresh one before it finishes, while the market
+#   is open. One start a day that lands at all is then enough to hold the
+#   whole session, however late it came. A push hands over too, because a
+#   push cancels the run in progress and would otherwise break the chain.
+#
 # Times are UTC. New York is UTC-4 in summer, so the cash session is
-# 13:30 to 20:00 UTC. The three starts are placed to overlap.
+# 13:30 to 20:00 UTC.
 
 on:
   push:
     branches: [main]
   schedule:
-    - cron: "13 12 * * 1-5"    # before the open
-    - cron: "41 14 * * 1-5"    # first half of the session
-    - cron: "9 16 * * 1-5"     # second half, into the close
+    - cron: "7 8 * * 1-5"      # lands around 11:00 to 12:00
+    - cron: "37 9 * * 1-5"     # lands around 12:30 to 13:30, before the open
+    - cron: "41 14 * * 1-5"    # a spare, in case the chain was broken
   workflow_dispatch:
     inputs:
       cycles:
@@ -62,11 +75,17 @@ on:
       gap:
         description: "Seconds between publishes, for testing the loop quickly"
         default: "%(sleep)d"
+      chain:
+        description: "Hand over to a fresh run at the end, while the market is open"
+        default: "no"
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  # To start the next run in the chain. A workflow_dispatch made with the
+  # run's own token is the one kind of event that token is allowed to start.
+  actions: write
 
 # Never two deploys at once. A push cancels a publishing run in progress,
 # because a code change should go out immediately and the next scheduled start
@@ -85,6 +104,9 @@ jobs:
       # once and finishes, unless a manual run asks for more.
       CYCLES: ${{ github.event_name == 'schedule' && %(cycles)d || inputs.cycles || 1 }}
       GAP: ${{ github.event_name == 'schedule' && %(sleep)d || inputs.gap || %(sleep)d }}
+      # Scheduled starts and pushes keep the chain going; a manual run only
+      # does when asked, so testing the loop does not start one by accident.
+      CHAIN: ${{ github.event_name == 'schedule' || github.event_name == 'push' || inputs.chain == 'yes' }}
     environment:
       name: github-pages
       url: ${{ steps.deploy1.outputs.page_url }}
@@ -146,13 +168,37 @@ CYCLE = '''
           artifact_name: github-pages-%(n)d
 '''
 
-need = (CYCLES - 1) * GAP_MIN + CYCLES * 3
+HANDOVER = '''
+      # The hand-over. Runs after a failure too, so one bad fetch does not end
+      # the day's publishing, but not after a cancel: a cancel is a push, and
+      # the push run hands over itself.
+      - name: Hand over to the next run while the market is open
+        if: ${{ !cancelled() && env.CHAIN == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATUS: ${{ job.status }}
+        run: |
+          d=$(date -u +%%u)
+          h=$(date -u +%%H)
+          if [ "$d" -gt 5 ] || [ "$h" -ge 20 ]; then
+            echo "session over, not handing on"
+            exit 0
+          fi
+          # A run that failed waits before handing on, so a fetch that keeps
+          # failing becomes a few runs an hour rather than hundreds.
+          if [ "$STATUS" != "success" ]; then sleep 600; fi
+          gh workflow run pages.yml --ref main -f cycles=%(cycles)d -f chain=yes
+          echo "handed over"
+'''
+
+need = (CYCLES - 1) * GAP_MIN + CYCLES * 3 + 10
 out = HEAD % {"gap": GAP_MIN, "hours": (CYCLES - 1) * GAP_MIN / 60.0,
               "cycles": CYCLES, "need": need, "timeout": need + 40,
               "sleep": GAP_MIN * 60}
 out += FIRST
 for n in range(2, CYCLES + 1):
     out += CYCLE % {"n": n}
+out += HANDOVER % {"cycles": CYCLES}
 
 P = r"C:\Users\chris\TradersDiary\.github\workflows\pages.yml"
 io.open(P, "w", encoding="utf-8", newline="\n").write(out)
