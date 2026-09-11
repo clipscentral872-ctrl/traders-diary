@@ -1,11 +1,15 @@
-"""Draw the home-screen icons.
+"""Draw the app's logo: the SVG, and every PNG the platforms ask for.
 
-iOS will not use an SVG for the home screen, so the same mark is drawn again
-as PNG at the sizes Safari and Android ask for. Drawn rather than converted so
-the repo needs no SVG rasteriser to rebuild it.
+The app is white with blue and black candles, the way TradingView draws a
+chart, and the logo is three of those candles climbing on a white tile. The
+logo before this was a dark neon chart from before the redesign, and it was
+the one thing on the laptop's taskbar that still looked like the old app.
 
-Kept deliberately in step with docs/icon.svg: same grid, same geometry, same
-colours. If one changes, change the other.
+One set of numbers draws both the SVG and the PNGs, so the two cannot drift
+apart the way hand-kept copies do.
+
+The PNGs are drawn with Pillow rather than converted from the SVG, so
+rebuilding needs no SVG rasteriser.
 
     python tools/make_icons.py
 """
@@ -14,132 +18,122 @@ import os
 
 print = functools.partial(print, flush=True)
 
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DOCS = os.path.join(HERE, "..", "docs")
 
-GROUND = (5, 7, 12)
-ACCENT = (53, 224, 240)
-COL_TOP = (46, 127, 168)
-COL_BOT = (20, 52, 74)
-COL_EDGE = (79, 168, 216)
-LINE_LO = (34, 184, 119)
-LINE_HI = (91, 255, 176)
-GLOW = (43, 224, 138)
-# 32 and 48 are the browser tab and the desktop shortcut, which some
-# browsers will not take an SVG for. 180 is Apple, 192 and 512 are the
-# manifest.
-SIZES = [32, 48, 180, 192, 512]
-SS = 4          # supersample, then shrink, because these have thin strokes
+# The app's own colours, from the stylesheet: --ground, --candle-up and
+# --candle-dn. The edge is a hairline so a white tile still has an outline on
+# a light taskbar, where white on beige is otherwise nearly invisible.
+WHITE = (255, 255, 255)
+EDGE = (220, 224, 232)
+BLUE = (41, 98, 255)
+BLACK = (19, 23, 34)
 
-# The mark, on the 512 grid the SVG is drawn on.
-COLUMNS = [(128, 278), (222, 212), (316, 126)]
-COL_W, BASE = 72, 418
-GRID_Y = (330, 242, 154)
-ZIG = [(108, 376), (196, 300), (262, 338), (352, 196)]
-HEAD = [(300, 172), (388, 156), (372, 244)]
-AREA = [(108, 376), (196, 300), (262, 338), (356, 190), (356, 418), (108, 418)]
+SS = 4            # supersample, then shrink, because the wicks are thin
+RADIUS = 112      # the tile's corner, about a fifth of it, like other app icons
+EDGE_W = 8
+BODY_W = 72
+WICK_W = 16
+BODY_R = 6
 
+# Three candles on the 512 grid, climbing left to right: a black one, then
+# two blue. Each is (left edge of the body, wick top, body top, body bottom,
+# wick bottom, colour). The group is centred on the tile. At this size it fits
+# inside the middle 80% circle Android keeps when it crops a maskable icon;
+# the other outputs draw it larger, below.
+CANDLES = [
+    (112, 244, 280, 360, 392, BLACK),
+    (220, 184, 218, 326, 352, BLUE),
+    (328, 120, 150, 276, 310, BLUE),
+]
 
-def ramp(n, stops):
-    """A one pixel wide vertical ramp, stretched to n wide, used as a paint.
-
-    stops is a list of (position 0..1, value), where value is a colour tuple
-    for a paint or a single number for a mask.
-    """
-    single = not isinstance(stops[0][1], tuple)
-    strip = Image.new("L" if single else "RGB", (1, n))
-    px = strip.load()
-    for y in range(n):
-        t = y / max(1, n - 1)
-        lo = stops[0]
-        hi = stops[-1]
-        for a, b in zip(stops, stops[1:]):
-            if a[0] <= t <= b[0]:
-                lo, hi = a, b
-                break
-        span = max(1e-6, hi[0] - lo[0])
-        f = min(1.0, max(0.0, (t - lo[0]) / span))
-        if single:
-            px[0, y] = round(lo[1] + (hi[1] - lo[1]) * f)
-        else:
-            px[0, y] = tuple(round(lo[1][k] + (hi[1][k] - lo[1][k]) * f)
-                             for k in range(3))
-    return strip.resize((n, n), Image.BILINEAR)
+# (file, size, full bleed). The tab and desktop sizes are a rounded tile with
+# clear corners. The iPhone's home screen icon is a full square with no
+# transparency, because iOS rounds it itself and paints clear corners black.
+# The maskable one is full bleed too, because Android cuts its own shape.
+#
+# The last number scales the candles about the centre. At 1.0 they filled
+# only half the tile and were tiny at 32 pixels beside the old icon, which
+# filled its whole square, so the tile, the desktop sizes and the iPhone draw
+# them a quarter larger. The maskable one keeps 1.0: Android may crop it to a
+# circle, and at the larger size the tip of the right candle would be cut off.
+BIG = 1.25
+OUTPUTS = [
+    ("logo-32.png", 32, False, BIG),
+    ("logo-48.png", 48, False, BIG),
+    ("logo-180.png", 180, True, BIG),
+    ("logo-192.png", 192, False, BIG),
+    ("logo-512.png", 512, False, BIG),
+    ("logo-maskable-512.png", 512, True, 1.0),
+]
 
 
-def draw(size):
+def placed(k):
+    """The candles scaled by k about the centre of the tile."""
+    at = lambda v: 256 + (v - 256) * k
+    return [(at(x), at(wt), at(bt), at(bb), at(wb), col)
+            for x, wt, bt, bb, wb, col in CANDLES]
+
+
+def draw(size, bleed, k):
     n = size * SS
     u = n / 512.0
-    im = Image.new("RGB", (n, n), GROUND)
-
-    # A halo where the move ends, so the corner it climbs into is not dead
-    # space. Concentric rings rather than one blurred blob: a blob has a hard
-    # edge that survives the blur and reads as a stain across the corner.
-    halo = Image.new("L", (n, n), 0)
-    hd = ImageDraw.Draw(halo)
-    cx, cy, r = 0.72 * n, 0.30 * n, 0.62 * n
-    for i in range(48, 0, -1):
-        t = i / 48.0
-        hd.ellipse([cx - r * t, cy - r * t, cx + r * t, cy + r * t],
-                   fill=round(66 * (1 - t) ** 1.6))
-    halo = halo.filter(ImageFilter.GaussianBlur(0.03 * n))
-    im.paste(Image.new("RGB", (n, n), GLOW), (0, 0), halo)
-
+    im = Image.new("RGBA", (n, n), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
+    if bleed:
+        d.rectangle([0, 0, n, n], fill=WHITE + (255,))
+    else:
+        d.rounded_rectangle([0, 0, n - 1, n - 1], radius=RADIUS * u,
+                            fill=WHITE + (255,))
+        half = EDGE_W * u / 2
+        d.rounded_rectangle([half, half, n - 1 - half, n - 1 - half],
+                            radius=(RADIUS - EDGE_W / 2) * u,
+                            outline=EDGE + (255,), width=max(1, round(EDGE_W * u)))
+    bw, ww, br = BODY_W * k, WICK_W * k, BODY_R * k
+    for x, wt, bt, bb, wb, col in placed(k):
+        cx = x + bw / 2
+        d.rectangle([(cx - ww / 2) * u, wt * u, (cx + ww / 2) * u, wb * u],
+                    fill=col + (255,))
+        d.rounded_rectangle([x * u, bt * u, (x + bw) * u, bb * u],
+                            radius=br * u, fill=col + (255,))
+    out = im.resize((size, size), Image.LANCZOS)
+    # No alpha where there must be none: iOS would paint it black.
+    return out.convert("RGB") if bleed else out
 
-    # Gridlines, faint, the way a chart shows its scale.
-    faint = tuple(round(GROUND[k] + (ACCENT[k] - GROUND[k]) * 0.18)
-                  for k in range(3))
-    for y in GRID_Y:
-        d.line([(92 * u, y * u), (440 * u, y * u)], fill=faint,
-               width=max(1, round(5 * u)))
 
-    # Columns, lifting from bright at the top to deep at the base, so they
-    # read as solid objects standing on the axis rather than flat blocks.
-    mask = Image.new("L", (n, n), 0)
-    md = ImageDraw.Draw(mask)
-    for x, top in COLUMNS:
-        md.rounded_rectangle([x * u, top * u, (x + COL_W) * u, BASE * u],
-                             radius=8 * u, fill=255)
-    im.paste(ramp(n, [(0.0, COL_TOP), (1.0, COL_BOT)]), (0, 0), mask)
-    for x, top in COLUMNS:
-        d.rounded_rectangle([x * u, top * u, (x + COL_W) * u, (top + 6) * u],
-                            radius=3 * u, fill=COL_EDGE)
+def hexc(c):
+    return "#%02X%02X%02X" % c
 
-    # The area under the move, fading out downward the way a chart's area
-    # series does. This is the thing that makes it read as a chart.
-    area = Image.new("L", (n, n), 0)
-    ImageDraw.Draw(area).polygon([(x * u, y * u) for x, y in AREA], fill=255)
-    fade = ramp(n, [(0.0, 118), (150 / 512.0, 118), (BASE / 512.0, 0),
-                    (1.0, 0)])
-    area = Image.composite(fade, Image.new("L", (n, n), 0), area)
-    im.paste(Image.new("RGB", (n, n), GLOW), (0, 0), area)
 
-    # The move, drawn once into a mask so it can be blurred into a glow and
-    # then laid over itself sharp.
-    move = Image.new("L", (n, n), 0)
-    mv = ImageDraw.Draw(move)
-    mv.line([(x * u, y * u) for x, y in ZIG], fill=255,
-            width=max(1, round(26 * u)), joint="curve")
-    mv.polygon([(x * u, y * u) for x, y in HEAD], fill=255)
-    paint = ramp(n, [(0.0, LINE_HI), (1.0, LINE_LO)])
-    im.paste(paint, (0, 0),
-             move.filter(ImageFilter.GaussianBlur(0.028 * n))
-                 .point(lambda v: round(v * 0.6)))
-    im.paste(paint, (0, 0), move)
-
-    # The axes last, so they sit cleanly over everything.
-    ax = max(1, round(15 * u))
-    d.line([(92 * u, 76 * u), (92 * u, BASE * u)], fill=ACCENT, width=ax)
-    d.line([(92 * u, BASE * u), (440 * u, BASE * u)], fill=ACCENT, width=ax)
-
-    return im.resize((size, size), Image.LANCZOS)
+def svg(k=BIG):
+    half = EDGE_W / 2
+    rows = [
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" '
+        'role="img" aria-label="Traders Diary">',
+        '  <rect x="%g" y="%g" width="%g" height="%g" rx="%g" fill="%s" '
+        'stroke="%s" stroke-width="%g"/>'
+        % (half, half, 512 - EDGE_W, 512 - EDGE_W, RADIUS - half,
+           hexc(WHITE), hexc(EDGE), EDGE_W),
+    ]
+    bw, ww, br = BODY_W * k, WICK_W * k, BODY_R * k
+    for x, wt, bt, bb, wb, col in placed(k):
+        cx = x + bw / 2
+        rows.append('  <rect x="%g" y="%g" width="%g" height="%g" fill="%s"/>'
+                    % (cx - ww / 2, wt, ww, wb - wt, hexc(col)))
+        rows.append('  <rect x="%g" y="%g" width="%g" height="%g" rx="%g" fill="%s"/>'
+                    % (x, bt, bw, bb - bt, br, hexc(col)))
+    rows.append("</svg>")
+    return "\n".join(rows) + "\n"
 
 
 if __name__ == "__main__":
-    for s in SIZES:
-        out = os.path.join(DOCS, f"icon-{s}.png")
-        draw(s).save(out, optimize=True)
-        print(f"  icon-{s}.png  {os.path.getsize(out):,} bytes")
+    path = os.path.join(DOCS, "logo.svg")
+    with open(path, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(svg())
+    print("  logo.svg  %s bytes" % format(os.path.getsize(path), ","))
+    for name, size, bleed, k in OUTPUTS:
+        out = os.path.join(DOCS, name)
+        draw(size, bleed, k).save(out, optimize=True)
+        print("  %s  %s bytes" % (name, format(os.path.getsize(out), ",")))

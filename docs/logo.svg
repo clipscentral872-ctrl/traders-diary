@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Traders Diary">
+  <rect x="4" y="4" width="504" height="504" rx="108" fill="#FFFFFF" stroke="#DCE0E8" stroke-width="8"/>
+  <rect x="111" y="241" width="20" height="185" fill="#131722"/>
+  <rect x="76" y="286" width="90" height="100" rx="7.5" fill="#131722"/>
+  <rect x="246" y="166" width="20" height="210" fill="#2962FF"/>
+  <rect x="211" y="208.5" width="90" height="135" rx="7.5" fill="#2962FF"/>
+  <rect x="381" y="86" width="20" height="237.5" fill="#2962FF"/>
+  <rect x="346" y="123.5" width="90" height="157.5" rx="7.5" fill="#2962FF"/>
+</svg>

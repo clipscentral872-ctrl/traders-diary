@@ -16,7 +16,7 @@
 // Stamped by tools/build_web.py from the content of the files below. A
 // fixed version meant a cache-first shell served the old page forever:
 // once installed, no update could reach anyone.
-const VERSION = "50ed44ce8c99";
+const VERSION = "8ca9ee13264e";
 const SHELL = "diary-shell-" + VERSION;
 const DATA = "diary-bars-" + VERSION;
 
@@ -32,9 +32,9 @@ const MODULES = ["engine.js", "chart.js", "levels.js", "revisit.js", "series.js"
 const FILES = [
   "./", "./index.html",
   ...MODULES.map(m => `./${m}?v=${VERSION}`),
-  "./manifest.webmanifest", "./icon.svg",
-  "./icon-32.png", "./icon-48.png",
-  "./icon-180.png", "./icon-192.png", "./icon-512.png",
+  "./manifest.webmanifest", "./logo.svg",
+  "./logo-32.png", "./logo-48.png",
+  "./logo-180.png", "./logo-192.png", "./logo-512.png", "./logo-maskable-512.png",
 ];
 
 self.addEventListener("install", e => {
