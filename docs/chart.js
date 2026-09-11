@@ -212,6 +212,7 @@ export function createChart(canvas, opts = {}) {
     grid(x, r, Y, v, tt);
     if (opts.beforeCandles) opts.beforeCandles({x, Y, plot, css, visible: v, range: r});
     zones(x, Y);
+    volume(x, v);
     levels(x, Y);
     candles(x, Y, v);
     tradeMarks(x, Y, v);
@@ -398,6 +399,30 @@ export function createChart(canvas, opts = {}) {
       lastLabel = ly;
       x.globalAlpha = 1;
     }
+  }
+
+  /* Volume along the bottom, behind the price, the way TradingView shows it.
+   *
+   * On its own scale: the tallest bar in view fills the bottom fifth of the
+   * pane, so it reads as the rhythm of the session rather than competing
+   * with the candles for height. Coloured like its candle and drawn faint,
+   * because it is context for the price rather than the price. Bars from
+   * before the files carried volume have none, and draw nothing. */
+  function volume(x, v) {
+    let top = 0;
+    for (const b of v.bars) if (b.v > top) top = b.v;
+    if (!top) return;
+    const w = Math.max(1, Math.min(barWidth() * 0.7, 24));
+    const room = plot.h * 0.2;
+    const base = plot.y + plot.h;
+    x.globalAlpha = 0.28;
+    v.bars.forEach((b, k) => {
+      if (!b.v) return;
+      const bh = Math.max(1, b.v / top * room);
+      x.fillStyle = css(b.c >= b.o ? "--candle-up" : "--candle-dn");
+      x.fillRect(xOf(k) - w / 2, base - bh, w, bh);
+    });
+    x.globalAlpha = 1;
   }
 
   function candles(x, Y, v) {

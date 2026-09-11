@@ -69,13 +69,20 @@ def pack(res, step):
     n = (ts[-1] - t0) // step + 1
     grid = [None] * n
     kept = 0
+    # Volume rides along as a fifth number. Every reader takes the first four
+    # by position, so they carry on as they were; the chart reads the fifth
+    # when it is there. A minute Yahoo prices but has no volume for is stored
+    # as zero rather than dropped, because the price is still real.
+    vol = q.get("volume") or []
     for i, t in enumerate(ts):
         o, h, l, c = q["open"][i], q["high"][i], q["low"][i], q["close"][i]
         if None in (o, h, l, c):
             continue
         j = (t - t0) // step
         if 0 <= j < n:
-            grid[j] = [round(o, 2), round(h, 2), round(l, 2), round(c, 2)]
+            v = vol[i] if i < len(vol) else None
+            grid[j] = [round(o, 2), round(h, 2), round(l, 2), round(c, 2),
+                       int(v) if v else 0]
             kept += 1
     return {"t0": t0, "step": step, "bars": grid}, kept, n
 

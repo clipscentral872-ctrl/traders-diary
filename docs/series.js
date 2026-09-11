@@ -41,7 +41,12 @@ async function rawFile(sym, tf) {
     const out = [];
     j.bars.forEach((b, i) => {
       if (b) out.push({ms: (j.t0 + i * j.step) * 1000,
-                       o: b[0], h: b[1], l: b[2], c: b[3]});
+                       o: b[0], h: b[1], l: b[2], c: b[3],
+                       // Volume when the file carries it. Archives written
+                       // before it did, and the seed copies, read as none
+                       // rather than as zero, so the chart draws nothing
+                       // instead of a row of empty bars.
+                       v: b.length > 4 ? b[4] : null});
     });
     files.set(key, out);
     pending.delete(key);
@@ -97,11 +102,13 @@ export function resample(bars, stepMs, n, anchorSession) {
       // source bar that happened to land in it. Those are the same for a full
       // bucket and differ for the partial one at the beginning of a file,
       // where taking the source bar's time put a "15 minute" bar at 09:35.
-      cur = {ms: key - shift, o: b.o, h: b.h, l: b.l, c: b.c};
+      cur = {ms: key - shift, o: b.o, h: b.h, l: b.l, c: b.c, v: b.v ?? null};
     } else {
       cur.h = Math.max(cur.h, b.h);
       cur.l = Math.min(cur.l, b.l);
       cur.c = b.c;
+      // A built bar's volume is everything traded inside it.
+      if (b.v != null) cur.v = (cur.v ?? 0) + b.v;
     }
   }
   if (cur) out.push(cur);

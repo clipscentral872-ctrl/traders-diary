@@ -102,5 +102,21 @@ console.log("\nasking for no grouping changes nothing");
   check("empty in, empty out", resample([], 5 * MIN, 3, false).length === 0);
 }
 
+console.log("\nvolume adds up across a built bar");
+{
+  // Three five-minute bars into one fifteen: the volume is all three, not
+  // the first one's or the last one's.
+  const bars = fiveMin("2026-09-02T09:30:00Z", 6)
+    .map((b, i) => ({...b, v: 100 * (i + 1)}));
+  const out = resample(bars, 5 * MIN, 3, false);
+  check("the first built bar holds all three", out[0].v === 100 + 200 + 300,
+        String(out[0].v));
+  check("and the second the next three", out[1].v === 400 + 500 + 600,
+        String(out[1].v));
+  // A file with no volume stays without it, rather than showing zero.
+  const none = resample(fiveMin("2026-09-02T09:30:00Z", 3), 5 * MIN, 3, false);
+  check("no volume in, none out", none[0].v == null, String(none[0].v));
+}
+
 console.log(failed ? `\n${failed} check(s) failed` : "\nall checks passed");
 process.exit(failed ? 1 : 0);

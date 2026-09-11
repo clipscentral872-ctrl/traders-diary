@@ -15,7 +15,7 @@ import sys
 print = functools.partial(print, flush=True)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from publish_bars import merge
+from publish_bars import merge, pack
 
 FAILED = []
 
@@ -95,6 +95,21 @@ old = series(1000 * STEP, STEP, [10, None, None, 13])
 out, kept = merge(None, old, STEP, 500)
 check("closed slots are not counted as bars", kept == 2, kept)
 check("and are still empty", at(out, 1001 * STEP) is None)
+
+print("\nvolume is kept as the fifth number on each bar")
+res = {"timestamp": [1000 * STEP, 1001 * STEP, 1003 * STEP],
+       "indicators": {"quote": [{"open": [10, 11, 13], "high": [11, 12, 14],
+                                 "low": [9, 10, 12], "close": [10.5, 11.5, 13.5],
+                                 "volume": [120, None, 7]}]}}
+packed, kept, n = pack(res, STEP)
+check("three bars on a grid of four", kept == 3 and n == 4, (kept, n))
+check("volume rides along", packed["bars"][0][4] == 120, packed["bars"][0])
+check("a missing volume is zero, not a crash", packed["bars"][1][4] == 0,
+      packed["bars"][1])
+check("the closed slot is still empty", packed["bars"][2] is None,
+      packed["bars"][2])
+check("and the four prices are untouched",
+      packed["bars"][3][:4] == [13, 14, 12, 13.5], packed["bars"][3])
 
 print("\n" + ("%d check(s) failed" % len(FAILED) if FAILED
               else "all checks passed"))
