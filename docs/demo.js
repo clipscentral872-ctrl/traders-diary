@@ -683,6 +683,39 @@ export function init(onSaveToDiary, onTradeClosed) {
   });
   litTools();
 
+  /* The time in New York, ticking, as TradingView keeps it in the corner of
+     the chart. You trade on New York time from somewhere else, so this is
+     the clock that matters, and before the open it says how long is left.
+     Only while the Demo is on screen: a second-by-second timer for a tab
+     nobody is looking at is work for nothing. */
+  const clk = $("dclock");
+  if (clk) {
+    const fmts = new Map();
+    const fmt = (zone, opts) => {
+      const k = zone + JSON.stringify(opts);
+      if (!fmts.has(k)) fmts.set(k, new Intl.DateTimeFormat("en-GB", {timeZone: zone, ...opts}));
+      return fmts.get(k);
+    };
+    const tick = () => {
+      const pane = document.querySelector('.tabpane[data-tab="demo"]');
+      if (!pane || pane.hidden) return;
+      const now = Date.now(), zone = C.getZone();
+      let text = fmt(zone, {hour: "2-digit", minute: "2-digit", second: "2-digit",
+                            hourCycle: "h23"}).format(now) + " " + C.zoneName(now);
+      const wd = fmt(zone, {weekday: "short"}).format(now);
+      const m = C.minutes(now);
+      // The open is a New York time, so the countdown only makes sense there.
+      if (zone === C.NY && wd !== "Sat" && wd !== "Sun" && m < C.RTH_OPEN) {
+        const left = C.RTH_OPEN - m;
+        text += `   opens in ${left >= 60 ? Math.floor(left / 60) + "h " : ""}${left % 60}m`;
+      }
+      clk.textContent = text;
+    };
+    tick();
+    setInterval(tick, 1000);
+    document.addEventListener("visibilitychange", tick);
+  }
+
   render();
   refresh();
   // The site republishes bars through the session, so a tab left open picks

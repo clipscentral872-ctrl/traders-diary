@@ -1038,6 +1038,11 @@ body{overflow:hidden}
   font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:11.5px; color:var(--muted);
   white-space:nowrap;
 }
+/* The live New York clock beside the price's age on the Demo. Hidden on a
+   phone, where that bar is already full. */
+.pclock{margin-left:12px; color:var(--muted); font-variant-numeric:tabular-nums;
+  white-space:nowrap; font-size:11.5px}
+@media (max-width:640px){ .pclock{display:none} }
 .pstale .old{color:var(--loss)}
 
 .pstage{
@@ -1778,6 +1783,7 @@ body{overflow:hidden}
       <select id="dsym" class="psel" aria-label="Contract"></select>
       <div class="tfrow" id="dtf" role="group" aria-label="Timeframe"></div>
       <span class="pstale" id="dread"></span>
+      <span class="pclock" id="dclock"></span>
       <div class="pgrow" id="dohlc"></div>
     </div>
     <div class="wsstage"><canvas id="dc"></canvas></div>
@@ -2240,7 +2246,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=9240ba59bce6","./chart.js":"./chart.js?v=9240ba59bce6","./levels.js":"./levels.js?v=9240ba59bce6","./revisit.js":"./revisit.js?v=9240ba59bce6","./series.js":"./series.js?v=9240ba59bce6","./clock.js":"./clock.js?v=9240ba59bce6","./vault.js":"./vault.js?v=9240ba59bce6","./draw.js":"./draw.js?v=9240ba59bce6","./profile.js":"./profile.js?v=9240ba59bce6","./whatif.js":"./whatif.js?v=9240ba59bce6","./precheck.js":"./precheck.js?v=9240ba59bce6","./shelf.js":"./shelf.js?v=9240ba59bce6","./watchlist.js":"./watchlist.js?v=9240ba59bce6","./lock.js":"./lock.js?v=9240ba59bce6","./replay.js":"./replay.js?v=9240ba59bce6","./demo.js":"./demo.js?v=9240ba59bce6","./diary.js":"./diary.js?v=9240ba59bce6","./videos.js":"./videos.js?v=9240ba59bce6","./system.js":"./system.js?v=9240ba59bce6","./dashboard.js":"./dashboard.js?v=9240ba59bce6"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=50ed44ce8c99","./chart.js":"./chart.js?v=50ed44ce8c99","./levels.js":"./levels.js?v=50ed44ce8c99","./revisit.js":"./revisit.js?v=50ed44ce8c99","./series.js":"./series.js?v=50ed44ce8c99","./clock.js":"./clock.js?v=50ed44ce8c99","./vault.js":"./vault.js?v=50ed44ce8c99","./draw.js":"./draw.js?v=50ed44ce8c99","./profile.js":"./profile.js?v=50ed44ce8c99","./whatif.js":"./whatif.js?v=50ed44ce8c99","./precheck.js":"./precheck.js?v=50ed44ce8c99","./shelf.js":"./shelf.js?v=50ed44ce8c99","./watchlist.js":"./watchlist.js?v=50ed44ce8c99","./lock.js":"./lock.js?v=50ed44ce8c99","./replay.js":"./replay.js?v=50ed44ce8c99","./demo.js":"./demo.js?v=50ed44ce8c99","./diary.js":"./diary.js?v=50ed44ce8c99","./videos.js":"./videos.js?v=50ed44ce8c99","./system.js":"./system.js?v=50ed44ce8c99","./dashboard.js":"./dashboard.js?v=50ed44ce8c99"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.

@@ -926,6 +926,11 @@ body{overflow:hidden}
   font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:11.5px; color:var(--muted);
   white-space:nowrap;
 }
+/* The live New York clock beside the price's age on the Demo. Hidden on a
+   phone, where that bar is already full. */
+.pclock{margin-left:12px; color:var(--muted); font-variant-numeric:tabular-nums;
+  white-space:nowrap; font-size:11.5px}
+@media (max-width:640px){ .pclock{display:none} }
 .pstale .old{color:var(--loss)}
 
 .pstage{
