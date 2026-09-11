@@ -8,7 +8,7 @@
  *
  *   node tools/test_series.mjs
  */
-import {resample} from "../docs/series.js";
+import {resample, bucketIndex, formingBar, stitchHours} from "../docs/series.js";
 
 let failed = 0;
 const check = (name, ok, detail = "") => {
@@ -116,6 +116,71 @@ console.log("\nvolume adds up across a built bar");
   // A file with no volume stays without it, rather than showing zero.
   const none = resample(fiveMin("2026-09-02T09:30:00Z", 3), 5 * MIN, 3, false);
   check("no volume in, none out", none[0].v == null, String(none[0].v));
+}
+
+console.log("\na candle forms from the bars played so far");
+{
+  const fine = fiveMin("2026-09-02T09:30:00Z", 9)
+    .map((b, i) => ({...b, h: b.h + (i === 1 ? 10 : 0), v: 10 * (i + 1)}));
+  const coarse = resample(fine, 5 * MIN, 3, false);
+  const idx = bucketIndex(fine, coarse);
+  check("each five minute bar knows its quarter hour",
+        Array.from(idx).join() === "0,0,0,1,1,1,2,2,2", Array.from(idx).join());
+  const one = formingBar(fine, idx, 0, coarse[0].ms);
+  check("after one bar the candle is that bar",
+        one.o === fine[0].o && one.h === fine[0].h && one.l === fine[0].l
+        && one.c === fine[0].c && one.v === 10, JSON.stringify(one));
+  const two = formingBar(fine, idx, 1, coarse[0].ms);
+  check("after two it has the second bar's high and close",
+        two.h === fine[1].h && two.c === fine[1].c && two.o === fine[0].o
+        && two.v === 30, JSON.stringify(two));
+  // Once its last bar is in, the forming candle is the finished one.
+  let same = true;
+  for (const j of [2, 5, 8]) {
+    const f = formingBar(fine, idx, j, coarse[idx[j]].ms);
+    const c = coarse[idx[j]];
+    if (!(f.ms === c.ms && f.o === c.o && f.h === c.h && f.l === c.l
+          && f.c === c.c && f.v === c.v)) same = false;
+  }
+  check("and when its bucket is complete it is the finished bar", same);
+  const mid = formingBar(fine, idx, 4, coarse[1].ms);
+  check("a candle in the middle starts at its own bucket, not the one before",
+        mid.o === fine[3].o && mid.c === fine[4].c, JSON.stringify(mid));
+}
+
+console.log("\nthe hour is stitched from the finest bars held");
+{
+  const HOUR = 60 * MIN;
+  const t0 = Date.parse("2026-09-01T10:00:00Z");
+  const h1 = [];
+  for (let i = 0; i < 6; i++)
+    h1.push({ms: t0 + i * HOUR, o: 1, h: 2, l: 0, c: 1, v: 1});
+  // Five minute bars from 12:20, part way into an hour.
+  const m5 = [];
+  for (let i = 0; i < 40; i++) {
+    const v = 100 + i;
+    m5.push({ms: t0 + 2 * HOUR + 20 * MIN + i * 5 * MIN, o: v, h: v + 1, l: v - 1, c: v, v: 2});
+  }
+  const {fine, hours, split} = stitchHours(h1, m5);
+  check("the split is the first whole hour of five minute bars",
+        split === t0 + 3 * HOUR, new Date(split).toISOString());
+  check("hours before it come from the hourly file",
+        hours.slice(0, 3).every(b => b.o === 1) && hours[2].ms === t0 + 2 * HOUR,
+        JSON.stringify(hours.slice(0, 3)));
+  check("hours after it are built from five minutes",
+        hours[3].ms === t0 + 3 * HOUR && hours[3].o === m5[8].o
+        && hours[3].c === m5[19].c && hours[3].v === 24,
+        JSON.stringify(hours[3]));
+  check("the fine bars are hours, then five minutes, in order",
+        fine.length === 3 + 32 && fine[2].o === 1 && fine[3].ms === split
+        && fine.every((b, i) => i === 0 || b.ms > fine[i - 1].ms));
+  const idx = bucketIndex(fine, hours);
+  check("an old hour is its own fine bar, a new one owns twelve",
+        idx[2] === 2 && idx[3] === 3 && idx[14] === 3 && idx[15] === 4,
+        Array.from(idx).slice(0, 16).join());
+  const none = stitchHours(h1, []);
+  check("with no five minute bars it is the hourly file",
+        none.fine === h1 && none.hours === h1);
 }
 
 console.log(failed ? `\n${failed} check(s) failed` : "\nall checks passed");

@@ -115,6 +115,78 @@ export function resample(bars, stepMs, n, anchorSession) {
   return out;
 }
 
+/** How long one bar of a published file lasts. */
+export const STEP_MS = {"1m": MIN, "5m": 5 * MIN, "1h": 60 * MIN};
+
+/**
+ * For each bar of a finer series, the index of the coarser bar it falls in.
+ *
+ * The replay steps through the finer bars and draws the coarser ones, so it
+ * needs to know, for the five-minute bar it has just played, which fifteen
+ * minute candle that belongs to. Both series are ascending, so one pass does
+ * it. A coarse bar owns every fine bar from its own start up to the start of
+ * the next one.
+ */
+export function bucketIndex(fine, coarse) {
+  const out = new Int32Array(fine.length);
+  let k = 0;
+  for (let j = 0; j < fine.length; j++) {
+    while (k + 1 < coarse.length && coarse[k + 1].ms <= fine[j].ms) k++;
+    out[j] = k;
+  }
+  return out;
+}
+
+/**
+ * The coarse bar as it stood when fine bar j closed.
+ *
+ * Opened by the first fine bar of its bucket, its high and low so far, and
+ * closed at bar j. This is the candle TradingView draws half formed during a
+ * replay. Drawing the finished bar instead showed the rest of the hour before
+ * it had happened: switch a replay at 10:25 from five minutes to the hour and
+ * the 10:00 candle arrived complete, with 35 minutes of the future in it.
+ * When j is the last fine bar of its bucket this is the finished bar.
+ */
+export function formingBar(fine, idx, j, ms) {
+  const k = idx[j];
+  let s = j;
+  while (s > 0 && idx[s - 1] === k) s--;
+  let h = -Infinity, l = Infinity, v = null;
+  for (let q = s; q <= j; q++) {
+    const b = fine[q];
+    if (b.h > h) h = b.h;
+    if (b.l < l) l = b.l;
+    if (b.v != null) v = (v ?? 0) + b.v;
+  }
+  return {ms, o: fine[s].o, h, l, c: fine[j].c, v};
+}
+
+/**
+ * The hour, and the bars to step it with, from the finest data held.
+ *
+ * The hourly file reaches back two years; the five minute one only as far as
+ * it has been collecting. So the hour is the hourly file up to where the five
+ * minute bars begin, and built from the five minute bars after that, and the
+ * bars a replay steps through follow the same split. Stepping an hourly chart
+ * an hour at a time skipped whatever happened inside the hour, fills
+ * included, and showed the last finished hour's price as the market's.
+ *
+ * The split is on an hour boundary so no hour is half one and half the other.
+ * Returns the fine bars, the hours, and the moment the five minute bars start.
+ */
+export function stitchHours(h1, m5) {
+  const HOUR = 60 * MIN;
+  if (!m5 || !m5.length) return {fine: h1, hours: h1, split: Infinity};
+  const split = Math.ceil(m5[0].ms / HOUR) * HOUR;
+  const old = h1.filter(b => b.ms < split);
+  const recent = m5.filter(b => b.ms >= split);
+  return {
+    fine: old.concat(recent),
+    hours: old.concat(resample(recent, 5 * MIN, 12, false)),
+    split,
+  };
+}
+
 /** Bars for a symbol at a timeframe, built if it is not one that is published. */
 export async function load(sym, tf) {
   const spec = TIMEFRAMES.find(t => t.key === tf) || TIMEFRAMES[0];

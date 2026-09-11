@@ -916,6 +916,7 @@ async function opened(pin) {
   storeLine();
   lockState();
   DEMO.reload();
+  RP.reopen();
   // The video library belongs to the journal too, and init() ran before there
   // was one.
   // Re-ask whether the trade on screen has a video, now that the library has

@@ -1889,8 +1889,8 @@ body{overflow:hidden}
     </div>
     <div class="ptransport" id="rpctl" role="group" aria-label="Replay controls" hidden>
         <button class="ptool picon" id="rplay" title="Play (Shift+Down)" aria-label="Play"></button>
-        <button class="ptool picon" id="rstep1" title="Forward one bar (Shift+Right)"
-                aria-label="Forward one bar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6v12l9-6z"/><path d="M18 6v12"/></svg></button>
+        <button class="ptool picon" id="rstep1" title="Forward (Shift+Right)"
+                aria-label="Forward"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6v12l9-6z"/><path d="M18 6v12"/></svg></button>
         <select class="ptool pspeed" id="rspeed" title="Replay speed" aria-label="Replay speed">
           <option value="10">10x</option><option value="7">7x</option>
           <option value="5">5x</option><option value="3">3x</option>
@@ -2286,7 +2286,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=5e357aa76574","./chart.js":"./chart.js?v=5e357aa76574","./levels.js":"./levels.js?v=5e357aa76574","./revisit.js":"./revisit.js?v=5e357aa76574","./series.js":"./series.js?v=5e357aa76574","./clock.js":"./clock.js?v=5e357aa76574","./vault.js":"./vault.js?v=5e357aa76574","./draw.js":"./draw.js?v=5e357aa76574","./profile.js":"./profile.js?v=5e357aa76574","./whatif.js":"./whatif.js?v=5e357aa76574","./precheck.js":"./precheck.js?v=5e357aa76574","./shelf.js":"./shelf.js?v=5e357aa76574","./watchlist.js":"./watchlist.js?v=5e357aa76574","./lock.js":"./lock.js?v=5e357aa76574","./replay.js":"./replay.js?v=5e357aa76574","./demo.js":"./demo.js?v=5e357aa76574","./diary.js":"./diary.js?v=5e357aa76574","./videos.js":"./videos.js?v=5e357aa76574","./system.js":"./system.js?v=5e357aa76574","./dashboard.js":"./dashboard.js?v=5e357aa76574"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=df83c18054a4","./chart.js":"./chart.js?v=df83c18054a4","./levels.js":"./levels.js?v=df83c18054a4","./revisit.js":"./revisit.js?v=df83c18054a4","./series.js":"./series.js?v=df83c18054a4","./clock.js":"./clock.js?v=df83c18054a4","./vault.js":"./vault.js?v=df83c18054a4","./draw.js":"./draw.js?v=df83c18054a4","./profile.js":"./profile.js?v=df83c18054a4","./whatif.js":"./whatif.js?v=df83c18054a4","./precheck.js":"./precheck.js?v=df83c18054a4","./shelf.js":"./shelf.js?v=df83c18054a4","./watchlist.js":"./watchlist.js?v=df83c18054a4","./lock.js":"./lock.js?v=df83c18054a4","./replay.js":"./replay.js?v=df83c18054a4","./demo.js":"./demo.js?v=df83c18054a4","./diary.js":"./diary.js?v=df83c18054a4","./videos.js":"./videos.js?v=df83c18054a4","./system.js":"./system.js?v=df83c18054a4","./dashboard.js":"./dashboard.js?v=df83c18054a4"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -3206,6 +3206,7 @@ async function opened(pin) {
   storeLine();
   lockState();
   DEMO.reload();
+  RP.reopen();
   // The video library belongs to the journal too, and init() ran before there
   // was one.
   // Re-ask whether the trade on screen has a video, now that the library has
