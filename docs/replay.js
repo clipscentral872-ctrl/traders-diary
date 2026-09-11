@@ -198,6 +198,11 @@ function paint() {
 
 /* -------------------------------------------------------------- render */
 
+/* Volume the way a chart legend writes it: exact while it is small, then
+   in thousands and millions, so the readout keeps its width. */
+const vol = n => n >= 1e6 ? (n / 1e6).toFixed(2) + "M"
+  : n >= 1e4 ? (n / 1e3).toFixed(1) + "K" : String(n);
+
 function ohlc(b, prev) {
   const box = $("rohlc");
   if (!b) { box.innerHTML = ""; return; }
@@ -212,6 +217,8 @@ function ohlc(b, prev) {
     + (ch == null ? "" : `<span class="${ch >= 0 ? "up" : "dn"}">`
         + `${ch >= 0 ? "+" : ""}${px(ch)} `
         + `(${ch >= 0 ? "+" : ""}${(ch / prev.c * 100).toFixed(2)}%)</span>`)
+    // The bar's volume, when the bars carry it, as the legend shows it.
+    + (b.v != null ? `<span>Vol <b>${vol(b.v)}</b></span>` : "")
     + '</span>';
 }
 
@@ -242,7 +249,7 @@ function render() {
   if (b) {
     $("rbuypx").textContent = px(b.c);
     $("rsellpx").textContent = px(b.c);
-    ohlc(b);
+    ohlc(b, S.bars[S.i - 1]);
   }
 
   if (p) dragNote(); else riskNote();
@@ -597,7 +604,7 @@ export function init(onSave) {
   chart = createChart($("rc"), {
     timeLabel: ms => C.label(ms),
     timeParts: ms => ({day: C.day(ms), min: C.minutes(ms)}),
-    onHover: (b, i, prev) => ohlc(b || S.bars[S.i], b ? prev : null),
+    onHover: (b, i, prev) => ohlc(b || S.bars[S.i], b ? prev : S.bars[S.i - 1]),
     onLevelMove: levelMoved,
     onLevelDrop: which => { recordMove(which); render(); },
     onPick: i => { armed(false); cutAt(i); },

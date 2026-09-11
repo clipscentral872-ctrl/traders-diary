@@ -287,6 +287,11 @@ function paint() {
   chart.setPosition(withWorth(D.pos));
 }
 
+/* Volume the way a chart legend writes it: exact while it is small, then
+   in thousands and millions, so the readout keeps its width. */
+const vol = n => n >= 1e6 ? (n / 1e6).toFixed(2) + "M"
+  : n >= 1e4 ? (n / 1e3).toFixed(1) + "K" : String(n);
+
 function ohlc(b, prev) {
   const box = $("dohlc");
   if (!box) return;
@@ -302,6 +307,8 @@ function ohlc(b, prev) {
     + (ch == null ? "" : `<span class="${ch >= 0 ? "up" : "dn"}">`
         + `${ch >= 0 ? "+" : ""}${px(ch)} `
         + `(${ch >= 0 ? "+" : ""}${(ch / prev.c * 100).toFixed(2)}%)</span>`)
+    // The bar's volume, when the bars carry it, as the legend shows it.
+    + (b.v != null ? `<span>Vol <b>${vol(b.v)}</b></span>` : "")
     + '</span>';
 }
 
@@ -374,7 +381,7 @@ function render() {
     $("dbuypx").textContent = px(t.c);
     $("dsellpx").textContent = px(t.c);
   }
-  if (b) ohlc(b);
+  if (b) ohlc(b, D.bars[D.bars.length - 2]);
 
   const p = D.pos;
   const stats = [
@@ -550,7 +557,7 @@ export function init(onSaveToDiary, onTradeClosed) {
     onPress: (px, py) => DRAW.down(px, py, chart),
     onDrag: (px, py) => DRAW.move(px, py, chart),
     onRelease: moved => { if (DRAW.release(moved)) chart.repaint(); },
-    onHover: (b, i, prev) => ohlc(b || last(), b ? prev : null),
+    onHover: (b, i, prev) => ohlc(b || last(), b ? prev : D.bars[D.bars.length - 2]),
     onLevelMove: levelMoved,
     onLevelDrop: which => { recordMove(which); saveAccount(); render(); },
   });
