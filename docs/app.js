@@ -17,6 +17,7 @@ import * as DASH from "./dashboard.js";
 import * as VID from "./videos.js";
 import * as DIARY from "./diary.js";
 import * as DRAW from "./draw.js";
+import * as W from "./whatif.js";
 
 const $ = id => document.getElementById(id);
 // Names within a journal. The journal itself decides where they land, so
@@ -565,9 +566,8 @@ showSel.addEventListener("change", () => {
    you keep paying for is worth reading. */
 const LESSON = {
   "trailed early": ["Tightening the stop before your own rule says to",
-    "Your rule holds the stop until price has run about twice what you risked. "
-    + "Moving it in earlier turns a trade you were right about into a small loss, "
-    + "and it is the single most common thing in this record."],
+    "Your rule holds the stop until price has run about twice what you risked, "
+    + "and this marks every time it moved in before that."],
   "stopped into the news": ["Leaving a stop where a data release can reach it",
     "US data lands at 08:30 and 10:00 New York, and the Fed at 14:00. In the "
     + "minute before, the market reaches for resting stops. A stop just past the "
@@ -598,6 +598,10 @@ const LESSON = {
     + "before the setup finished rather than of a bad read."],
 };
 
+/* The habits the Home tab can replay against the bars. Kept the same as its
+   list, so the two tabs can never give different answers about one habit. */
+const TESTED = new Set(["trailed early", "right, stopped early"]);
+
 function renderLearn() {
   const mine = window.TRADES.filter(t => (t.source || "live") === "live");
   const cost = new Map();
@@ -609,17 +613,40 @@ function renderLearn() {
       cost.set(f, c);
     }
 
+  /* Most frequent first, and a cost only where one was measured.
+   *
+   * This ranked the habits by the losses on the trades that carried them and
+   * called that the cost, under the heading "where the money is actually
+   * lost". That comparison is not one: they are different trades on
+   * different days, and the habit is one of a hundred things separating
+   * them. It put tightening the stop first, at -$1,470, while the Home tab,
+   * which replays those same trades against the bars with the stop left
+   * alone, found no detectable difference. Two tabs gave opposite advice
+   * about the same habit, and the wrong one had the more confident heading.
+   *
+   * So a habit that can be replayed says what the replay found, in the same
+   * sentence the Home tab uses. Everything else says what it is: how often it
+   * happened, and what the losing trades with it lost between them, labelled
+   * as where it showed up rather than as a bill. */
   const ranked = [...cost.entries()]
     .filter(([f]) => LESSON[f])
-    .sort((a, b) => (b[1].lost - a[1].lost) || (b[1].n - a[1].n))
+    .sort((a, b) => (b[1].n - a[1].n) || (b[1].lost - a[1].lost))
     .slice(0, 6);
+  const barsOf = sym => BARS[E.FEED[sym]] || [];
 
   $("lessons").innerHTML = mine.length
     ? (ranked.map(([f, c]) => {
         const [title, body] = LESSON[f];
-        const bill = c.lost
-          ? ` It appears on losses totalling ${dollars(-c.lost)}.`
-          : " It has not cost you money yet.";
+        let bill;
+        if (TESTED.has(f)) {
+          const res = W.compare(mine.filter(t => (t.flags || []).includes(f)), barsOf);
+          bill = " Tested against the bars: " + W.verdict(res);
+        } else {
+          bill = c.lost
+            ? ` The losing trades with it lost ${dollars(-c.lost)} between them. `
+              + `That is where it showed up, not what it cost.`
+            : " None of the trades with it lost money.";
+        }
         return `<li><span class="ln">${c.n}</span><span class="lt">`
           + `<b>${esc(title)}</b><span>${esc(body + bill)}</span></span></li>`;
       }).join("")
@@ -801,6 +828,11 @@ function fillCandles() {
   if (filled) {
     save(window.TRADES, window.START);
     renderPanels();
+  } else {
+    // The bars have arrived either way, and the Learn tab replays trades
+    // against them, so it is drawn again now rather than left saying there
+    // was nothing to replay.
+    renderLearn();
   }
 }
 

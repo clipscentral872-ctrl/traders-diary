@@ -2025,10 +2025,13 @@ body{overflow:hidden}
 </section>
 
 <section>
-  <h2>Where the money is actually lost</h2>
-  <p class="lead">Read from your own record rather than from a book. These are
-  the things this diary has caught in your trading, in the order they cost you
-  the most.</p>
+  <h2>What keeps happening in your trades</h2>
+  <p class="lead">Caught by this diary in your own trading, most frequent
+  first. Where a habit can be replayed against the bars with the stop left
+  alone, the result of that replay is shown. Anywhere else a dollar figure is
+  only what the losing trades with that habit lost between them: they are
+  different trades on different days, so it says where a habit showed up, not
+  what it cost.</p>
   <ul class="lessons" id="lessons"></ul>
 </section>
 
@@ -2237,7 +2240,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=bbb78ea56074","./chart.js":"./chart.js?v=bbb78ea56074","./levels.js":"./levels.js?v=bbb78ea56074","./revisit.js":"./revisit.js?v=bbb78ea56074","./series.js":"./series.js?v=bbb78ea56074","./clock.js":"./clock.js?v=bbb78ea56074","./vault.js":"./vault.js?v=bbb78ea56074","./draw.js":"./draw.js?v=bbb78ea56074","./profile.js":"./profile.js?v=bbb78ea56074","./whatif.js":"./whatif.js?v=bbb78ea56074","./precheck.js":"./precheck.js?v=bbb78ea56074","./shelf.js":"./shelf.js?v=bbb78ea56074","./watchlist.js":"./watchlist.js?v=bbb78ea56074","./lock.js":"./lock.js?v=bbb78ea56074","./replay.js":"./replay.js?v=bbb78ea56074","./demo.js":"./demo.js?v=bbb78ea56074","./diary.js":"./diary.js?v=bbb78ea56074","./videos.js":"./videos.js?v=bbb78ea56074","./system.js":"./system.js?v=bbb78ea56074","./dashboard.js":"./dashboard.js?v=bbb78ea56074"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=33c83c1d05ce","./chart.js":"./chart.js?v=33c83c1d05ce","./levels.js":"./levels.js?v=33c83c1d05ce","./revisit.js":"./revisit.js?v=33c83c1d05ce","./series.js":"./series.js?v=33c83c1d05ce","./clock.js":"./clock.js?v=33c83c1d05ce","./vault.js":"./vault.js?v=33c83c1d05ce","./draw.js":"./draw.js?v=33c83c1d05ce","./profile.js":"./profile.js?v=33c83c1d05ce","./whatif.js":"./whatif.js?v=33c83c1d05ce","./precheck.js":"./precheck.js?v=33c83c1d05ce","./shelf.js":"./shelf.js?v=33c83c1d05ce","./watchlist.js":"./watchlist.js?v=33c83c1d05ce","./lock.js":"./lock.js?v=33c83c1d05ce","./replay.js":"./replay.js?v=33c83c1d05ce","./demo.js":"./demo.js?v=33c83c1d05ce","./diary.js":"./diary.js?v=33c83c1d05ce","./videos.js":"./videos.js?v=33c83c1d05ce","./system.js":"./system.js?v=33c83c1d05ce","./dashboard.js":"./dashboard.js?v=33c83c1d05ce"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -2258,6 +2261,7 @@ import * as DASH from "./dashboard.js";
 import * as VID from "./videos.js";
 import * as DIARY from "./diary.js";
 import * as DRAW from "./draw.js";
+import * as W from "./whatif.js";
 
 const $ = id => document.getElementById(id);
 // Names within a journal. The journal itself decides where they land, so
@@ -2806,9 +2810,8 @@ showSel.addEventListener("change", () => {
    you keep paying for is worth reading. */
 const LESSON = {
   "trailed early": ["Tightening the stop before your own rule says to",
-    "Your rule holds the stop until price has run about twice what you risked. "
-    + "Moving it in earlier turns a trade you were right about into a small loss, "
-    + "and it is the single most common thing in this record."],
+    "Your rule holds the stop until price has run about twice what you risked, "
+    + "and this marks every time it moved in before that."],
   "stopped into the news": ["Leaving a stop where a data release can reach it",
     "US data lands at 08:30 and 10:00 New York, and the Fed at 14:00. In the "
     + "minute before, the market reaches for resting stops. A stop just past the "
@@ -2839,6 +2842,10 @@ const LESSON = {
     + "before the setup finished rather than of a bad read."],
 };
 
+/* The habits the Home tab can replay against the bars. Kept the same as its
+   list, so the two tabs can never give different answers about one habit. */
+const TESTED = new Set(["trailed early", "right, stopped early"]);
+
 function renderLearn() {
   const mine = window.TRADES.filter(t => (t.source || "live") === "live");
   const cost = new Map();
@@ -2850,17 +2857,40 @@ function renderLearn() {
       cost.set(f, c);
     }
 
+  /* Most frequent first, and a cost only where one was measured.
+   *
+   * This ranked the habits by the losses on the trades that carried them and
+   * called that the cost, under the heading "where the money is actually
+   * lost". That comparison is not one: they are different trades on
+   * different days, and the habit is one of a hundred things separating
+   * them. It put tightening the stop first, at -$1,470, while the Home tab,
+   * which replays those same trades against the bars with the stop left
+   * alone, found no detectable difference. Two tabs gave opposite advice
+   * about the same habit, and the wrong one had the more confident heading.
+   *
+   * So a habit that can be replayed says what the replay found, in the same
+   * sentence the Home tab uses. Everything else says what it is: how often it
+   * happened, and what the losing trades with it lost between them, labelled
+   * as where it showed up rather than as a bill. */
   const ranked = [...cost.entries()]
     .filter(([f]) => LESSON[f])
-    .sort((a, b) => (b[1].lost - a[1].lost) || (b[1].n - a[1].n))
+    .sort((a, b) => (b[1].n - a[1].n) || (b[1].lost - a[1].lost))
     .slice(0, 6);
+  const barsOf = sym => BARS[E.FEED[sym]] || [];
 
   $("lessons").innerHTML = mine.length
     ? (ranked.map(([f, c]) => {
         const [title, body] = LESSON[f];
-        const bill = c.lost
-          ? ` It appears on losses totalling ${dollars(-c.lost)}.`
-          : " It has not cost you money yet.";
+        let bill;
+        if (TESTED.has(f)) {
+          const res = W.compare(mine.filter(t => (t.flags || []).includes(f)), barsOf);
+          bill = " Tested against the bars: " + W.verdict(res);
+        } else {
+          bill = c.lost
+            ? ` The losing trades with it lost ${dollars(-c.lost)} between them. `
+              + `That is where it showed up, not what it cost.`
+            : " None of the trades with it lost money.";
+        }
         return `<li><span class="ln">${c.n}</span><span class="lt">`
           + `<b>${esc(title)}</b><span>${esc(body + bill)}</span></span></li>`;
       }).join("")
@@ -3042,6 +3072,11 @@ function fillCandles() {
   if (filled) {
     save(window.TRADES, window.START);
     renderPanels();
+  } else {
+    // The bars have arrived either way, and the Learn tab replays trades
+    // against them, so it is drawn again now rather than left saying there
+    // was nothing to replay.
+    renderLearn();
   }
 }
 
