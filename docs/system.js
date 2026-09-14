@@ -239,6 +239,64 @@ async function fetchState() {
   return null;
 }
 
+/* Topstep's $50K Trading Combine, played on paper by its own rules.
+ *
+ * The robot runs a third book that trades the small target book's setups at a
+ * fixed $200 and keeps the Combine's rules: a $3,000 target, a loss limit that
+ * trails the best closing balance by $2,000, a $1,000 day, and no single day
+ * worth more than half the profit. This shows where the attempt stands and
+ * what the attempts so far would have cost for real. */
+const usd = v => "$" + Math.round(v).toLocaleString("en-US");
+
+export function topstepHtml(c) {
+  if (!c) return '<p class="srcnote">It starts on the system\'s next poll in the '
+    + "trading window. Until then there is nothing to show.</p>";
+  const pct = Math.max(0, Math.min(100, c.profit / c.need * 100));
+  const roomPct = Math.max(0, Math.min(100, c.room / 2000 * 100));
+  const line = c.status === "failed"
+    ? `Attempt ${c.attempt} failed: ${esc(c.reason)}. A fresh $50,000 starts at `
+      + `the next session, the way a $49 reset would.`
+    : c.status === "passed"
+      ? `Attempt ${c.attempt} passed: ${esc(c.reason)}. For real, this is where `
+        + `the $149 activation fee would be paid.`
+      : c.dll_hit
+        ? "Done for today: the $1,000 daily limit was hit. That stops the day "
+          + "but does not fail the attempt."
+        : c.profit >= 0
+          ? `Attempt ${c.attempt}: ${usd(c.need - c.profit)} to go to the `
+            + `${usd(c.need)} target.`
+          : `Attempt ${c.attempt}: down ${usd(-c.profit)}, with ${usd(c.room)} `
+            + `left above the loss limit.`;
+  const hist = (c.history || []).slice().reverse().map(h =>
+    row(h.result === "passed" ? "ok" : "no",
+        `Attempt ${h.attempt} ${h.result}`,
+        `${h.days} trading day${h.days === 1 ? "" : "s"}, ${h.trades} trade`
+        + `${h.trades === 1 ? "" : "s"}, ${money(h.pnl)}. ${esc(h.reason || "")}`))
+    .join("");
+  const f = c.fees || {total: 0};
+  return `<div class="stats hud">${[
+      stat("attempt", String(c.attempt)),
+      stat("balance", usd(c.equity), c.profit >= 0 ? "win" : "loss"),
+      stat("target", usd(c.need)),
+      stat("loss limit", usd(c.mll)),
+      stat("today", money(c.day_pnl), c.day_pnl >= 0 ? "win" : "loss"),
+      stat("best day", c.best_day > 0 ? money(c.best_day) : "&mdash;"),
+      stat("trading days", String(c.days_traded)),
+      stat("passed / failed", `${c.passes} / ${c.fails}`),
+      stat("cost if real", usd(f.total)),
+    ].join("")}</div>
+    <p class="booknote">Toward the target: <b>${pct.toFixed(0)}%</b></p>
+    <div class="bookbar"><i style="width:${pct.toFixed(1)}%"></i></div>
+    <p class="booknote">Room above the loss limit: <b>${usd(c.room)}</b> of $2,000</p>
+    <div class="bookbar"><i style="width:${roomPct.toFixed(1)}%;background:`
+      + `${roomPct < 30 ? "var(--loss)" : "var(--win)"}"></i></div>
+    <p class="srcnote">${line}</p>
+    <p class="srcnote">Cost if real is $49 a month, plus $49 for each reset beyond `
+      + `the free one each renewal brings. A day worth more than half the profit `
+      + `raises the target to twice that day, which is Topstep's consistency rule.</p>
+    ${hist ? `<ul class="stands">${hist}</ul>` : ""}`;
+}
+
 /* Kept small whichever file arrived.
  *
  * The full state is 800 KB and most of it is the poller's own workings. Put
@@ -250,6 +308,10 @@ export const slim = d => ({
   wide: d.wide ? {
     equity: d.wide.equity, position: d.wide.position,
     trades: (d.wide.trades || []).map(t => ({pnl: t.pnl, r: t.r})),
+  } : undefined,
+  topstep: d.topstep ? {
+    equity: d.topstep.equity, position: d.topstep.position,
+    combine: d.topstep.combine,
   } : undefined,
   polls: d.polls, started: d.started, updated: d.updated,
   seen_totals: seenTotals(d),
@@ -322,5 +384,6 @@ export async function show() {
 
   renderStanding(d, when, stale);
   renderBooks(d);
+  $("systopstep").innerHTML = topstepHtml(d.topstep && d.topstep.combine);
   renderSeen(d);
 }
