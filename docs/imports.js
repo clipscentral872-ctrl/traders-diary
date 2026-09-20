@@ -180,6 +180,30 @@ export const SOURCES = [
   },
 ];
 
+/* Tradovate's Account Balance History: one row a day, the account's own
+   closing balance and what it realised. This is the record the firm's
+   trailing drawdown is measured against, and it is net of every fee, which a
+   pile of fills can only estimate. */
+SOURCES.push({
+  id: "tradovate-balance",
+  name: "Tradovate account balance history",
+  need: [["accountname", "accountid"], ["tradedate"], ["totalamount"]],
+  fills: () => [],
+  balances(rows) {
+    const out = [];
+    for (const r of rows) {
+      const date = String(pick(r, ["tradedate", "date"]) || "").trim();
+      const amount = num(pick(r, ["totalamount", "balance", "netliq"]));
+      if (!/^\d{4}-\d{2}-\d{2}/.test(date) || amount === null) continue;
+      out.push({date: date.slice(0, 10), amount,
+                realized: num(pick(r, ["totalrealizedpnl", "realizedpnl"])),
+                account: String(pick(r, ["accountname", "accountid"]) || "")});
+    }
+    out.sort((a, b) => (a.date < b.date ? -1 : 1));
+    return out;
+  },
+});
+
 /** Which export this file is, by its columns alone. */
 export function sniff(headers) {
   const has = new Set((headers || []).map(norm));
@@ -199,7 +223,7 @@ export function sniff(headers) {
  *          no stop on record rather than being given the wrong one.
  */
 export function readAny(files, parseCSV) {
-  const fills = [], moves = [], spans = [], found = [];
+  const fills = [], moves = [], spans = [], found = [], balances = [];
   for (const f of files || []) {
     const rows = parseCSV(f.text || "");
     if (!rows.length) continue;
@@ -212,12 +236,22 @@ export function readAny(files, parseCSV) {
       for (const k of Object.keys(r)) o[norm(k)] = r[k];
       return o;
     });
+    if (source.balances) {
+      const days = source.balances(lower);
+      if (days.length) {
+        balances.push(...days);
+        found.push({file: f.name, source: source.id, name: source.name,
+                    days: days.length});
+      }
+      continue;
+    }
     const got = source.fills(lower);
     if (!got.length) continue;
     fills.push(...got);
+    const stops = source.moves ? source.moves(lower) : [];
+    moves.push(...stops);
     found.push({file: f.name, source: source.id, name: source.name,
-                fills: got.length});
-    if (source.moves) moves.push(...source.moves(lower));
+                fills: got.length, stops: stops.length});
     /* A broker's own export is complete for the period it covers, so every
        trade inside it can be judged. TradingView's activity log cannot say
        that, which is the whole reason spans exist. */
@@ -225,5 +259,6 @@ export function readAny(files, parseCSV) {
     if (times.length) spans.push([times[0], times[times.length - 1]]);
   }
   fills.sort((a, b) => (a["Closing time"] < b["Closing time"] ? -1 : 1));
-  return {fills, moves, spans, found};
+  balances.sort((a, b) => (a.date < b.date ? -1 : 1));
+  return {fills, moves, spans, found, balances};
 }

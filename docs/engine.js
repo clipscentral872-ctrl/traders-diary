@@ -657,7 +657,8 @@ export function ingest(files, existing, barsBySymbol, offsetHours) {
 
   return {trades: all, added, repaired, stillOpen, gaps,
           brokerCount: brokerTrades.length, startBalance: start, withBars,
-          files: files.length, sources: broker.found};
+          files: files.length, sources: broker.found,
+          balances: broker.balances};
 }
 
 /**

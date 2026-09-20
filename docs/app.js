@@ -20,6 +20,7 @@ import * as DIARY from "./diary.js";
 import * as DRAW from "./draw.js";
 import * as W from "./whatif.js";
 import * as FS from "./folder.js";
+import * as FUND from "./funded.js";
 
 const $ = id => document.getElementById(id);
 // Names within a journal. The journal itself decides where they land, so
@@ -378,20 +379,35 @@ async function handle(fileHandles) {
     const out = E.ingest(files, window.TRADES, BARS, offset);
 
     window.TRADES = out.trades;
+    // The broker's own daily balances, which is what the firm's drawdown is
+    // actually measured against.
+    keepBalances(out.balances);
     if (out.startBalance !== null &&
         (window.START === null || out.startBalance < window.START))
       window.START = out.startBalance;
 
     const warn = save(window.TRADES, window.START);
     renderPanels();
+    renderFunded();
 
     const lines = [];
     /* Said first, because it changes what the rest of these numbers mean: a
        broker export carries the stop that was on the position, so trades get
        an R that TradingView's hour-long activity log could never give them. */
-    for (const s of out.sources || [])
+    for (const s of out.sources || []) {
+      if (s.days != null) {
+        lines.push(`Read ${s.days} day${s.days === 1 ? "" : "s"} of the `
+          + `account's own balance from your ${s.name} export.`);
+        continue;
+      }
       lines.push(`Read ${s.fills} fill${s.fills === 1 ? "" : "s"} from your `
-        + `${s.name} export, with the stops that were on the positions.`);
+        + `${s.name} export`
+        + (s.stops
+           ? `, with ${s.stops} stop or target order${s.stops === 1 ? "" : "s"} `
+             + `on them, which is where R comes from.`
+           : `. It carries no stop orders, so R still needs the orders export `
+             + `from the trading screen.`));
+    }
     lines.push(out.added
       ? `${out.added} new trade${out.added === 1 ? "" : "s"} added. `
         + `${out.trades.length} on record.`
@@ -447,6 +463,116 @@ if (matchMedia("(hover: none)").matches) {
   if (lead) lead.textContent = "Pick all six TradingView exports at once. Anything "
     + "the diary cannot use is ignored, and the same file added twice changes "
     + "nothing, so there is no wrong way to do this.";
+}
+
+/* --------------------------------------------------- the funded account */
+
+/* The rules that close a funded account have nothing to do with whether the
+   trading was good, and none of them are visible while you trade. The firm's
+   numbers are kept with the journal so two accounts on one device never share
+   them, and the broker's own daily balances are kept beside them because they
+   are what the drawdown is really measured against. */
+const PLAN_KEY = "funded.plan";
+const BAL_KEY = "funded.balances";
+
+const planNow = () => {
+  try {
+    const saved = JSON.parse(PROF.get(PLAN_KEY));
+    if (saved && typeof saved === "object") return {...FUND.preset(saved.id), ...saved};
+  } catch { /* nothing kept yet */ }
+  return FUND.preset("fff-velocity-25k");
+};
+
+const balancesNow = () => {
+  try { return JSON.parse(PROF.get(BAL_KEY)) || []; } catch { return []; }
+};
+
+/** Keep the broker's days, newest reading of a day winning. */
+function keepBalances(days) {
+  if (!days || !days.length) return;
+  const by = new Map(balancesNow().map(d => [d.date, d]));
+  for (const d of days) by.set(d.date, d);
+  const all = [...by.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
+  PROF.set(BAL_KEY, JSON.stringify(all));
+}
+
+const FIELDS = [
+  ["start", "Starting balance", 1],
+  ["drawdown", "Max drawdown", 1],
+  ["qualifyingDay", "A day counts at", 1],
+  ["minDays", "Days needed", 1],
+  ["consistencyPct", "Best day limit %", 1],
+  ["target", "Profit target", 1],
+];
+
+function renderPlanForm(plan) {
+  const box = $("planform");
+  if (!box) return;
+  box.innerHTML = FIELDS.map(([key, label]) => {
+    const value = key === "consistencyPct"
+      ? Math.round((plan.consistency || 0) * 100) : (plan[key] ?? 0);
+    return `<label>${esc(label)}<input type="number" step="any" `
+      + `data-plan="${key}" value="${value}"></label>`;
+  }).join("");
+  box.oninput = e => {
+    const key = e.target.dataset.plan;
+    if (!key) return;
+    const v = parseFloat(e.target.value);
+    if (!Number.isFinite(v)) return;
+    const next = {...planNow()};
+    if (key === "consistencyPct") next.consistency = v / 100;
+    else next[key] = v;
+    PROF.set(PLAN_KEY, JSON.stringify(next));
+    renderFunded();
+  };
+}
+
+function renderFunded() {
+  const sec = $("fundedsec"), card = $("fundedcard");
+  if (!sec || !card) return;
+  const plan = planNow();
+  const balances = balancesNow();
+  const live = window.TRADES.filter(t => (t.source || "live") === "live");
+  if (plan.id === "none" || (!balances.length && !live.length)) {
+    sec.hidden = true;
+    return;
+  }
+  sec.hidden = false;
+  renderPlanForm(plan);
+
+  const s = FUND.state(plan, {balances, trades: window.TRADES});
+  const pct = Math.round(s.roomPct * 100);
+  const tight = s.roomPct < 0.25;
+  const rows = [
+    stat("balance", "$" + Math.round(s.balance).toLocaleString("en-US")),
+    stat("profit", dollars(s.profit), s.profit >= 0 ? "win" : "loss"),
+    stat("drawdown floor", "$" + Math.round(s.floor).toLocaleString("en-US")),
+    stat("best day", s.best ? dollars(s.best) : "&mdash;"),
+    stat("days that count", `${s.qualifying} of ${s.minDays}`),
+    stat("floor locked", s.locked ? "yes" : "not yet"),
+  ].join("");
+
+  const todo = [];
+  if (s.breached)
+    todo.push('<span class="fundwarn">This account is at or below its '
+      + "drawdown floor.</span>");
+  if (!s.consistencyOk && s.needMore > 0)
+    todo.push(`Your best day is ${Math.round(s.bestPct * 100)}% of the profit. `
+      + `A payout needs ${Math.round((plan.consistency || 0) * 100)}% or less, `
+      + `so ${dollars(s.needMore)} more profit on other days.`);
+  if (s.daysLeft)
+    todo.push(`${s.daysLeft} more day${s.daysLeft === 1 ? "" : "s"} of `
+      + `$${plan.qualifyingDay}+ to count.`);
+  if (s.ready) todo.push("Every rule on this list is met.");
+
+  card.innerHTML =
+    `<p class="fundline">Room before the account is closed: `
+    + `<b>${dollars(s.room).replace("+", "")}</b> of `
+    + `$${Math.round(plan.drawdown).toLocaleString("en-US")}</p>`
+    + `<div class="fundbar${tight ? " warn" : ""}"><i style="width:${pct}%"></i></div>`
+    + `<div class="stats hud">${rows}</div>`
+    + todo.map(t => `<p class="fundnote">${t}</p>`).join("")
+    + s.notes.map(n => `<p class="fundnote">${esc(n)}</p>`).join("");
 }
 
 /* ------------------------------------------------- the exports folder */
@@ -571,6 +697,7 @@ $("loadpick").addEventListener("change", async () => {
     window.TRADES = o.trades;
     window.START = o.start ?? null;
     const warn = save(window.TRADES, window.START);
+    renderFunded();
     renderPanels();
     storeLine();
     if (warn) { say(warn, true); return; }
@@ -989,6 +1116,7 @@ async function opened(pin) {
   if (tzSel) tzSel.value = String(tzOffset());
   if ($("showtz")) $("showtz").value = displayZone();
   renderPanels();
+  renderFunded();
   storeLine();
   lockState();
   DEMO.reload();

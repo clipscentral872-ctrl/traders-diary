@@ -959,6 +959,42 @@ body{overflow:hidden}
 /* The indicators under the prices, a row each with an eye, as TradingView
    lists them. Only the eye takes a click; the rest of the legend lets the
    chart underneath have it. */
+/* The funded account guard. The room bar is the one number that matters, so
+   it is the widest thing on the card. */
+.fundbar{height:10px; border-radius:5px; background:var(--lift); overflow:hidden;
+  margin:4px 0 10px}
+.fundbar i{display:block; height:100%; background:var(--win); width:0}
+.fundbar.warn i{background:var(--loss)}
+.fundline{margin:0 0 4px; font-size:13px; color:var(--text)}
+.fundline b{font-variant-numeric:tabular-nums}
+.fundnote{margin:6px 0 0; color:var(--muted); font-size:11.5px; line-height:1.5}
+.fundwarn{color:var(--loss)}
+.planform{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:10px; margin:6px 0 10px}
+.planform label{display:flex; flex-direction:column; gap:4px; font-size:11px;
+  color:var(--muted); text-transform:uppercase; letter-spacing:.03em}
+.planform input{background:var(--lift); border:1px solid var(--line);
+  border-radius:4px; color:var(--text); padding:7px 9px; font-size:13px;
+  font-variant-numeric:tabular-nums; min-height:38px}
+
+/* The funded account guard. The room bar is the one number that matters, so
+   it is the widest thing on the card. */
+.fundbar{height:10px; border-radius:5px; background:var(--lift); overflow:hidden;
+  margin:4px 0 10px}
+.fundbar i{display:block; height:100%; background:var(--win); width:0}
+.fundbar.warn i{background:var(--loss)}
+.fundline{margin:0 0 4px; font-size:13px; color:var(--text)}
+.fundline b{font-variant-numeric:tabular-nums}
+.fundnote{margin:6px 0 0; color:var(--muted); font-size:11.5px; line-height:1.5}
+.fundwarn{color:var(--loss)}
+.planform{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:10px; margin:6px 0 10px}
+.planform label{display:flex; flex-direction:column; gap:4px; font-size:11px;
+  color:var(--muted); text-transform:uppercase; letter-spacing:.03em}
+.planform input{background:var(--lift); border:1px solid var(--line);
+  border-radius:4px; color:var(--text); padding:7px 9px; font-size:13px;
+  font-variant-numeric:tabular-nums; min-height:38px}
+
 /* The watched folder, under the drop box. */
 .folderrow{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:12px}
 .folderrow .srcnote{flex:1 1 260px; margin:0}
@@ -1614,6 +1650,8 @@ MODULES = [
     "engine.js", "chart.js", "levels.js", "revisit.js", "series.js",
     "clock.js", "vault.js", "draw.js", "profile.js", "whatif.js", "precheck.js", "shelf.js",
     "watchlist.js", "lock.js", "inds.js", "imports.js", "folder.js",
+    "funded.js",
+    "funded.js",
     "replay.js", "demo.js", "diary.js", "videos.js", "system.js",
     "dashboard.js",
 ]
