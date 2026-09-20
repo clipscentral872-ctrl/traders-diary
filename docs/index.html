@@ -1064,6 +1064,9 @@ body{overflow:hidden}
 /* The indicators under the prices, a row each with an eye, as TradingView
    lists them. Only the eye takes a click; the rest of the legend lets the
    chart underneath have it. */
+/* The watched folder, under the drop box. */
+.folderrow{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:12px}
+.folderrow .srcnote{flex:1 1 260px; margin:0}
 .pinds{display:flex; flex-direction:column; margin-top:2px}
 .pind{display:flex; align-items:center; gap:6px; min-height:20px;
   font-size:11px; color:var(--muted)}
@@ -1612,11 +1615,18 @@ body{overflow:hidden}
            aria-label="Choose your TradingView export files">
         <input type="file" id="pick" multiple accept=".csv" hidden>
         <p class="dropbig">Add exports</p>
-        <p class="dropsub">All six at once</p>
+        <p class="dropsub">All six from TradingView, or Fills and Orders from Tradovate</p>
         <ul class="dropfiles" id="dropfiles"></ul>
         <div class="dropbar" id="dropbar" hidden><i></i></div>
       </div>
       <p class="dropmsg" id="dropmsg" hidden></p>
+      <div class="folderrow" id="folderrow" hidden>
+        <button class="pbtn" id="folderbtn" type="button">Watch a folder</button>
+        <p class="srcnote" id="folderline">Point the diary at the folder your
+        exports land in, usually Downloads, and it reads anything new by itself
+        each time you open it. The files are read here and never leave this
+        device.</p>
+      </div>
     </div>
   </div>
 </div>
@@ -2329,7 +2339,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=05f51b264b57","./chart.js":"./chart.js?v=05f51b264b57","./levels.js":"./levels.js?v=05f51b264b57","./revisit.js":"./revisit.js?v=05f51b264b57","./series.js":"./series.js?v=05f51b264b57","./clock.js":"./clock.js?v=05f51b264b57","./vault.js":"./vault.js?v=05f51b264b57","./draw.js":"./draw.js?v=05f51b264b57","./profile.js":"./profile.js?v=05f51b264b57","./whatif.js":"./whatif.js?v=05f51b264b57","./precheck.js":"./precheck.js?v=05f51b264b57","./shelf.js":"./shelf.js?v=05f51b264b57","./watchlist.js":"./watchlist.js?v=05f51b264b57","./lock.js":"./lock.js?v=05f51b264b57","./inds.js":"./inds.js?v=05f51b264b57","./imports.js":"./imports.js?v=05f51b264b57","./replay.js":"./replay.js?v=05f51b264b57","./demo.js":"./demo.js?v=05f51b264b57","./diary.js":"./diary.js?v=05f51b264b57","./videos.js":"./videos.js?v=05f51b264b57","./system.js":"./system.js?v=05f51b264b57","./dashboard.js":"./dashboard.js?v=05f51b264b57"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=9c26ec13fcb7","./chart.js":"./chart.js?v=9c26ec13fcb7","./levels.js":"./levels.js?v=9c26ec13fcb7","./revisit.js":"./revisit.js?v=9c26ec13fcb7","./series.js":"./series.js?v=9c26ec13fcb7","./clock.js":"./clock.js?v=9c26ec13fcb7","./vault.js":"./vault.js?v=9c26ec13fcb7","./draw.js":"./draw.js?v=9c26ec13fcb7","./profile.js":"./profile.js?v=9c26ec13fcb7","./whatif.js":"./whatif.js?v=9c26ec13fcb7","./precheck.js":"./precheck.js?v=9c26ec13fcb7","./shelf.js":"./shelf.js?v=9c26ec13fcb7","./watchlist.js":"./watchlist.js?v=9c26ec13fcb7","./lock.js":"./lock.js?v=9c26ec13fcb7","./inds.js":"./inds.js?v=9c26ec13fcb7","./imports.js":"./imports.js?v=9c26ec13fcb7","./folder.js":"./folder.js?v=9c26ec13fcb7","./replay.js":"./replay.js?v=9c26ec13fcb7","./demo.js":"./demo.js?v=9c26ec13fcb7","./diary.js":"./diary.js?v=9c26ec13fcb7","./videos.js":"./videos.js?v=9c26ec13fcb7","./system.js":"./system.js?v=9c26ec13fcb7","./dashboard.js":"./dashboard.js?v=9c26ec13fcb7"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -2352,6 +2362,7 @@ import * as VID from "./videos.js";
 import * as DIARY from "./diary.js";
 import * as DRAW from "./draw.js";
 import * as W from "./whatif.js";
+import * as FS from "./folder.js";
 
 const $ = id => document.getElementById(id);
 // Names within a journal. The journal itself decides where they land, so
@@ -2779,6 +2790,74 @@ if (matchMedia("(hover: none)").matches) {
   if (lead) lead.textContent = "Pick all six TradingView exports at once. Anything "
     + "the diary cannot use is ignored, and the same file added twice changes "
     + "nothing, so there is no wrong way to do this.";
+}
+
+/* ------------------------------------------------- the exports folder */
+
+/* Importing is exporting: the journal is pointed at the folder the exports
+   land in, and reads anything new when it is opened. What it has already read
+   is kept with the journal, so the same file is not re-read every time, and so
+   two journals on one device do not inherit each other's list. */
+const FOLDER_SEEN = "folderseen";
+const folderRow = $("folderrow"), folderBtn = $("folderbtn");
+const folderLine = $("folderline");
+
+const seenFiles = () => {
+  try { return JSON.parse(PROF.get(FOLDER_SEEN)) || {}; } catch { return {}; }
+};
+function rememberFiles(files) {
+  const seen = seenFiles();
+  for (const f of files) seen[FS.fileKey(f)] = 1;
+  // Only the recent ones: a key a year old cannot match a file any more.
+  const keys = Object.keys(seen).slice(-400);
+  const kept = {};
+  for (const k of keys) kept[k] = 1;
+  PROF.set(FOLDER_SEEN, JSON.stringify(kept));
+}
+
+function folderSay(text) {
+  if (folderLine) folderLine.textContent = text;
+}
+
+/** Read whatever is new in the watched folder. `ask` may prompt, so it is
+ *  only true when a click asked for it. */
+async function scanFolder({ask = false} = {}) {
+  if (!FS.supported() || !PROF.isOpen() || !folderRow) return;
+  const dir = await FS.remembered();
+  if (!dir) return;
+  if (folderBtn) folderBtn.textContent = `Check ${dir.name} now`;
+  const state = await FS.permission(dir, ask);
+  if (state !== "granted") {
+    folderSay(`Watching ${dir.name}. The browser needs one click to let it `
+      + `read that folder again after a restart.`);
+    return;
+  }
+  const files = await FS.newFiles(dir, seenFiles());
+  if (!files.length) {
+    folderSay(`Watching ${dir.name}. Nothing new in it.`);
+    return;
+  }
+  folderSay(`Reading ${files.length} new file${files.length === 1 ? "" : "s"} `
+    + `from ${dir.name}...`);
+  await handle(files);
+  rememberFiles(files);
+  folderSay(`Watching ${dir.name}. Last read ${files.length} new `
+    + `file${files.length === 1 ? "" : "s"}.`);
+}
+
+if (FS.supported() && folderRow) {
+  folderRow.hidden = false;
+  folderBtn.addEventListener("click", async () => {
+    try {
+      const had = await FS.remembered();
+      if (!had) await FS.choose();
+      await scanFolder({ask: true});
+    } catch (e) {
+      // Cancelling the picker is not an error worth shouting about.
+      if (e && e.name !== "AbortError")
+        folderSay("That folder could not be read: " + e.message);
+    }
+  });
 }
 
 drop.addEventListener("click", () => pickEl.click());
@@ -3258,6 +3337,9 @@ async function opened(pin) {
   DEMO.reload();
   RP.reopen();
   IND.reopen();
+  // Anything new in the watched folder, now that there is a journal to put
+  // it in. Silent when there is nothing, and it never prompts on its own.
+  scanFolder().catch(() => {});
   // The video library belongs to the journal too, and init() ran before there
   // was one.
   // Re-ask whether the trade on screen has a video, now that the library has

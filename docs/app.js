@@ -19,6 +19,7 @@ import * as VID from "./videos.js";
 import * as DIARY from "./diary.js";
 import * as DRAW from "./draw.js";
 import * as W from "./whatif.js";
+import * as FS from "./folder.js";
 
 const $ = id => document.getElementById(id);
 // Names within a journal. The journal itself decides where they land, so
@@ -446,6 +447,74 @@ if (matchMedia("(hover: none)").matches) {
   if (lead) lead.textContent = "Pick all six TradingView exports at once. Anything "
     + "the diary cannot use is ignored, and the same file added twice changes "
     + "nothing, so there is no wrong way to do this.";
+}
+
+/* ------------------------------------------------- the exports folder */
+
+/* Importing is exporting: the journal is pointed at the folder the exports
+   land in, and reads anything new when it is opened. What it has already read
+   is kept with the journal, so the same file is not re-read every time, and so
+   two journals on one device do not inherit each other's list. */
+const FOLDER_SEEN = "folderseen";
+const folderRow = $("folderrow"), folderBtn = $("folderbtn");
+const folderLine = $("folderline");
+
+const seenFiles = () => {
+  try { return JSON.parse(PROF.get(FOLDER_SEEN)) || {}; } catch { return {}; }
+};
+function rememberFiles(files) {
+  const seen = seenFiles();
+  for (const f of files) seen[FS.fileKey(f)] = 1;
+  // Only the recent ones: a key a year old cannot match a file any more.
+  const keys = Object.keys(seen).slice(-400);
+  const kept = {};
+  for (const k of keys) kept[k] = 1;
+  PROF.set(FOLDER_SEEN, JSON.stringify(kept));
+}
+
+function folderSay(text) {
+  if (folderLine) folderLine.textContent = text;
+}
+
+/** Read whatever is new in the watched folder. `ask` may prompt, so it is
+ *  only true when a click asked for it. */
+async function scanFolder({ask = false} = {}) {
+  if (!FS.supported() || !PROF.isOpen() || !folderRow) return;
+  const dir = await FS.remembered();
+  if (!dir) return;
+  if (folderBtn) folderBtn.textContent = `Check ${dir.name} now`;
+  const state = await FS.permission(dir, ask);
+  if (state !== "granted") {
+    folderSay(`Watching ${dir.name}. The browser needs one click to let it `
+      + `read that folder again after a restart.`);
+    return;
+  }
+  const files = await FS.newFiles(dir, seenFiles());
+  if (!files.length) {
+    folderSay(`Watching ${dir.name}. Nothing new in it.`);
+    return;
+  }
+  folderSay(`Reading ${files.length} new file${files.length === 1 ? "" : "s"} `
+    + `from ${dir.name}...`);
+  await handle(files);
+  rememberFiles(files);
+  folderSay(`Watching ${dir.name}. Last read ${files.length} new `
+    + `file${files.length === 1 ? "" : "s"}.`);
+}
+
+if (FS.supported() && folderRow) {
+  folderRow.hidden = false;
+  folderBtn.addEventListener("click", async () => {
+    try {
+      const had = await FS.remembered();
+      if (!had) await FS.choose();
+      await scanFolder({ask: true});
+    } catch (e) {
+      // Cancelling the picker is not an error worth shouting about.
+      if (e && e.name !== "AbortError")
+        folderSay("That folder could not be read: " + e.message);
+    }
+  });
 }
 
 drop.addEventListener("click", () => pickEl.click());
@@ -925,6 +994,9 @@ async function opened(pin) {
   DEMO.reload();
   RP.reopen();
   IND.reopen();
+  // Anything new in the watched folder, now that there is a journal to put
+  // it in. Silent when there is nothing, and it never prompts on its own.
+  scanFolder().catch(() => {});
   // The video library belongs to the journal too, and init() ran before there
   // was one.
   // Re-ask whether the trade on screen has a video, now that the library has

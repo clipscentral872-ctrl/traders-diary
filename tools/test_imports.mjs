@@ -77,6 +77,36 @@ console.log("\nthe broker's fills");
   check("the target is read too", done.target === 24990.25, String(done.target));
 }
 
+console.log("\nthe Fills report, the shape Tradovate's Reports page writes");
+{
+  /* The real report carries Tradovate's own columns beside the human ones,
+     including a UTC `_timestamp` next to a local `Timestamp`, a leading space
+     in B/S, and no status column at all: every row in it is a fill. The
+     numbers here are invented; the columns are the ones the real file has. */
+  const FILLS = `_id,_orderId,_contractId,_timestamp,_tradeDate,_action,_qty,_price,_active,_accountId,Fill ID,Order ID,Timestamp,Date,Account,B/S,Quantity,Price,_priceFormat,_priceFormatType,_tickSize,Contract,Product,Product Description,commission
+1,2,4470324,2026-09-15 14:17:10.848Z,2026-09-15,1,7,29345.5,true,99,1,2,09/15/2026 16:17:10,9/15/26,ACC1, Sell,7,29345.50,-2,0,0.25,MNQZ6,MNQ,Micro E-mini NASDAQ-100,2.73
+3,4,4470324,2026-09-15 14:24:15.040Z,2026-09-15,0,7,29318.0,true,99,3,4,09/15/2026 16:24:15,9/15/26,ACC1, Buy,7,29318.00,-2,0,0.25,MNQZ6,MNQ,Micro E-mini NASDAQ-100,2.73
+`;
+  const got = readAny([file("Fills.csv", FILLS)], parseCSV);
+  check("the Fills report is recognised", got.found.length === 1
+        && got.found[0].source === "tradovate-orders", JSON.stringify(got.found));
+  check("every row is a fill, status column or not", got.fills.length === 2,
+        String(got.fills.length));
+  check("the local stamp is used, not the UTC one beside it",
+        got.fills[0]["Closing time"] === "2026-09-15 16:17:10",
+        got.fills[0]["Closing time"]);
+  check("a leading space in B/S is still a side",
+        got.fills[0]["Side"] === "sell", got.fills[0]["Side"]);
+  check("the commission comes with it", got.fills[0]["Commission"] === "2.73",
+        got.fills[0]["Commission"]);
+  const {trades} = pairTrades(got.fills);
+  check("sold first and bought back, so a short",
+        trades.length === 1 && trades[0].side === "Short",
+        JSON.stringify(trades.map(t => t.side)));
+  check("27.5 points on seven MNQ is $385, which is what the broker's own "
+        + "report says", Math.abs(trades[0].pnl - 385) < 1e-6, String(trades[0].pnl));
+}
+
 console.log("\nthe shapes Tradovate writes");
 {
   check("M/D/YY with a time", stamp("9/18/26", "09:35:12") === "2026-09-18 09:35:12",

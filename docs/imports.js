@@ -16,8 +16,18 @@
  * Adding a broker is adding one entry to SOURCES.
  */
 
-/** Headers compared with the punctuation and the case taken out. */
-const norm = h => String(h).toLowerCase().replace(/[^a-z0-9]/g, "");
+/** Headers compared with the punctuation and the case taken out.
+ *
+ *  Tradovate's Fills report carries its own internal columns beside the human
+ *  ones: `_timestamp` in UTC next to `Timestamp` in your local time, and both
+ *  of them become "timestamp" once the punctuation goes. The internal ones
+ *  keep a "raw" in front so the two never collide, and so the file's own local
+ *  stamps are the ones used, which is what the journal's offset setting is
+ *  there to read. */
+const norm = h => {
+  const clean = String(h).toLowerCase().replace(/[^a-z0-9]/g, "");
+  return /^_/.test(String(h).trim()) ? "raw" + clean : clean;
+};
 
 /** The first of these columns that has anything in it. */
 const pick = (row, names) => {
@@ -101,8 +111,12 @@ export const SOURCES = [
        Contract, Product, Filled Qty, Avg Fill Price, Status, Type, and the
        order's own price columns. Only filled rows are fills; the stop and
        limit orders sitting in the same file are what give a trade its R. */
+    /* B/S and a contract column are Tradovate's own and nothing else here
+       has them, so a file is never claimed by two sources. The quantity
+       column is named differently in the Fills report and the orders panel,
+       and both are accepted. */
     need: [["bs", "buysell"], ["contract", "product"],
-           ["filledqty", "fillqty", "filledquantity"]],
+           ["quantity", "qty", "filledqty", "fillqty", "filledquantity"]],
     fills(rows) {
       const out = [];
       for (const r of rows) {
@@ -110,6 +124,8 @@ export const SOURCES = [
         if (!status.includes("fill")) continue;
         const qty = num(pick(r, ["filledqty", "fillqty", "filledquantity",
                                  "qty", "quantity"]));
+        // The Fills report has no status column at all: every row in it is a
+        // fill. The orders panel export has one, and only "Filled" counts.
         const price = num(pick(r, ["avgfillprice", "avgprice", "fillprice",
                                    "price"]));
         const when = stamp(pick(r, ["date", "tradedate"]),

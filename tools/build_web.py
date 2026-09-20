@@ -165,11 +165,18 @@ TRADEVIEW = """<div class="ws">
            aria-label="Choose your TradingView export files">
         <input type="file" id="pick" multiple accept=".csv" hidden>
         <p class="dropbig">Add exports</p>
-        <p class="dropsub">All six at once</p>
+        <p class="dropsub">All six from TradingView, or Fills and Orders from Tradovate</p>
         <ul class="dropfiles" id="dropfiles"></ul>
         <div class="dropbar" id="dropbar" hidden><i></i></div>
       </div>
       <p class="dropmsg" id="dropmsg" hidden></p>
+      <div class="folderrow" id="folderrow" hidden>
+        <button class="pbtn" id="folderbtn" type="button">Watch a folder</button>
+        <p class="srcnote" id="folderline">Point the diary at the folder your
+        exports land in, usually Downloads, and it reads anything new by itself
+        each time you open it. The files are read here and never leave this
+        device.</p>
+      </div>
     </div>
   </div>
 </div>
@@ -952,6 +959,9 @@ body{overflow:hidden}
 /* The indicators under the prices, a row each with an eye, as TradingView
    lists them. Only the eye takes a click; the rest of the legend lets the
    chart underneath have it. */
+/* The watched folder, under the drop box. */
+.folderrow{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:12px}
+.folderrow .srcnote{flex:1 1 260px; margin:0}
 .pinds{display:flex; flex-direction:column; margin-top:2px}
 .pind{display:flex; align-items:center; gap:6px; min-height:20px;
   font-size:11px; color:var(--muted)}
@@ -1603,7 +1613,7 @@ def main():
 MODULES = [
     "engine.js", "chart.js", "levels.js", "revisit.js", "series.js",
     "clock.js", "vault.js", "draw.js", "profile.js", "whatif.js", "precheck.js", "shelf.js",
-    "watchlist.js", "lock.js", "inds.js", "imports.js",
+    "watchlist.js", "lock.js", "inds.js", "imports.js", "folder.js",
     "replay.js", "demo.js", "diary.js", "videos.js", "system.js",
     "dashboard.js",
 ]
