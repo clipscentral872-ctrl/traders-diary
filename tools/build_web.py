@@ -1603,7 +1603,7 @@ def main():
 MODULES = [
     "engine.js", "chart.js", "levels.js", "revisit.js", "series.js",
     "clock.js", "vault.js", "draw.js", "profile.js", "whatif.js", "precheck.js", "shelf.js",
-    "watchlist.js", "lock.js", "inds.js",
+    "watchlist.js", "lock.js", "inds.js", "imports.js",
     "replay.js", "demo.js", "diary.js", "videos.js", "system.js",
     "dashboard.js",
 ]

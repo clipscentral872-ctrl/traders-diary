@@ -21,6 +21,8 @@
  * stay in it.
  */
 
+import * as IMP from "./imports.js";
+
 export const POINT = {NQ: 20, MNQ: 2, ES: 50, MES: 5,
                       YM: 5, MYM: 0.5, RTY: 50, M2K: 5};
 export const TICKER = {
@@ -570,10 +572,28 @@ export function summarise(trades) {
  *
  *  Existing trades are kept and matched on symbol plus open time, so dropping
  *  the same export twice changes nothing and a fresh one only adds. */
+/* The fills to judge, from whichever export carries them.
+ *
+ * Chris trades a funded Tradovate account through TradingView, so the same
+ * trades exist in both exports. The broker's own file is the account's record
+ * and reaches back as far as it was asked to, while TradingView's activity log
+ * only holds about the last hour, which is why most of his trades had no stop
+ * and therefore no R. So when a broker export is among the files it IS the
+ * fills, rather than being merged with TradingView's copy of the same trades
+ * and pairing each of them twice. */
+export function fillsFrom(files) {
+  const broker = IMP.readAny(files, parseCSV);
+  return broker.fills.length ? broker.fills : readExports(files);
+}
+
 export function ingest(files, existing, barsBySymbol, offsetHours) {
-  const fills = readExports(files);
-  const moves = readStopMoves(files);
-  const spans = logCoverage(files);
+  const broker = IMP.readAny(files, parseCSV);
+  const fills = broker.fills.length ? broker.fills : readExports(files);
+  // Stops from both: the broker keeps every stop order it was given, and the
+  // activity log carries the ones typed into TradingView.
+  const moves = [...readStopMoves(files), ...broker.moves]
+    .sort((a, b) => (a.t < b.t ? -1 : 1));
+  const spans = [...logCoverage(files), ...broker.spans];
   const {trades: fresh, stillOpen} = pairTrades(fills);
 
   const byKey = new Map(existing.map(t => [t.symbol + "|" + t.open_t, t]));
@@ -631,13 +651,13 @@ export function ingest(files, existing, barsBySymbol, offsetHours) {
     if (t.bars && t.bars.length) withBars++;
   }
 
-  const broker = readBrokerTrades(files);
-  const gaps = reconcile(all, broker);
+  const brokerTrades = readBrokerTrades(files);
+  const gaps = reconcile(all, brokerTrades);
   const start = readStartBalance(files);
 
   return {trades: all, added, repaired, stillOpen, gaps,
-          brokerCount: broker.length, startBalance: start, withBars,
-          files: files.length};
+          brokerCount: brokerTrades.length, startBalance: start, withBars,
+          files: files.length, sources: broker.found};
 }
 
 /**

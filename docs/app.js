@@ -357,8 +357,8 @@ async function handle(fileHandles) {
   const csv = [...fileHandles].filter(f => /\.csv$/i.test(f.name));
   preview(fileHandles);
   if (!csv.length) {
-    say("Those are not CSV files. Export from TradingView first, then drop the "
-      + "files it gives you.", true);
+    say("Those are not CSV files. Export from TradingView, or from Tradovate, "
+      + "then drop the files it gives you.", true);
     return;
   }
 
@@ -372,7 +372,7 @@ async function handle(fileHandles) {
     E.setLocalOffset(offset);
 
     const before = window.TRADES.length;
-    const peek = E.pairTrades(E.readExports(files)).trades;
+    const peek = E.pairTrades(E.fillsFrom(files)).trades;
     await loadBars(feedsFor([...window.TRADES, ...peek]));
     const out = E.ingest(files, window.TRADES, BARS, offset);
 
@@ -385,6 +385,12 @@ async function handle(fileHandles) {
     renderPanels();
 
     const lines = [];
+    /* Said first, because it changes what the rest of these numbers mean: a
+       broker export carries the stop that was on the position, so trades get
+       an R that TradingView's hour-long activity log could never give them. */
+    for (const s of out.sources || [])
+      lines.push(`Read ${s.fills} fill${s.fills === 1 ? "" : "s"} from your `
+        + `${s.name} export, with the stops that were on the positions.`);
     lines.push(out.added
       ? `${out.added} new trade${out.added === 1 ? "" : "s"} added. `
         + `${out.trades.length} on record.`

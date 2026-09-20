@@ -2329,7 +2329,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=fa186653baf5","./chart.js":"./chart.js?v=fa186653baf5","./levels.js":"./levels.js?v=fa186653baf5","./revisit.js":"./revisit.js?v=fa186653baf5","./series.js":"./series.js?v=fa186653baf5","./clock.js":"./clock.js?v=fa186653baf5","./vault.js":"./vault.js?v=fa186653baf5","./draw.js":"./draw.js?v=fa186653baf5","./profile.js":"./profile.js?v=fa186653baf5","./whatif.js":"./whatif.js?v=fa186653baf5","./precheck.js":"./precheck.js?v=fa186653baf5","./shelf.js":"./shelf.js?v=fa186653baf5","./watchlist.js":"./watchlist.js?v=fa186653baf5","./lock.js":"./lock.js?v=fa186653baf5","./inds.js":"./inds.js?v=fa186653baf5","./replay.js":"./replay.js?v=fa186653baf5","./demo.js":"./demo.js?v=fa186653baf5","./diary.js":"./diary.js?v=fa186653baf5","./videos.js":"./videos.js?v=fa186653baf5","./system.js":"./system.js?v=fa186653baf5","./dashboard.js":"./dashboard.js?v=fa186653baf5"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=05f51b264b57","./chart.js":"./chart.js?v=05f51b264b57","./levels.js":"./levels.js?v=05f51b264b57","./revisit.js":"./revisit.js?v=05f51b264b57","./series.js":"./series.js?v=05f51b264b57","./clock.js":"./clock.js?v=05f51b264b57","./vault.js":"./vault.js?v=05f51b264b57","./draw.js":"./draw.js?v=05f51b264b57","./profile.js":"./profile.js?v=05f51b264b57","./whatif.js":"./whatif.js?v=05f51b264b57","./precheck.js":"./precheck.js?v=05f51b264b57","./shelf.js":"./shelf.js?v=05f51b264b57","./watchlist.js":"./watchlist.js?v=05f51b264b57","./lock.js":"./lock.js?v=05f51b264b57","./inds.js":"./inds.js?v=05f51b264b57","./imports.js":"./imports.js?v=05f51b264b57","./replay.js":"./replay.js?v=05f51b264b57","./demo.js":"./demo.js?v=05f51b264b57","./diary.js":"./diary.js?v=05f51b264b57","./videos.js":"./videos.js?v=05f51b264b57","./system.js":"./system.js?v=05f51b264b57","./dashboard.js":"./dashboard.js?v=05f51b264b57"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -2690,8 +2690,8 @@ async function handle(fileHandles) {
   const csv = [...fileHandles].filter(f => /\.csv$/i.test(f.name));
   preview(fileHandles);
   if (!csv.length) {
-    say("Those are not CSV files. Export from TradingView first, then drop the "
-      + "files it gives you.", true);
+    say("Those are not CSV files. Export from TradingView, or from Tradovate, "
+      + "then drop the files it gives you.", true);
     return;
   }
 
@@ -2705,7 +2705,7 @@ async function handle(fileHandles) {
     E.setLocalOffset(offset);
 
     const before = window.TRADES.length;
-    const peek = E.pairTrades(E.readExports(files)).trades;
+    const peek = E.pairTrades(E.fillsFrom(files)).trades;
     await loadBars(feedsFor([...window.TRADES, ...peek]));
     const out = E.ingest(files, window.TRADES, BARS, offset);
 
@@ -2718,6 +2718,12 @@ async function handle(fileHandles) {
     renderPanels();
 
     const lines = [];
+    /* Said first, because it changes what the rest of these numbers mean: a
+       broker export carries the stop that was on the position, so trades get
+       an R that TradingView's hour-long activity log could never give them. */
+    for (const s of out.sources || [])
+      lines.push(`Read ${s.fills} fill${s.fills === 1 ? "" : "s"} from your `
+        + `${s.name} export, with the stops that were on the positions.`);
     lines.push(out.added
       ? `${out.added} new trade${out.added === 1 ? "" : "s"} added. `
         + `${out.trades.length} on record.`
