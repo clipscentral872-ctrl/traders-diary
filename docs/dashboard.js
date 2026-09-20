@@ -20,6 +20,7 @@ import * as E from "./engine.js";
 import * as RV from "./revisit.js";
 import * as P from "./profile.js";
 import * as W from "./whatif.js";
+import * as FUND from "./funded.js";
 
 const $ = id => document.getElementById(id);
 
@@ -76,8 +77,8 @@ function hero() {
     // button. This is the first screen a new journal shows.
     box.innerHTML = '<span class="hk">Your record</span>'
       + '<span class="hv">Nothing yet</span>'
-      + '<span class="hsub">Export the six files from TradingView, then drop '
-      + 'them all in at once.</span>'
+      + '<span class="hsub">Export Fills from Tradovate, or all six files from '
+      + 'TradingView, and drop them in.</span>'
       + '<span class="hact"><button class="bigbtn" data-go="diary" '
       + 'data-import="1">Import your trades</button></span>';
     return;
@@ -93,7 +94,29 @@ function hero() {
     + "</span>";
 }
 
-/** The three numbers worth carrying, small, plus the demo account. */
+/* The funded account, when there is one.
+ *
+ * It belongs at the top because it is the account that can be taken away,
+ * and because the number that decides that is not in any of the trading
+ * figures: it is how much room is left before the firm's drawdown closes
+ * it. The plan and the broker's own daily balances are kept by the app;
+ * this only reads them. */
+function fundedFig() {
+  let plan = FUND.preset("fff-velocity-25k"), balances = [];
+  try {
+    const saved = JSON.parse(P.get("funded.plan"));
+    if (saved && typeof saved === "object") plan = {...FUND.preset(saved.id), ...saved};
+  } catch { /* the preset, then */ }
+  try { balances = JSON.parse(P.get("funded.balances")) || []; } catch { balances = []; }
+  const trades = window.TRADES || [];
+  if (plan.id === "none" || !plan.drawdown) return "";
+  if (!balances.length && !mine().length) return "";
+  const s = FUND.state(plan, {balances, trades});
+  return fig("Funded account", plain(s.room), s.roomPct < 0.25 ? "loss" : "win",
+             `left of ${plain(plan.drawdown)} before it closes`);
+}
+
+/** The three numbers worth carrying, small, plus the funded and demo accounts. */
 function figures() {
   const live = mine();
   const box = $("dashyou");
@@ -108,7 +131,11 @@ function figures() {
                  : `${money(d.balance - 100000)} over `
                    + `${(d.trades || []).length} trades`);
 
-  if (!live.length) { box.innerHTML = demoFig; return; }
+  const funded = fundedFig();
+  // A journal with nothing in it still has an account to watch, if one was
+  // imported: the demo tile on its own is what made the home page look like
+  // it was about the demo account.
+  if (!live.length) { box.innerHTML = funded + demoFig; return; }
 
   const s = E.summarise(live);
   const scored = live.filter(t => t.got_r !== null && t.got_r !== undefined);
@@ -123,6 +150,7 @@ function figures() {
            ? `on ${scored.length} of ${live.length}` : "a trade"),
     fig("Worst drawdown", plain(s.max_dd), "loss",
          `${s.worst_streak} loss${s.worst_streak === 1 ? "" : "es"} in a row`),
+    funded,
     demoFig,
   ].join("");
 }
