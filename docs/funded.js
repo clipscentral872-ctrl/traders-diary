@@ -35,6 +35,9 @@ export const PLANS = {
     minDays: 3,
     consistency: 0.40,
     target: 2500,
+    /* The firm's position cap, in micro contracts. Two minis on the $25,000
+       size is twenty micros. Check it against your own dashboard. */
+    maxMicros: 20,
   },
   none: {id: "none", name: "No funded account", start: 0, drawdown: 0},
 };
@@ -42,6 +45,32 @@ export const PLANS = {
 export const preset = id => ({...(PLANS[id] || PLANS["fff-velocity-25k"])});
 
 const money = v => Math.round(v * 100) / 100;
+
+/**
+ * How many contracts a risk budget buys.
+ *
+ * Risk first, stop second, size last, and always rounded DOWN: the contract
+ * that would take you past the budget is the one that turns a planned loss
+ * into an unplanned one. What is left over is reported rather than hidden,
+ * because on a wide stop the rounding can waste a third of the budget, and
+ * knowing that is how you decide whether the trade is worth taking at all.
+ *
+ * @param risk    dollars you are willing to lose on this trade
+ * @param stop    the stop distance in points
+ * @param value   what one point of this contract is worth, in dollars
+ * @param max     the firm's cap on contracts, if there is one
+ */
+export function size({risk = 0, stop = 0, value = 0, max = Infinity} = {}) {
+  const per = money(stop * value);
+  if (!(per > 0) || !(risk > 0))
+    return {contracts: 0, per: per || 0, risk: 0, unused: money(risk || 0),
+            capped: false};
+  let contracts = Math.floor(risk / per);
+  const capped = contracts > max;
+  if (capped) contracts = Math.floor(max);
+  return {contracts, per, risk: money(contracts * per),
+          unused: money(risk - contracts * per), capped};
+}
 
 /**
  * The account day by day.

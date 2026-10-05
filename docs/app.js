@@ -503,7 +503,81 @@ const FIELDS = [
   ["minDays", "Days needed", 1],
   ["consistencyPct", "Best day limit %", 1],
   ["target", "Profit target", 1],
+  ["maxMicros", "Max contracts", 1],
 ];
+
+/* How many contracts, worked out where the room is.
+ *
+ * Risk first, stop second, size last. The arithmetic is three numbers and a
+ * rounding down, and it is still the thing most easily got wrong in a hurry,
+ * because the budget on a funded account is not a share of the balance: it is
+ * the room left before the firm closes the account. So the answer is shown
+ * against that room rather than against the equity. */
+const SIZE_KEY = "funded.size";
+const CONTRACTS = ["MNQ", "MES", "MYM", "M2K", "NQ", "ES", "YM", "RTY"];
+
+const sizeNow = () => {
+  try {
+    const s = JSON.parse(PROF.get(SIZE_KEY));
+    if (s && typeof s === "object") return {sym: "MNQ", stop: 40, risk: 200, ...s};
+  } catch { /* first time */ }
+  return {sym: "MNQ", stop: 40, risk: 200};
+};
+
+function sizerHtml(st) {
+  const opts = CONTRACTS.map(c =>
+    `<option value="${c}"${c === st.sym ? " selected" : ""}>${c}</option>`).join("");
+  return '<div class="planform sizer">'
+    + `<label>Contract<select id="sizesym">${opts}</select></label>`
+    + `<label>Stop in points<input id="sizestop" type="number" step="any" `
+    + `min="0" value="${st.stop}"></label>`
+    + `<label>Risk<input id="sizerisk" type="number" step="any" min="0" `
+    + `value="${st.risk}"></label></div>`
+    + '<p class="fundline" id="sizeout"></p>';
+}
+
+function renderSizer(room, plan) {
+  const out = $("sizeout");
+  if (!out) return;
+  const st = sizeNow();
+  const value = E.POINT[st.sym] ?? 2;
+  const s = FUND.size({risk: st.risk, stop: st.stop, value,
+                       max: plan.maxMicros || Infinity});
+  if (!s.contracts) {
+    out.innerHTML = s.per > 0
+      ? `That budget does not reach one contract: one ${esc(st.sym)} on a `
+        + `${st.stop} point stop risks ${dollars(-s.per).replace("-", "")}.`
+      : "Put in a stop and a risk and this says how many contracts that is.";
+    return;
+  }
+  const share = room > 0 ? Math.round(s.risk / room * 100) : null;
+  out.innerHTML = `<b>${s.contracts} ${esc(st.sym)}</b>, risking `
+    + `<b>${dollars(-s.risk).replace("-", "")}</b>`
+    + (share === null ? "" : `, ${share}% of your room`)
+    + (s.capped
+       ? `. Your plan caps you at ${plan.maxMicros} contracts, so the budget `
+         + `is not the thing stopping you here.`
+       : s.unused >= 1
+         ? `. Rounding down leaves ${dollars(-s.unused).replace("-", "")} of `
+           + `the budget unused.`
+         : ".");
+}
+
+function wireSizer(room, plan) {
+  for (const id of ["sizesym", "sizestop", "sizerisk"]) {
+    const el = $(id);
+    if (!el) continue;
+    el.oninput = () => {
+      const st = {sym: $("sizesym").value,
+                  stop: parseFloat($("sizestop").value) || 0,
+                  risk: parseFloat($("sizerisk").value) || 0};
+      PROF.set(SIZE_KEY, JSON.stringify(st));
+      renderSizer(room, plan);
+    };
+    el.onchange = el.oninput;
+  }
+  renderSizer(room, plan);
+}
 
 function renderPlanForm(plan) {
   const box = $("planform");
@@ -571,8 +645,10 @@ function renderFunded() {
     + `$${Math.round(plan.drawdown).toLocaleString("en-US")}</p>`
     + `<div class="fundbar${tight ? " warn" : ""}"><i style="width:${pct}%"></i></div>`
     + `<div class="stats hud">${rows}</div>`
+    + sizerHtml(sizeNow())
     + todo.map(t => `<p class="fundnote">${t}</p>`).join("")
     + s.notes.map(n => `<p class="fundnote">${esc(n)}</p>`).join("");
+  wireSizer(s.room, plan);
 }
 
 /* ------------------------------------------------- the exports folder */

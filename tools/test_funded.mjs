@@ -12,7 +12,7 @@
  *
  *   node tools/test_funded.mjs
  */
-import {PLANS, preset, days, state} from "../docs/funded.js";
+import {PLANS, preset, days, state, size} from "../docs/funded.js";
 
 let failed = 0;
 const check = (name, ok, detail = "") => {
@@ -116,6 +116,38 @@ console.log("\nwhat it says about itself");
   check("no account, nothing to watch", none.days.length === 0 && !none.ready);
   check("the preset is a copy, so editing it cannot change the preset",
         preset("fff-velocity-25k") !== PLANS["fff-velocity-25k"]);
+}
+
+console.log("\nhow many contracts");
+{
+  // MNQ is $2 a point, so a 40 point stop risks $80 a contract.
+  let s = size({risk: 200, stop: 40, value: 2});
+  check("$200 at a 40 point stop is two MNQ",
+        s.contracts === 2 && s.risk === 160, JSON.stringify(s));
+  check("and it says what the rounding left behind", s.unused === 40,
+        String(s.unused));
+
+  check("$250 at 25 points is five, to the dollar",
+        size({risk: 250, stop: 25, value: 2}).contracts === 5);
+  check("$250 at 45 points is two, not three",
+        size({risk: 250, stop: 45, value: 2}).contracts === 2);
+  check("$250 at 10 points is twelve",
+        size({risk: 250, stop: 10, value: 2}).contracts === 12);
+
+  // ES is $50 a point: one contract on a 40 point stop is $2,000.
+  s = size({risk: 200, stop: 40, value: 50});
+  check("a budget that cannot buy one contract buys none",
+        s.contracts === 0 && s.risk === 0, JSON.stringify(s));
+
+  s = size({risk: 250, stop: 10, value: 2, max: 20});
+  check("under the firm's cap it is left alone",
+        s.contracts === 12 && !s.capped, JSON.stringify(s));
+  s = size({risk: 2000, stop: 10, value: 2, max: 20});
+  check("over it, the cap is the answer and it says so",
+        s.contracts === 20 && s.capped, JSON.stringify(s));
+
+  check("no stop, no size", size({risk: 200, stop: 0, value: 2}).contracts === 0);
+  check("no budget, no size", size({risk: 0, stop: 20, value: 2}).contracts === 0);
 }
 
 console.log(failed ? `\n${failed} check(s) failed` : "\nall checks passed");
