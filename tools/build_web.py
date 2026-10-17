@@ -733,9 +733,17 @@ body{overflow:hidden}
   /* Readable rather than merely present. At 12px in a bar squeezed under a
      status bar the name was neither. */
   .brand{font-size:14px; letter-spacing:.02em; order:1}
-  .appmeta{order:2; margin-left:auto; font-size:12px}
+  /* The bar wraps on a phone, so every child is given its place rather than
+     landing wherever the markup put it. The name leads, the count and the
+     theme sit beside it, the account picker takes its own line, and the tabs
+     take the one under that. */
+  .brand{order:0}
+  .appmeta{order:1; margin-left:auto; font-size:12px}
+  .themebtn{order:2; margin-left:8px}
+  .accrow.bar{order:3; flex:1 0 100%; margin:8px 0 0}
+  .accrow.bar .acc{flex:1 1 0; justify-content:center}
   .appbar .tabs2{
-    order:3; flex:1 0 100%; margin:8px -14px 0; padding:0 14px;
+    order:4; flex:1 0 100%; margin:8px -14px 0; padding:0 14px;
     border-bottom:none;
   }
   /* 46px of target, and the text sitting in the middle of it rather than at
@@ -1005,9 +1013,12 @@ body{overflow:hidden}
    all. Here it has the chart's width, wraps onto a second line on a phone
    rather than vanishing, and takes no clicks, so it never gets between you
    and the chart. The faint backing keeps it readable over a candle. */
+/* The legend sits ON the chart, so its backing has to be the chart's own
+   ground rather than a fixed white. On dark it was white text on a near
+   white panel. */
 .plegend{position:absolute; left:8px; top:6px; z-index:3; pointer-events:none;
   max-width:calc(100% - 96px); padding:2px 6px; border-radius:4px;
-  background:rgba(255,255,255,.8)}
+  background:color-mix(in srgb, var(--ground) 82%, transparent)}
 .plegend:empty{display:none}
 .plegend .pohlc{flex-wrap:wrap; row-gap:2px; overflow:visible}
 /* The indicators under the prices, a row each with an eye, as TradingView

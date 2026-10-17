@@ -834,9 +834,17 @@ body{overflow:hidden}
   /* Readable rather than merely present. At 12px in a bar squeezed under a
      status bar the name was neither. */
   .brand{font-size:14px; letter-spacing:.02em; order:1}
-  .appmeta{order:2; margin-left:auto; font-size:12px}
+  /* The bar wraps on a phone, so every child is given its place rather than
+     landing wherever the markup put it. The name leads, the count and the
+     theme sit beside it, the account picker takes its own line, and the tabs
+     take the one under that. */
+  .brand{order:0}
+  .appmeta{order:1; margin-left:auto; font-size:12px}
+  .themebtn{order:2; margin-left:8px}
+  .accrow.bar{order:3; flex:1 0 100%; margin:8px 0 0}
+  .accrow.bar .acc{flex:1 1 0; justify-content:center}
   .appbar .tabs2{
-    order:3; flex:1 0 100%; margin:8px -14px 0; padding:0 14px;
+    order:4; flex:1 0 100%; margin:8px -14px 0; padding:0 14px;
     border-bottom:none;
   }
   /* 46px of target, and the text sitting in the middle of it rather than at
@@ -1106,9 +1114,12 @@ body{overflow:hidden}
    all. Here it has the chart's width, wraps onto a second line on a phone
    rather than vanishing, and takes no clicks, so it never gets between you
    and the chart. The faint backing keeps it readable over a candle. */
+/* The legend sits ON the chart, so its backing has to be the chart's own
+   ground rather than a fixed white. On dark it was white text on a near
+   white panel. */
 .plegend{position:absolute; left:8px; top:6px; z-index:3; pointer-events:none;
   max-width:calc(100% - 96px); padding:2px 6px; border-radius:4px;
-  background:rgba(255,255,255,.8)}
+  background:color-mix(in srgb, var(--ground) 82%, transparent)}
 .plegend:empty{display:none}
 .plegend .pohlc{flex-wrap:wrap; row-gap:2px; overflow:visible}
 /* The indicators under the prices, a row each with an eye, as TradingView
@@ -1974,7 +1985,7 @@ body{overflow:hidden}
   <div class="hpanel">
     <canvas id="hspark" aria-hidden="true"></canvas>
     <div class="hface" id="hmain"></div>
-    <div class="hfoot"><span>Equity</span><span id="hcnote"></span></div>
+    <div class="hfoot"><span id="hclab">Equity</span><span id="hcnote"></span></div>
   </div>
   <div class="figs" id="dashyou"></div>
   <div id="dashleak"></div>
@@ -2405,7 +2416,8 @@ body{overflow:hidden}
 
 <section>
   <h2>The automated system</h2>
-  <p class="lead">A version of the four-step method runs on its own against
+  <p class="lead">A version of the four-step TJR method, the one on the Learn
+  tab behind the TJR switch and not the one you trade, runs on its own against
   live bars and reports here. It is not connected to your account and never
   will be from this page. It exists to answer one question honestly: does the
   method make money when a human is not choosing which setups to take.</p>
@@ -2761,7 +2773,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=572b08b6dec2","./chart.js":"./chart.js?v=572b08b6dec2","./levels.js":"./levels.js?v=572b08b6dec2","./revisit.js":"./revisit.js?v=572b08b6dec2","./series.js":"./series.js?v=572b08b6dec2","./clock.js":"./clock.js?v=572b08b6dec2","./vault.js":"./vault.js?v=572b08b6dec2","./draw.js":"./draw.js?v=572b08b6dec2","./profile.js":"./profile.js?v=572b08b6dec2","./whatif.js":"./whatif.js?v=572b08b6dec2","./precheck.js":"./precheck.js?v=572b08b6dec2","./shelf.js":"./shelf.js?v=572b08b6dec2","./watchlist.js":"./watchlist.js?v=572b08b6dec2","./lock.js":"./lock.js?v=572b08b6dec2","./inds.js":"./inds.js?v=572b08b6dec2","./imports.js":"./imports.js?v=572b08b6dec2","./folder.js":"./folder.js?v=572b08b6dec2","./funded.js":"./funded.js?v=572b08b6dec2","./jdun.js":"./jdun.js?v=572b08b6dec2","./replay.js":"./replay.js?v=572b08b6dec2","./demo.js":"./demo.js?v=572b08b6dec2","./diary.js":"./diary.js?v=572b08b6dec2","./videos.js":"./videos.js?v=572b08b6dec2","./system.js":"./system.js?v=572b08b6dec2","./dashboard.js":"./dashboard.js?v=572b08b6dec2"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=a6767a200a20","./chart.js":"./chart.js?v=a6767a200a20","./levels.js":"./levels.js?v=a6767a200a20","./revisit.js":"./revisit.js?v=a6767a200a20","./series.js":"./series.js?v=a6767a200a20","./clock.js":"./clock.js?v=a6767a200a20","./vault.js":"./vault.js?v=a6767a200a20","./draw.js":"./draw.js?v=a6767a200a20","./profile.js":"./profile.js?v=a6767a200a20","./whatif.js":"./whatif.js?v=a6767a200a20","./precheck.js":"./precheck.js?v=a6767a200a20","./shelf.js":"./shelf.js?v=a6767a200a20","./watchlist.js":"./watchlist.js?v=a6767a200a20","./lock.js":"./lock.js?v=a6767a200a20","./inds.js":"./inds.js?v=a6767a200a20","./imports.js":"./imports.js?v=a6767a200a20","./folder.js":"./folder.js?v=a6767a200a20","./funded.js":"./funded.js?v=a6767a200a20","./jdun.js":"./jdun.js?v=a6767a200a20","./replay.js":"./replay.js?v=a6767a200a20","./demo.js":"./demo.js?v=a6767a200a20","./diary.js":"./diary.js?v=a6767a200a20","./videos.js":"./videos.js?v=a6767a200a20","./system.js":"./system.js?v=a6767a200a20","./dashboard.js":"./dashboard.js?v=a6767a200a20"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.

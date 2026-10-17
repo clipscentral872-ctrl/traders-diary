@@ -387,6 +387,10 @@ function spark() {
   if (!cv) return;
   const live = mine().slice().sort((a, b) => (a.open_t < b.open_t ? -1 : 1));
   const note = $("hcnote");
+  /* "Equity $0 to -$252" is not equity, it is a running total. The word only
+     means something when there is a balance the curve started from. */
+  const lab = $("hclab");
+  if (lab) lab.textContent = window.START == null && mine().length ? "P&L" : "Equity";
   const dpr = Math.min(3, devicePixelRatio || 1);
   const W = cv.clientWidth, H = cv.clientHeight;
   if (!W || !H) return;
