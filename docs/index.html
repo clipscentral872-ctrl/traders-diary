@@ -2459,7 +2459,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=8583d993db0b","./chart.js":"./chart.js?v=8583d993db0b","./levels.js":"./levels.js?v=8583d993db0b","./revisit.js":"./revisit.js?v=8583d993db0b","./series.js":"./series.js?v=8583d993db0b","./clock.js":"./clock.js?v=8583d993db0b","./vault.js":"./vault.js?v=8583d993db0b","./draw.js":"./draw.js?v=8583d993db0b","./profile.js":"./profile.js?v=8583d993db0b","./whatif.js":"./whatif.js?v=8583d993db0b","./precheck.js":"./precheck.js?v=8583d993db0b","./shelf.js":"./shelf.js?v=8583d993db0b","./watchlist.js":"./watchlist.js?v=8583d993db0b","./lock.js":"./lock.js?v=8583d993db0b","./inds.js":"./inds.js?v=8583d993db0b","./imports.js":"./imports.js?v=8583d993db0b","./folder.js":"./folder.js?v=8583d993db0b","./funded.js":"./funded.js?v=8583d993db0b","./jdun.js":"./jdun.js?v=8583d993db0b","./replay.js":"./replay.js?v=8583d993db0b","./demo.js":"./demo.js?v=8583d993db0b","./diary.js":"./diary.js?v=8583d993db0b","./videos.js":"./videos.js?v=8583d993db0b","./system.js":"./system.js?v=8583d993db0b","./dashboard.js":"./dashboard.js?v=8583d993db0b"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=9f83290d860b","./chart.js":"./chart.js?v=9f83290d860b","./levels.js":"./levels.js?v=9f83290d860b","./revisit.js":"./revisit.js?v=9f83290d860b","./series.js":"./series.js?v=9f83290d860b","./clock.js":"./clock.js?v=9f83290d860b","./vault.js":"./vault.js?v=9f83290d860b","./draw.js":"./draw.js?v=9f83290d860b","./profile.js":"./profile.js?v=9f83290d860b","./whatif.js":"./whatif.js?v=9f83290d860b","./precheck.js":"./precheck.js?v=9f83290d860b","./shelf.js":"./shelf.js?v=9f83290d860b","./watchlist.js":"./watchlist.js?v=9f83290d860b","./lock.js":"./lock.js?v=9f83290d860b","./inds.js":"./inds.js?v=9f83290d860b","./imports.js":"./imports.js?v=9f83290d860b","./folder.js":"./folder.js?v=9f83290d860b","./funded.js":"./funded.js?v=9f83290d860b","./jdun.js":"./jdun.js?v=9f83290d860b","./replay.js":"./replay.js?v=9f83290d860b","./demo.js":"./demo.js?v=9f83290d860b","./diary.js":"./diary.js?v=9f83290d860b","./videos.js":"./videos.js?v=9f83290d860b","./system.js":"./system.js?v=9f83290d860b","./dashboard.js":"./dashboard.js?v=9f83290d860b"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -3754,15 +3754,22 @@ window.pickAccount = function (acc) {
 };
 
 function renderAccounts() {
-  const names = accountsIn(window.TRADES.filter(t => (t.source || "live") === "live"));
+  /* Accounts come from the balance history as well as from trades. Tradovate
+     hands those two files out separately, and the balance one carries the
+     account name, so the picker has to work before a single fill is in. */
+  const names = [...new Set([
+    ...accountsIn(window.TRADES.filter(t => (t.source || "live") === "live")),
+    ...balancesNow().map(b => (b.account || "").trim()).filter(Boolean),
+  ])].sort();
   // One account is not a choice, and no account means the import has not
   // happened yet. Either way the row stays out of the way.
   const show = names.length > 1;
   if (!names.includes(window.ACCOUNT)) window.ACCOUNT = "all";
   const html = !show ? "" :
     [["all", "Both"], ...names.map(n => [n, n])].map(([k, label]) => {
-      const n = window.ofAccount(window.TRADES, k)
-        .filter(t => (t.source || "live") === "live").length;
+      const n = k === "all" ? window.TRADES.filter(t => (t.source || "live") === "live").length
+        : window.ofAccount(window.TRADES, k)
+          .filter(t => (t.source || "live") === "live").length;
       return `<button class="acc" data-acc="${esc(k)}" `
         + `aria-pressed="${k === window.ACCOUNT}" `
         + `onclick="pickAccount('${esc(k)}')">${esc(label)}`

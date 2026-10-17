@@ -1291,15 +1291,22 @@ window.pickAccount = function (acc) {
 };
 
 function renderAccounts() {
-  const names = accountsIn(window.TRADES.filter(t => (t.source || "live") === "live"));
+  /* Accounts come from the balance history as well as from trades. Tradovate
+     hands those two files out separately, and the balance one carries the
+     account name, so the picker has to work before a single fill is in. */
+  const names = [...new Set([
+    ...accountsIn(window.TRADES.filter(t => (t.source || "live") === "live")),
+    ...balancesNow().map(b => (b.account || "").trim()).filter(Boolean),
+  ])].sort();
   // One account is not a choice, and no account means the import has not
   // happened yet. Either way the row stays out of the way.
   const show = names.length > 1;
   if (!names.includes(window.ACCOUNT)) window.ACCOUNT = "all";
   const html = !show ? "" :
     [["all", "Both"], ...names.map(n => [n, n])].map(([k, label]) => {
-      const n = window.ofAccount(window.TRADES, k)
-        .filter(t => (t.source || "live") === "live").length;
+      const n = k === "all" ? window.TRADES.filter(t => (t.source || "live") === "live").length
+        : window.ofAccount(window.TRADES, k)
+          .filter(t => (t.source || "live") === "live").length;
       return `<button class="acc" data-acc="${esc(k)}" `
         + `aria-pressed="${k === window.ACCOUNT}" `
         + `onclick="pickAccount('${esc(k)}')">${esc(label)}`
