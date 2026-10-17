@@ -1028,6 +1028,24 @@ body{overflow:hidden}
 .jfw{font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
 .jfi{font-size:11px; color:var(--faint); line-height:1.5}
 
+/* The account day by day, from the broker's own balances. Reads as a
+   statement: date, what it made, where it closed, what was left. */
+.dayacc{font-size:12px; color:var(--muted); margin:14px 0 4px;
+  text-transform:uppercase; letter-spacing:.04em}
+.days{list-style:none; margin:8px 0 0; padding:0; display:flex;
+  flex-direction:column}
+.dayrow{display:grid; grid-template-columns:auto 1fr auto auto; gap:4px 12px;
+  align-items:baseline; padding:7px 0; border-bottom:1px solid var(--line-soft);
+  font-variant-numeric:tabular-nums; font-size:13px}
+.dayd{color:var(--muted); font-size:12px}
+.dayp{color:var(--text)}
+.dayrow.up .dayp{color:var(--win)}
+.dayrow.down .dayp{color:var(--loss)}
+.dayb{color:var(--muted); font-size:12px}
+.dayr{color:var(--faint); font-size:12px; text-align:right}
+.dayover{grid-column:1/-1; color:var(--loss); font-size:11.5px;
+  font-variant-numeric:normal}
+
 /* Where the plan keeps breaking, on the home page. */
 .habits{list-style:none; margin:0; padding:0; display:flex;
   flex-direction:column; gap:10px}

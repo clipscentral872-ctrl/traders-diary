@@ -230,6 +230,7 @@ function renderPanels() {
   }).join("");
 
   renderStanding();
+  renderDays();
   renderHabits();
   renderLearn();
   DASH.refreshRecord();
@@ -1243,6 +1244,56 @@ document.addEventListener("click", e => {
   renderHabits();
 });
 
+/**
+ * The account day by day, from the broker's own balances.
+ *
+ * A journal with no fills in it is not an empty journal. Tradovate hands out
+ * the balance history as its own export, and that alone says what every
+ * session made or lost, where the drawdown floor sat, and which days went
+ * past the plan's cap. So it is shown rather than waiting for fills that may
+ * be an export away.
+ */
+function renderDays() {
+  const sec = $("dayssec"), box = $("daysbox");
+  if (!sec || !box) return;
+  const all = balancesNow();
+  const plan = planNow();
+  const names = [...new Set(all.map(b => (b.account || "").trim()).filter(Boolean))].sort();
+  const show = window.ACCOUNT === "all" ? names
+    : names.filter(n => n === window.ACCOUNT);
+  if (!all.length || !show.length) { sec.hidden = true; return; }
+  sec.hidden = false;
+
+  const cap = JD.dailyCap(jdunPlan());
+  box.innerHTML = show.map(name => {
+    const st = FUND.state(plan, {balances: all.filter(b => (b.account || "") === name)});
+    const rows = [...st.days].reverse().map(d => {
+      const over = cap > 0 && d.pnl < -cap;
+      return `<li class="dayrow${d.pnl < 0 ? " down" : d.pnl > 0 ? " up" : ""}">`
+        + `<span class="dayd">${esc(d.date)}</span>`
+        + `<span class="dayp">${d.pnl === 0 ? "flat" : dollars(d.pnl)}</span>`
+        + `<span class="dayb">$${Math.round(d.balance).toLocaleString("en-US")}</span>`
+        + `<span class="dayr">${dollars(d.room).replace("+", "")} room</span>`
+        + (over ? `<span class="dayover">${(d.pnl / -cap).toFixed(1)}&times; the `
+            + `$${cap} cap</span>` : "")
+        + "</li>";
+    }).join("");
+    const red = st.days.filter(d => d.pnl < 0).length;
+    const green = st.days.filter(d => d.pnl > 0).length;
+    const flat = st.days.length - red - green;
+    const worst = st.days.length ? Math.min(...st.days.map(d => d.pnl)) : 0;
+    return (names.length > 1 ? `<h3 class="dayacc">${esc(name)}</h3>` : "")
+      + `<p class="srcnote">${st.days.length} session`
+      + `${st.days.length === 1 ? "" : "s"}, ${green} green and ${red} red`
+      + (flat ? `, ${flat} with no trade` : "") + `, `
+      + `worst day ${dollars(worst)}. `
+      + (cap > 0 && worst < -cap
+          ? `The plan's cap is $${cap}.` : "Every day inside the plan's cap.")
+      + "</p>"
+      + `<ul class="days">${rows}</ul>`;
+  }).join("");
+}
+
 /** The one habit worth fixing this week, with what it has cost. */
 function renderHabits() {
   const box = $("habits");
@@ -1288,6 +1339,7 @@ window.pickAccount = function (acc) {
     b.setAttribute("aria-pressed", String(b.dataset.acc === acc));
   renderPanels();
   renderFunded();
+  renderDays();
 };
 
 function renderAccounts() {
@@ -1310,7 +1362,7 @@ function renderAccounts() {
       return `<button class="acc" data-acc="${esc(k)}" `
         + `aria-pressed="${k === window.ACCOUNT}" `
         + `onclick="pickAccount('${esc(k)}')">${esc(label)}`
-        + `<span class="sn">${n}</span></button>`;
+        + (n ? `<span class="sn">${n}</span>` : "") + "</button>";
     }).join("");
   for (const id of ["accrow", "accrow2"]) {
     const el = $(id);

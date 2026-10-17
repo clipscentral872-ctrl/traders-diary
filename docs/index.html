@@ -1125,6 +1125,24 @@ body{overflow:hidden}
 .jfw{font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
 .jfi{font-size:11px; color:var(--faint); line-height:1.5}
 
+/* The account day by day, from the broker's own balances. Reads as a
+   statement: date, what it made, where it closed, what was left. */
+.dayacc{font-size:12px; color:var(--muted); margin:14px 0 4px;
+  text-transform:uppercase; letter-spacing:.04em}
+.days{list-style:none; margin:8px 0 0; padding:0; display:flex;
+  flex-direction:column}
+.dayrow{display:grid; grid-template-columns:auto 1fr auto auto; gap:4px 12px;
+  align-items:baseline; padding:7px 0; border-bottom:1px solid var(--line-soft);
+  font-variant-numeric:tabular-nums; font-size:13px}
+.dayd{color:var(--muted); font-size:12px}
+.dayp{color:var(--text)}
+.dayrow.up .dayp{color:var(--win)}
+.dayrow.down .dayp{color:var(--loss)}
+.dayb{color:var(--muted); font-size:12px}
+.dayr{color:var(--faint); font-size:12px; text-align:right}
+.dayover{grid-column:1/-1; color:var(--loss); font-size:11.5px;
+  font-variant-numeric:normal}
+
 /* Where the plan keeps breaking, on the home page. */
 .habits{list-style:none; margin:0; padding:0; display:flex;
   flex-direction:column; gap:10px}
@@ -1776,6 +1794,21 @@ body{overflow:hidden}
     days minimum, no single day more than 40% of the profit, and 40 micros at
     a time. The floor only moves at the close but is enforced against your
     open positions all day, so touching it for a second ends the account.</p>
+  </details>
+</section>
+
+<section id="dayssec" hidden>
+  <h2>Day by day</h2>
+  <div id="daysbox"></div>
+  <details class="how">
+    <summary>Where these come from</summary>
+    <p class="howwhy">Your broker's own Account Balance History: one row a
+    day, the account's closing balance and what it realised, net of every
+    commission and exchange fee. It is the record the firm's drawdown is
+    measured against, so it is the truth about where the account stands even
+    when no fills have been imported. What it cannot show is the trades
+    inside a day. That needs the Fills export, and the stops need the orders
+    panel.</p>
   </details>
 </section>
 
@@ -2459,7 +2492,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=9f83290d860b","./chart.js":"./chart.js?v=9f83290d860b","./levels.js":"./levels.js?v=9f83290d860b","./revisit.js":"./revisit.js?v=9f83290d860b","./series.js":"./series.js?v=9f83290d860b","./clock.js":"./clock.js?v=9f83290d860b","./vault.js":"./vault.js?v=9f83290d860b","./draw.js":"./draw.js?v=9f83290d860b","./profile.js":"./profile.js?v=9f83290d860b","./whatif.js":"./whatif.js?v=9f83290d860b","./precheck.js":"./precheck.js?v=9f83290d860b","./shelf.js":"./shelf.js?v=9f83290d860b","./watchlist.js":"./watchlist.js?v=9f83290d860b","./lock.js":"./lock.js?v=9f83290d860b","./inds.js":"./inds.js?v=9f83290d860b","./imports.js":"./imports.js?v=9f83290d860b","./folder.js":"./folder.js?v=9f83290d860b","./funded.js":"./funded.js?v=9f83290d860b","./jdun.js":"./jdun.js?v=9f83290d860b","./replay.js":"./replay.js?v=9f83290d860b","./demo.js":"./demo.js?v=9f83290d860b","./diary.js":"./diary.js?v=9f83290d860b","./videos.js":"./videos.js?v=9f83290d860b","./system.js":"./system.js?v=9f83290d860b","./dashboard.js":"./dashboard.js?v=9f83290d860b"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=2fda0946198c","./chart.js":"./chart.js?v=2fda0946198c","./levels.js":"./levels.js?v=2fda0946198c","./revisit.js":"./revisit.js?v=2fda0946198c","./series.js":"./series.js?v=2fda0946198c","./clock.js":"./clock.js?v=2fda0946198c","./vault.js":"./vault.js?v=2fda0946198c","./draw.js":"./draw.js?v=2fda0946198c","./profile.js":"./profile.js?v=2fda0946198c","./whatif.js":"./whatif.js?v=2fda0946198c","./precheck.js":"./precheck.js?v=2fda0946198c","./shelf.js":"./shelf.js?v=2fda0946198c","./watchlist.js":"./watchlist.js?v=2fda0946198c","./lock.js":"./lock.js?v=2fda0946198c","./inds.js":"./inds.js?v=2fda0946198c","./imports.js":"./imports.js?v=2fda0946198c","./folder.js":"./folder.js?v=2fda0946198c","./funded.js":"./funded.js?v=2fda0946198c","./jdun.js":"./jdun.js?v=2fda0946198c","./replay.js":"./replay.js?v=2fda0946198c","./demo.js":"./demo.js?v=2fda0946198c","./diary.js":"./diary.js?v=2fda0946198c","./videos.js":"./videos.js?v=2fda0946198c","./system.js":"./system.js?v=2fda0946198c","./dashboard.js":"./dashboard.js?v=2fda0946198c"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -2693,6 +2726,7 @@ function renderPanels() {
   }).join("");
 
   renderStanding();
+  renderDays();
   renderHabits();
   renderLearn();
   DASH.refreshRecord();
@@ -3706,6 +3740,56 @@ document.addEventListener("click", e => {
   renderHabits();
 });
 
+/**
+ * The account day by day, from the broker's own balances.
+ *
+ * A journal with no fills in it is not an empty journal. Tradovate hands out
+ * the balance history as its own export, and that alone says what every
+ * session made or lost, where the drawdown floor sat, and which days went
+ * past the plan's cap. So it is shown rather than waiting for fills that may
+ * be an export away.
+ */
+function renderDays() {
+  const sec = $("dayssec"), box = $("daysbox");
+  if (!sec || !box) return;
+  const all = balancesNow();
+  const plan = planNow();
+  const names = [...new Set(all.map(b => (b.account || "").trim()).filter(Boolean))].sort();
+  const show = window.ACCOUNT === "all" ? names
+    : names.filter(n => n === window.ACCOUNT);
+  if (!all.length || !show.length) { sec.hidden = true; return; }
+  sec.hidden = false;
+
+  const cap = JD.dailyCap(jdunPlan());
+  box.innerHTML = show.map(name => {
+    const st = FUND.state(plan, {balances: all.filter(b => (b.account || "") === name)});
+    const rows = [...st.days].reverse().map(d => {
+      const over = cap > 0 && d.pnl < -cap;
+      return `<li class="dayrow${d.pnl < 0 ? " down" : d.pnl > 0 ? " up" : ""}">`
+        + `<span class="dayd">${esc(d.date)}</span>`
+        + `<span class="dayp">${d.pnl === 0 ? "flat" : dollars(d.pnl)}</span>`
+        + `<span class="dayb">$${Math.round(d.balance).toLocaleString("en-US")}</span>`
+        + `<span class="dayr">${dollars(d.room).replace("+", "")} room</span>`
+        + (over ? `<span class="dayover">${(d.pnl / -cap).toFixed(1)}&times; the `
+            + `$${cap} cap</span>` : "")
+        + "</li>";
+    }).join("");
+    const red = st.days.filter(d => d.pnl < 0).length;
+    const green = st.days.filter(d => d.pnl > 0).length;
+    const flat = st.days.length - red - green;
+    const worst = st.days.length ? Math.min(...st.days.map(d => d.pnl)) : 0;
+    return (names.length > 1 ? `<h3 class="dayacc">${esc(name)}</h3>` : "")
+      + `<p class="srcnote">${st.days.length} session`
+      + `${st.days.length === 1 ? "" : "s"}, ${green} green and ${red} red`
+      + (flat ? `, ${flat} with no trade` : "") + `, `
+      + `worst day ${dollars(worst)}. `
+      + (cap > 0 && worst < -cap
+          ? `The plan's cap is $${cap}.` : "Every day inside the plan's cap.")
+      + "</p>"
+      + `<ul class="days">${rows}</ul>`;
+  }).join("");
+}
+
 /** The one habit worth fixing this week, with what it has cost. */
 function renderHabits() {
   const box = $("habits");
@@ -3751,6 +3835,7 @@ window.pickAccount = function (acc) {
     b.setAttribute("aria-pressed", String(b.dataset.acc === acc));
   renderPanels();
   renderFunded();
+  renderDays();
 };
 
 function renderAccounts() {
@@ -3773,7 +3858,7 @@ function renderAccounts() {
       return `<button class="acc" data-acc="${esc(k)}" `
         + `aria-pressed="${k === window.ACCOUNT}" `
         + `onclick="pickAccount('${esc(k)}')">${esc(label)}`
-        + `<span class="sn">${n}</span></button>`;
+        + (n ? `<span class="sn">${n}</span>` : "") + "</button>";
     }).join("");
   for (const id of ["accrow", "accrow2"]) {
     const el = $(id);
