@@ -105,6 +105,16 @@ export const SOURCES = [
     fills: () => [],
   },
   {
+    /* Tradovate's Fills report: one row per execution, with a Fill ID that
+       nothing else has. It is the authoritative record of what was actually
+       traded, so when it is in the drop the Orders report is read only for
+       the stops. */
+    id: "tradovate-fills",
+    name: "Tradovate fills",
+    need: [["fillid"], ["contract", "product"]],
+    fills(rows) { return SOURCES.find(s => s.id === "tradovate-orders").fills(rows); },
+  },
+  {
     id: "tradovate-orders",
     name: "Tradovate orders",
     /* Tradovate's own export: orderId, Account, Date, Fill Time, B/S,
@@ -115,8 +125,12 @@ export const SOURCES = [
        has them, so a file is never claimed by two sources. The quantity
        column is named differently in the Fills report and the orders panel,
        and both are accepted. */
-    need: [["bs", "buysell"], ["contract", "product"],
-           ["quantity", "qty", "filledqty", "fillqty", "filledquantity"]],
+    /* Both the Reports export and the orders panel export land here. The
+       panel writes Side and Symbol where the report writes B/S and Contract,
+       and the report is the one that reaches back months, so both spellings
+       are accepted and the stop prices come out of either. */
+    need: [["orderid"], ["stopprice", "limitprice"],
+           ["bs", "buysell", "side"]],
     fills(rows) {
       const out = [];
       for (const r of rows) {
@@ -251,9 +265,13 @@ export function readAny(files, parseCSV) {
       continue;
     }
     const got = source.fills(lower);
-    if (!got.length) continue;
-    fills.push(...got);
     const stops = source.moves ? source.moves(lower) : [];
+    if (!got.length && !stops.length) continue;
+    /* Which file an execution came from matters when both reports are in the
+       same drop: the Orders report lists the filled orders too, and counting
+       them beside the Fills report's rows would double every trade. */
+    for (const g of got) g.__from = source.id;
+    fills.push(...got);
     moves.push(...stops);
     found.push({file: f.name, source: source.id, name: source.name,
                 fills: got.length, stops: stops.length});
@@ -263,7 +281,17 @@ export function readAny(files, parseCSV) {
     const times = got.map(g => g["Closing time"]).filter(Boolean).sort();
     if (times.length) spans.push([times[0], times[times.length - 1]]);
   }
-  fills.sort((a, b) => (a["Closing time"] < b["Closing time"] ? -1 : 1));
+  /* The Fills report is the record of what was executed, down to each
+     partial fill of one order. The Orders report shows the same executions
+     rolled up per order, so where both are present the Fills report wins and
+     the Orders report is left to do the only job it alone can do: say where
+     the stop was. */
+  let kept = fills;
+  if (fills.some(f => f.__from === "tradovate-fills"))
+    kept = fills.filter(f => f.__from !== "tradovate-orders");
+  for (const f of kept) delete f.__from;
+
+  kept.sort((a, b) => (a["Closing time"] < b["Closing time"] ? -1 : 1));
   balances.sort((a, b) => (a.date < b.date ? -1 : 1));
-  return {fills, moves, spans, found, balances};
+  return {fills: kept, moves, spans, found, balances};
 }

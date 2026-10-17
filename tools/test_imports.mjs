@@ -88,8 +88,8 @@ console.log("\nthe Fills report, the shape Tradovate's Reports page writes");
 3,4,4470324,2026-09-15 14:24:15.040Z,2026-09-15,0,7,29318.0,true,99,3,4,09/15/2026 16:24:15,9/15/26,ACC1, Buy,7,29318.00,-2,0,0.25,MNQZ6,MNQ,Micro E-mini NASDAQ-100,2.73
 `;
   const got = readAny([file("Fills.csv", FILLS)], parseCSV);
-  check("the Fills report is recognised", got.found.length === 1
-        && got.found[0].source === "tradovate-orders", JSON.stringify(got.found));
+  check("the Fills report is recognised as its own thing", got.found.length === 1
+        && got.found[0].source === "tradovate-fills", JSON.stringify(got.found));
   check("every row is a fill, status column or not", got.fills.length === 2,
         String(got.fills.length));
   check("the local stamp is used, not the UTC one beside it",
@@ -142,6 +142,42 @@ console.log("\nwhat it refuses to do");
   const empty = readAny([file("notes.csv", "Date,Note\n9/18/26,hello\n")], parseCSV);
   check("a file it does not know is left alone", empty.fills.length === 0
         && empty.found.length === 0);
+}
+
+console.log("\nthe Fills report and the Orders report, dropped together");
+{
+  /* This is how Chris's exports actually arrive: the Fills report for what
+     was executed, and the Orders report for the stop that was on it. The
+     Orders report lists the filled orders too, so counting both would double
+     every trade. */
+  const FILLS = `Fill ID,Order ID,Timestamp,Date,Account,B/S,Quantity,Price,Contract,Product
+9001,8001,10/14/2026 15:51:27,10/14/26,EVAL1, Buy,2,30611.50,MNQZ6,MNQ
+9002,8003,10/14/2026 15:52:19,10/14/26,EVAL1, Sell,2,30575.25,MNQZ6,MNQ
+`;
+  const ORDERS = `orderId,Account,Order ID,B/S,Contract,Product,Fill Time,Status,Timestamp,Date,Quantity,Type,Limit Price,Stop Price,Filled Qty,Avg Fill Price
+8001,EVAL1,8001,Buy,MNQZ6,MNQ,10/14/2026 15:51:27,Filled,10/14/2026 15:51:27,10/14/26,2,Market,,,2,30611.50
+8002,EVAL1,8002,Sell,MNQZ6,MNQ,,Canceled,10/14/2026 15:51:27,10/14/26,2,Limit,30706.00,,,
+8003,EVAL1,8003,Sell,MNQZ6,MNQ,10/14/2026 15:52:19,Filled,10/14/2026 15:51:27,10/14/26,2,Stop,,30575.25,2,30575.25
+`;
+  const got = readAny([file("Fills.csv", FILLS), file("Orders.csv", ORDERS)],
+                      parseCSV);
+  check("both files are recognised", got.found.length === 2,
+        JSON.stringify(got.found.map(f => f.source)));
+  check("the executions are counted once, not twice", got.fills.length === 2,
+        String(got.fills.length));
+  check("and they are the Fills report's own rows",
+        got.fills.every(f => f["Fill price"]), JSON.stringify(got.fills[0]));
+  check("the stop comes out of the Orders report",
+        got.moves.filter(m => m.sl === 30575.25).length === 1,
+        JSON.stringify(got.moves));
+  check("so the trade knows what it risked",
+        pairTrades(got.fills).trades.length === 1);
+
+  // The Orders report on its own still has to work, for a session where only
+  // that was exported.
+  const alone = readAny([file("Orders.csv", ORDERS)], parseCSV);
+  check("the Orders report alone still gives the fills", alone.fills.length === 2,
+        String(alone.fills.length));
 }
 
 console.log("\ntwo accounts, one contract");

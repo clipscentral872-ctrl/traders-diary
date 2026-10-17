@@ -275,20 +275,29 @@ export function analyse(t, moves, spans) {
   const rel = moves.filter(m => m.symbol === t.symbol
     && t.open_t <= m.t && m.t <= t.close_t);
 
-  const target = (rel.find(m => m.tp)?.tp) ?? t.exit_limit_px ?? null;
-  t.trail = rel.map(m => ({t: m.t.slice(11), sl: m.sl}));
+  /* Stop orders and target orders arrive in the same list and have to be
+     told apart. A bracket puts both on the position at the same second, and
+     a target read as a stop takes R with it: `null < entry` is true, so a
+     target was picked as a stop "on the wrong side" and the trade was
+     described from a price that was never a stop. */
+  const stops = rel.filter(m => m.sl != null);
+  const targets = rel.filter(m => m.tp != null);
+
+  const target = (targets[0]?.tp) ?? t.exit_limit_px ?? null;
+  t.trail = stops.map(m => ({t: m.t.slice(11), sl: m.sl}));
 
   // R is the risk taken AT ENTRY, so the FIRST stop, never the last. The stop
   // on the exit order is only the entry stop when it was never moved, and that
   // is only knowable when the activity log covers the trade.
   let stop, noLog = false;
-  if (rel.length) stop = rel[0].sl;
+  if (stops.length) stop = stops[0].sl;
   else if (!spans || covered(spans, t.open_t, t.close_t)) stop = t.exit_stop_px;
   else { stop = null; noLog = true; }
 
   t.initial_stop = stop;
-  t.final_stop = rel.length ? rel[rel.length - 1].sl : stop;
-  t.stop_moved = rel.length > 0 && Math.abs(rel[rel.length - 1].sl - rel[0].sl) > 0.01;
+  t.final_stop = stops.length ? stops[stops.length - 1].sl : stop;
+  t.stop_moved = stops.length > 0
+    && Math.abs(stops[stops.length - 1].sl - stops[0].sl) > 0.01;
 
   const flags = [], notes = [];
   const risk = stop ? Math.abs(entry - stop) : null;
@@ -319,9 +328,9 @@ export function analyse(t, moves, spans) {
     }
   }
 
-  if (rel.length > 1) flags.push("trailed");
-  if (rel.length && stop) {
-    const wrong = rel.filter(m => short ? m.sl < entry : m.sl > entry);
+  if (stops.length > 1) flags.push("trailed");
+  if (stops.length && stop) {
+    const wrong = stops.filter(m => short ? m.sl < entry : m.sl > entry);
     if (wrong.length && t.got_r !== null && t.got_r < 0) {
       const m = wrong[wrong.length - 1];
       flags.push("stop wrong side");
