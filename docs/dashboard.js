@@ -103,7 +103,7 @@ function hero() {
  * it. The plan and the broker's own daily balances are kept by the app;
  * this only reads them. */
 function fundedFig() {
-  let plan = FUND.preset("fff-velocity-25k"), balances = [];
+  let plan = FUND.preset(FUND.DEFAULT_PLAN), balances = [];
   try {
     const saved = JSON.parse(P.get("funded.plan"));
     if (saved && typeof saved === "object") plan = {...FUND.preset(saved.id), ...saved};

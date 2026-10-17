@@ -118,6 +118,50 @@ console.log("\nwhat it says about itself");
         preset("fff-velocity-25k") !== PLANS["fff-velocity-25k"]);
 }
 
+console.log("\nthe floor, and where each firm stops following you");
+{
+  const tf = preset("tradeify-select-50k");
+  check("the Tradeify evaluation is a $50,000 with a $2,000 drawdown",
+        tf.start === 50000 && tf.drawdown === 2000, JSON.stringify([tf.start, tf.drawdown]));
+
+  // On an evaluation the floor never stops rising, so profit past the
+  // drawdown puts the floor ABOVE the starting balance.
+  const far = state(tf, {balances: [
+    {date: "2026-10-01", amount: 50000, realized: 0},
+    {date: "2026-10-02", amount: 52500, realized: 2500},
+  ]});
+  check("it follows you past the starting balance", far.floor === 50500,
+        String(far.floor));
+  check("and never calls itself locked", !far.locked);
+
+  // The funded version locks at $52,100, and the floor is then $50,100.
+  const fu = preset("tradeify-select-50k-funded");
+  const hit = state(fu, {balances: [
+    {date: "2026-10-01", amount: 50000, realized: 0},
+    {date: "2026-10-02", amount: 52200, realized: 2200},
+    {date: "2026-10-03", amount: 51000, realized: -1200},
+  ]});
+  check("the funded one locks once the balance reaches $52,100",
+        hit.locked && hit.floor === 50100, `${hit.locked} ${hit.floor}`);
+  const notYet = state(fu, {balances: [
+    {date: "2026-10-01", amount: 50000, realized: 0},
+    {date: "2026-10-02", amount: 51000, realized: 1000},
+  ]});
+  check("and trails as usual before that", !notYet.locked && notYet.floor === 49000,
+        `${notYet.locked} ${notYet.floor}`);
+
+  check("it warns that the floor is enforced while you are in a trade",
+        far.notes.some(n => n.includes("open positions")), JSON.stringify(far.notes));
+
+  // The rule the old code had, unchanged for the firm it came from.
+  const fff = state(preset("fff-velocity-25k"), {balances: [
+    {date: "2026-09-14", amount: 25000, realized: 0},
+    {date: "2026-09-15", amount: 27000, realized: 2000},
+  ]});
+  check("the FFF plan still stops at the starting balance",
+        fff.floor === 25000 && fff.locked, `${fff.floor} ${fff.locked}`);
+}
+
 console.log("\nhow many contracts");
 {
   // MNQ is $2 a point, so a 40 point stop risks $80 a contract.

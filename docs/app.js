@@ -484,7 +484,7 @@ const planNow = () => {
     const saved = JSON.parse(PROF.get(PLAN_KEY));
     if (saved && typeof saved === "object") return {...FUND.preset(saved.id), ...saved};
   } catch { /* nothing kept yet */ }
-  return FUND.preset("fff-velocity-25k");
+  return FUND.preset(FUND.DEFAULT_PLAN);
 };
 
 const balancesNow = () => {

@@ -39,27 +39,56 @@ export const PLANS = {
        size is twenty micros. Check it against your own dashboard. */
     maxMicros: 20,
   },
-  /* The $50,000 evaluation, the size Chris is on now. Firms differ on every
-     one of these numbers, so it is a starting point to be checked against
-     the dashboard rather than a claim about any particular firm. */
-  "eval-50k": {
-    id: "eval-50k",
-    name: "Evaluation, $50,000",
+  /* Tradeify's Select evaluation at $50,000, which is what Chris trades.
+     Taken from Tradeify's own pricing table and help centre on 2026-10-17.
+     Firms change these, so the app lets every number be edited.
+
+     The drawdown trails the highest END OF DAY balance and never locks on
+     an evaluation: locking is a funded-account rule there. It is updated at
+     the close but enforced in real time against net liquidation value, open
+     positions included, so touching the floor intraday fails the account
+     even if the day finishes green. */
+  "tradeify-select-50k": {
+    id: "tradeify-select-50k",
+    name: "Tradeify Select evaluation, $50,000",
     start: 50000,
     drawdown: 2000,
     trail: "eod",
-    locksAt: "start",
+    realtime: true,
+    locksAt: "none",
+    dailyLoss: null,
+    qualifyingDay: 0,
+    minDays: 3,
+    consistency: 0.40,
+    target: 3000,
+    maxMicros: 40,
+  },
+  /* The funded stage of the same account, for when he passes. Here the
+     drawdown does lock: at a $52,100 end of day balance, or the moment a
+     payout is requested, and the floor is then $50,100 for good. */
+  "tradeify-select-50k-funded": {
+    id: "tradeify-select-50k-funded",
+    name: "Tradeify Select funded, $50,000",
+    start: 50000,
+    drawdown: 2000,
+    trail: "eod",
+    realtime: true,
+    locksAt: 52100,
+    lockFloor: 50100,
     dailyLoss: null,
     qualifyingDay: 0,
     minDays: 1,
     consistency: 0,
-    target: 3000,
-    maxMicros: 50,
+    target: 0,
+    maxMicros: 40,
   },
   none: {id: "none", name: "No funded account", start: 0, drawdown: 0},
 };
 
-export const preset = id => ({...(PLANS[id] || PLANS["fff-velocity-25k"])});
+/* The plan a fresh journal assumes, which is the one Chris trades. */
+export const DEFAULT_PLAN = "tradeify-select-50k";
+
+export const preset = id => ({...(PLANS[id] || PLANS[DEFAULT_PLAN])});
 
 const money = v => Math.round(v * 100) / 100;
 
@@ -131,11 +160,20 @@ export function days(plan, {balances = [], trades = []} = {}) {
 /**
  * Where the account stands against its rules.
  *
- * The drawdown floor walks forward day by day: it follows the highest balance
- * the account has closed at, never falls, and stops at the starting balance
- * when it gets there. On a plan that trails intraday the real floor can be a
- * little higher than this, because it also follows profit that was on screen
- * and given back, so `room` is the best case and is labelled as such.
+ * The drawdown floor walks forward day by day, following the highest balance
+ * the account has closed at and never falling. Where it STOPS following is
+ * the part firms differ on, and getting it wrong misstates the one number
+ * that decides whether the account survives:
+ *
+ *   "start"  it stops at the starting balance. Funded Futures Family.
+ *   "none"   it never stops. Every Tradeify evaluation works this way, so
+ *            past the drawdown in profit the floor is above where you began.
+ *   a number the EOD balance that locks it, after which the floor is fixed at
+ *            `lockFloor`. Tradeify's funded accounts: $52,100 on the $50,000,
+ *            and the floor then sits at $50,100 for good.
+ *
+ * On a plan that is enforced against open profit as well, the real floor can
+ * be tighter than this, so `room` is the best case and is labelled as such.
  */
 export function state(plan, data = {}) {
   const list = days(plan, data);
@@ -144,11 +182,18 @@ export function state(plan, data = {}) {
 
   for (const d of list) {
     peak = Math.max(peak, d.balance);
-    const trailed = Math.min(start, peak - (plan.drawdown || 0));
+    let trailed;
+    if (typeof plan.locksAt === "number")
+      trailed = peak >= plan.locksAt
+        ? (plan.lockFloor ?? start) : peak - (plan.drawdown || 0);
+    else if (plan.locksAt === "none") trailed = peak - (plan.drawdown || 0);
+    else trailed = Math.min(start, peak - (plan.drawdown || 0));
     floor = Math.max(floor, trailed);
     d.floor = money(floor);
     d.room = money(d.balance - floor);
-    if (floor >= start) locked = true;
+    if (typeof plan.locksAt === "number") locked = peak >= plan.locksAt;
+    else if (plan.locksAt === "none") locked = false;
+    else if (floor >= start) locked = true;
   }
 
   const balance = list.length ? list[list.length - 1].balance : start;
@@ -173,6 +218,10 @@ export function state(plan, data = {}) {
   if (plan.trail === "intraday" && list.length)
     notes.push("This plan trails intraday, so it also follows profit that was "
       + "on screen and handed back. The room below is the best case.");
+  else if (plan.realtime && list.length)
+    notes.push("The floor only moves at the close, but it is enforced against "
+      + "your open positions all day. Touching it for a second fails the "
+      + "account, even if the day ends green. The room below is end of day.");
 
   return {
     plan, days: list, start, balance, profit,

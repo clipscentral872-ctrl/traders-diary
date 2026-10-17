@@ -1769,11 +1769,13 @@ body{overflow:hidden}
     <div class="planform" id="planform"></div>
     <p class="howwhy">These are your firm's numbers, not ours, so check them
     against your dashboard and change anything that is wrong. They start as
-    Funded Futures Family's Velocity plan at $25,000, as their own pages
-    describe it: a drawdown that follows your equity up and locks at your
-    starting balance, no daily loss limit, a day needs $200 of profit to count,
-    three of those days for a payout, and no day may be more than 40% of the
-    profit in the cycle.</p>
+    Tradeify's Select evaluation at $50,000, as Tradeify's own pricing page
+    and help centre described it in October 2026: a $3,000 profit target, a
+    $2,000 drawdown that follows your highest end of day balance and never
+    stops following it on an evaluation, no daily loss limit, three trading
+    days minimum, no single day more than 40% of the profit, and 40 micros at
+    a time. The floor only moves at the close but is enforced against your
+    open positions all day, so touching it for a second ends the account.</p>
   </details>
 </section>
 
@@ -2457,7 +2459,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=4b493df4eaf8","./chart.js":"./chart.js?v=4b493df4eaf8","./levels.js":"./levels.js?v=4b493df4eaf8","./revisit.js":"./revisit.js?v=4b493df4eaf8","./series.js":"./series.js?v=4b493df4eaf8","./clock.js":"./clock.js?v=4b493df4eaf8","./vault.js":"./vault.js?v=4b493df4eaf8","./draw.js":"./draw.js?v=4b493df4eaf8","./profile.js":"./profile.js?v=4b493df4eaf8","./whatif.js":"./whatif.js?v=4b493df4eaf8","./precheck.js":"./precheck.js?v=4b493df4eaf8","./shelf.js":"./shelf.js?v=4b493df4eaf8","./watchlist.js":"./watchlist.js?v=4b493df4eaf8","./lock.js":"./lock.js?v=4b493df4eaf8","./inds.js":"./inds.js?v=4b493df4eaf8","./imports.js":"./imports.js?v=4b493df4eaf8","./folder.js":"./folder.js?v=4b493df4eaf8","./funded.js":"./funded.js?v=4b493df4eaf8","./jdun.js":"./jdun.js?v=4b493df4eaf8","./replay.js":"./replay.js?v=4b493df4eaf8","./demo.js":"./demo.js?v=4b493df4eaf8","./diary.js":"./diary.js?v=4b493df4eaf8","./videos.js":"./videos.js?v=4b493df4eaf8","./system.js":"./system.js?v=4b493df4eaf8","./dashboard.js":"./dashboard.js?v=4b493df4eaf8"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=8583d993db0b","./chart.js":"./chart.js?v=8583d993db0b","./levels.js":"./levels.js?v=8583d993db0b","./revisit.js":"./revisit.js?v=8583d993db0b","./series.js":"./series.js?v=8583d993db0b","./clock.js":"./clock.js?v=8583d993db0b","./vault.js":"./vault.js?v=8583d993db0b","./draw.js":"./draw.js?v=8583d993db0b","./profile.js":"./profile.js?v=8583d993db0b","./whatif.js":"./whatif.js?v=8583d993db0b","./precheck.js":"./precheck.js?v=8583d993db0b","./shelf.js":"./shelf.js?v=8583d993db0b","./watchlist.js":"./watchlist.js?v=8583d993db0b","./lock.js":"./lock.js?v=8583d993db0b","./inds.js":"./inds.js?v=8583d993db0b","./imports.js":"./imports.js?v=8583d993db0b","./folder.js":"./folder.js?v=8583d993db0b","./funded.js":"./funded.js?v=8583d993db0b","./jdun.js":"./jdun.js?v=8583d993db0b","./replay.js":"./replay.js?v=8583d993db0b","./demo.js":"./demo.js?v=8583d993db0b","./diary.js":"./diary.js?v=8583d993db0b","./videos.js":"./videos.js?v=8583d993db0b","./system.js":"./system.js?v=8583d993db0b","./dashboard.js":"./dashboard.js?v=8583d993db0b"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -2945,7 +2947,7 @@ const planNow = () => {
     const saved = JSON.parse(PROF.get(PLAN_KEY));
     if (saved && typeof saved === "object") return {...FUND.preset(saved.id), ...saved};
   } catch { /* nothing kept yet */ }
-  return FUND.preset("fff-velocity-25k");
+  return FUND.preset(FUND.DEFAULT_PLAN);
 };
 
 const balancesNow = () => {
