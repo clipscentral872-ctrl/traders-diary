@@ -239,6 +239,7 @@ function renderPanels() {
 
   renderStanding();
   renderDays();
+  renderGroups();
   renderHabits();
   renderLearn();
   DASH.refreshRecord();
@@ -1536,6 +1537,83 @@ function renderAccounts() {
     if (el) { el.innerHTML = ""; el.hidden = true; }
   }
 }
+
+/**
+ * What is actually in this journal, by account, and a way to take a group
+ * out.
+ *
+ * Chris's installed app still held eighteen trades from a TradingView
+ * practice account, tagged live because that is what they were at the time,
+ * with no account on them because accounts did not exist yet. They were
+ * driving the headline, the win rate and the drawdown guard, and nothing in
+ * the app could tell him what they were or remove them without erasing
+ * everything.
+ */
+function renderGroups() {
+  const box = $("groups");
+  if (!box) return;
+  const live = window.TRADES.filter(t => (t.source || "live") === "live");
+  const by = new Map();
+  for (const t of live) {
+    const k = (t.account || "").trim();
+    if (!by.has(k)) by.set(k, []);
+    by.get(k).push(t);
+  }
+  const other = window.TRADES.length - live.length;
+  if (!by.size) {
+    box.innerHTML = '<p class="srcnote">No trades imported yet.</p>';
+    return;
+  }
+  box.innerHTML = [...by.entries()]
+    .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+    .map(([acc, list]) => {
+      const sorted = [...list].sort((a, b) => (a.open_t < b.open_t ? -1 : 1));
+      const net = Math.round(sorted.reduce((n, t) => n + (t.pnl || 0), 0));
+      const from = sorted[0].open_t.slice(0, 10);
+      const to = sorted[sorted.length - 1].open_t.slice(0, 10);
+      const syms = [...new Set(sorted.map(t => t.symbol))].join(", ");
+      return `<div class="grp"><span class="grpname">`
+        + (acc ? esc(window.accountName(acc)) : "No account")
+        + "</span>"
+        + `<button class="grpbtn" data-drop="${esc(acc)}">Remove</button>`
+        + `<span class="grpmeta">${sorted.length} trade`
+        + `${sorted.length === 1 ? "" : "s"}, ${from} to ${to}, ${esc(syms)}, `
+        + `${net >= 0 ? "+" : "-"}$${Math.abs(net).toLocaleString("en-US")}`
+        + (acc ? "" : ". Imported before accounts existed, usually practice "
+            + "from an older platform.")
+        + "</span></div>";
+    }).join("")
+    + (other ? `<p class="srcnote">Also ${other} demo or replay trade`
+        + `${other === 1 ? "" : "s"}, which are already kept out of your live `
+        + "figures.</p>" : "");
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-drop]");
+  if (!b) return;
+  const acc = b.dataset.drop;
+  const hit = window.TRADES.filter(t => (t.source || "live") === "live"
+    && (t.account || "").trim() === acc);
+  if (!hit.length) return;
+  const who = acc ? window.accountName(acc) : "no account";
+  if (!confirm(`Remove ${hit.length} trade${hit.length === 1 ? "" : "s"} from `
+             + `${who}? Every figure in the journal changes. This cannot be `
+             + "undone without a backup file.")) return;
+  const gone = new Set(hit);
+  window.TRADES = window.TRADES.filter(t => !gone.has(t));
+  const warn = save(window.TRADES, window.START);
+  /* The starting balance belonged to the record that just left. Keeping
+     $100,000 from a practice account after removing it put the equity curve
+     on a scale no remaining trade was ever measured against. */
+  window.START = null;
+  save(window.TRADES, window.START);
+  renderPanels();
+  renderFunded();
+  renderDays();
+  renderGroups();
+  storeLine();
+  say(warn || `Removed ${hit.length} trade${hit.length === 1 ? "" : "s"}.`, !!warn);
+});
 
 /** How many sessions of broker balances are in the journal, for the screens
  *  that need to explain what is and is not here yet. */

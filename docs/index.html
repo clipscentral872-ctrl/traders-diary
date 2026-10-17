@@ -1265,6 +1265,21 @@ body{overflow:hidden}
   .track i{transition:none}
 }
 
+/* What is in the journal, by account, with a way to take a group out. */
+.grp{
+  display:grid; grid-template-columns:1fr auto; gap:4px 14px;
+  align-items:center; padding:13px 0; border-bottom:1px solid var(--line-soft);
+}
+.grpname{font-size:14px; color:var(--text)}
+.grpmeta{grid-column:1; color:var(--muted); font-size:12px;
+  font-variant-numeric:tabular-nums}
+.grpbtn{
+  grid-row:1/3; background:var(--raised); border:1px solid var(--line);
+  color:var(--loss); border-radius:6px; padding:8px 14px; font-size:12.5px;
+  cursor:pointer; min-height:38px;
+}
+.grpbtn:hover{border-color:var(--loss)}
+
 /* An empty Diary is a question with an answer, not a blank chart. */
 .dempty{
   position:absolute; inset:0; display:flex; flex-direction:column;
@@ -2051,6 +2066,14 @@ body{overflow:hidden}
 
 
 <section>
+  <h2>What is in this journal</h2>
+  <p class="lead">Every trade the journal holds, grouped by the account it
+  came from. Trades imported before accounts existed have none, which is
+  usually practice from an older platform. Removing a group takes it out of
+  every figure on every page and cannot be undone without a backup.</p>
+  <div id="groups"></div>
+</section>
+<section>
   <h2>Where your trades live</h2>
   <p class="lead">Nowhere but this device. The files you drop are read in the
   browser, and the record is kept in this browser's own storage. Nothing is
@@ -2670,7 +2693,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=bf33c11c02bf","./chart.js":"./chart.js?v=bf33c11c02bf","./levels.js":"./levels.js?v=bf33c11c02bf","./revisit.js":"./revisit.js?v=bf33c11c02bf","./series.js":"./series.js?v=bf33c11c02bf","./clock.js":"./clock.js?v=bf33c11c02bf","./vault.js":"./vault.js?v=bf33c11c02bf","./draw.js":"./draw.js?v=bf33c11c02bf","./profile.js":"./profile.js?v=bf33c11c02bf","./whatif.js":"./whatif.js?v=bf33c11c02bf","./precheck.js":"./precheck.js?v=bf33c11c02bf","./shelf.js":"./shelf.js?v=bf33c11c02bf","./watchlist.js":"./watchlist.js?v=bf33c11c02bf","./lock.js":"./lock.js?v=bf33c11c02bf","./inds.js":"./inds.js?v=bf33c11c02bf","./imports.js":"./imports.js?v=bf33c11c02bf","./folder.js":"./folder.js?v=bf33c11c02bf","./funded.js":"./funded.js?v=bf33c11c02bf","./jdun.js":"./jdun.js?v=bf33c11c02bf","./replay.js":"./replay.js?v=bf33c11c02bf","./demo.js":"./demo.js?v=bf33c11c02bf","./diary.js":"./diary.js?v=bf33c11c02bf","./videos.js":"./videos.js?v=bf33c11c02bf","./system.js":"./system.js?v=bf33c11c02bf","./dashboard.js":"./dashboard.js?v=bf33c11c02bf"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=e65843f82f61","./chart.js":"./chart.js?v=e65843f82f61","./levels.js":"./levels.js?v=e65843f82f61","./revisit.js":"./revisit.js?v=e65843f82f61","./series.js":"./series.js?v=e65843f82f61","./clock.js":"./clock.js?v=e65843f82f61","./vault.js":"./vault.js?v=e65843f82f61","./draw.js":"./draw.js?v=e65843f82f61","./profile.js":"./profile.js?v=e65843f82f61","./whatif.js":"./whatif.js?v=e65843f82f61","./precheck.js":"./precheck.js?v=e65843f82f61","./shelf.js":"./shelf.js?v=e65843f82f61","./watchlist.js":"./watchlist.js?v=e65843f82f61","./lock.js":"./lock.js?v=e65843f82f61","./inds.js":"./inds.js?v=e65843f82f61","./imports.js":"./imports.js?v=e65843f82f61","./folder.js":"./folder.js?v=e65843f82f61","./funded.js":"./funded.js?v=e65843f82f61","./jdun.js":"./jdun.js?v=e65843f82f61","./replay.js":"./replay.js?v=e65843f82f61","./demo.js":"./demo.js?v=e65843f82f61","./diary.js":"./diary.js?v=e65843f82f61","./videos.js":"./videos.js?v=e65843f82f61","./system.js":"./system.js?v=e65843f82f61","./dashboard.js":"./dashboard.js?v=e65843f82f61"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -2913,6 +2936,7 @@ function renderPanels() {
 
   renderStanding();
   renderDays();
+  renderGroups();
   renderHabits();
   renderLearn();
   DASH.refreshRecord();
@@ -4210,6 +4234,83 @@ function renderAccounts() {
     if (el) { el.innerHTML = ""; el.hidden = true; }
   }
 }
+
+/**
+ * What is actually in this journal, by account, and a way to take a group
+ * out.
+ *
+ * Chris's installed app still held eighteen trades from a TradingView
+ * practice account, tagged live because that is what they were at the time,
+ * with no account on them because accounts did not exist yet. They were
+ * driving the headline, the win rate and the drawdown guard, and nothing in
+ * the app could tell him what they were or remove them without erasing
+ * everything.
+ */
+function renderGroups() {
+  const box = $("groups");
+  if (!box) return;
+  const live = window.TRADES.filter(t => (t.source || "live") === "live");
+  const by = new Map();
+  for (const t of live) {
+    const k = (t.account || "").trim();
+    if (!by.has(k)) by.set(k, []);
+    by.get(k).push(t);
+  }
+  const other = window.TRADES.length - live.length;
+  if (!by.size) {
+    box.innerHTML = '<p class="srcnote">No trades imported yet.</p>';
+    return;
+  }
+  box.innerHTML = [...by.entries()]
+    .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+    .map(([acc, list]) => {
+      const sorted = [...list].sort((a, b) => (a.open_t < b.open_t ? -1 : 1));
+      const net = Math.round(sorted.reduce((n, t) => n + (t.pnl || 0), 0));
+      const from = sorted[0].open_t.slice(0, 10);
+      const to = sorted[sorted.length - 1].open_t.slice(0, 10);
+      const syms = [...new Set(sorted.map(t => t.symbol))].join(", ");
+      return `<div class="grp"><span class="grpname">`
+        + (acc ? esc(window.accountName(acc)) : "No account")
+        + "</span>"
+        + `<button class="grpbtn" data-drop="${esc(acc)}">Remove</button>`
+        + `<span class="grpmeta">${sorted.length} trade`
+        + `${sorted.length === 1 ? "" : "s"}, ${from} to ${to}, ${esc(syms)}, `
+        + `${net >= 0 ? "+" : "-"}$${Math.abs(net).toLocaleString("en-US")}`
+        + (acc ? "" : ". Imported before accounts existed, usually practice "
+            + "from an older platform.")
+        + "</span></div>";
+    }).join("")
+    + (other ? `<p class="srcnote">Also ${other} demo or replay trade`
+        + `${other === 1 ? "" : "s"}, which are already kept out of your live `
+        + "figures.</p>" : "");
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-drop]");
+  if (!b) return;
+  const acc = b.dataset.drop;
+  const hit = window.TRADES.filter(t => (t.source || "live") === "live"
+    && (t.account || "").trim() === acc);
+  if (!hit.length) return;
+  const who = acc ? window.accountName(acc) : "no account";
+  if (!confirm(`Remove ${hit.length} trade${hit.length === 1 ? "" : "s"} from `
+             + `${who}? Every figure in the journal changes. This cannot be `
+             + "undone without a backup file.")) return;
+  const gone = new Set(hit);
+  window.TRADES = window.TRADES.filter(t => !gone.has(t));
+  const warn = save(window.TRADES, window.START);
+  /* The starting balance belonged to the record that just left. Keeping
+     $100,000 from a practice account after removing it put the equity curve
+     on a scale no remaining trade was ever measured against. */
+  window.START = null;
+  save(window.TRADES, window.START);
+  renderPanels();
+  renderFunded();
+  renderDays();
+  renderGroups();
+  storeLine();
+  say(warn || `Removed ${hit.length} trade${hit.length === 1 ? "" : "s"}.`, !!warn);
+});
 
 /** How many sessions of broker balances are in the journal, for the screens
  *  that need to explain what is and is not here yet. */

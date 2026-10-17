@@ -207,6 +207,17 @@ TRADEVIEW = """<div class="ws">
 
 
 
+GROUPS = """<section>
+  <h2>What is in this journal</h2>
+  <p class="lead">Every trade the journal holds, grouped by the account it
+  came from. Trades imported before accounts existed have none, which is
+  usually practice from an older platform. Removing a group takes it out of
+  every figure on every page and cannot be undone without a backup.</p>
+  <div id="groups"></div>
+</section>
+"""
+
+
 PRIVACY = """<section>
   <h2>Where your trades live</h2>
   <p class="lead">Nowhere but this device. The files you drop are read in the
@@ -1153,6 +1164,21 @@ body{overflow:hidden}
   .track i{transition:none}
 }
 
+/* What is in the journal, by account, with a way to take a group out. */
+.grp{
+  display:grid; grid-template-columns:1fr auto; gap:4px 14px;
+  align-items:center; padding:13px 0; border-bottom:1px solid var(--line-soft);
+}
+.grpname{font-size:14px; color:var(--text)}
+.grpmeta{grid-column:1; color:var(--muted); font-size:12px;
+  font-variant-numeric:tabular-nums}
+.grpbtn{
+  grid-row:1/3; background:var(--raised); border:1px solid var(--line);
+  color:var(--loss); border-radius:6px; padding:8px 14px; font-size:12.5px;
+  cursor:pointer; min-height:38px;
+}
+.grpbtn:hover{border-color:var(--loss)}
+
 /* An empty Diary is a question with an answer, not a blank chart. */
 .dempty{
   position:absolute; inset:0; display:flex; flex-direction:column;
@@ -1838,7 +1864,7 @@ def main():
         raise SystemExit("the footer marker moved; check sections.html")
     src = src.replace("<!--FOOTER-->", tail.group(0), 1)
 
-    src = src.replace("__LEARN__", PRIVACY + SETTINGS)
+    src = src.replace("__LEARN__", GROUPS + PRIVACY + SETTINGS)
 
     src, n = REPLAY_SECTION.subn("", src)
     if n != 1:
