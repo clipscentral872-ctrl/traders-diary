@@ -74,7 +74,7 @@ REPLAY_SECTION = re.compile(
 
 # One app, four tabs. The diary is the reason to open it, so it comes first
 # and it is what a fresh install lands on.
-TABS = [("home", "Home"), ("diary", "Diary"), ("demo", "Demo"),
+TABS = [("home", "Home"), ("diary", "Diary"),
         ("replay", "Replay"), ("videos", "Videos"), ("system", "System"),
         ("learn", "Learn")]
 
@@ -234,7 +234,6 @@ PRIVACY = """<section>
   <div class="toolrow">
     <button class="bigbtn" id="save">Save a backup file</button>
     <button class="bigbtn ghost" id="load">Restore from a backup</button>
-    <button class="bigbtn ghost" id="wipedemo">Erase the Demo account</button>
     <button class="bigbtn ghost" id="wipe">Erase everything</button>
     <input type="file" id="loadpick" accept=".json" hidden>
   </div>
@@ -1175,6 +1174,25 @@ body{overflow:hidden}
   .track i{transition:none}
 }
 
+/* The notice about trades that belong to no account. Loud enough to be seen
+   once, quiet enough not to be an alarm. */
+.orphan{display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  padding:14px 16px; margin-bottom:14px;
+  border-left:3px solid var(--warn)}
+.orphantext{flex:1 1 260px; min-width:0}
+.orphanbig{margin:0; font-size:13.5px; color:var(--text)}
+.orphansub{margin:5px 0 0; color:var(--muted); font-size:12.5px; line-height:1.55}
+
+/* The notice about trades that belong to no account. Loud enough to be seen
+   once, quiet enough not to be an alarm. */
+.orphan{display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  padding:14px 16px; margin-bottom:14px;
+  border-left:3px solid var(--warn)}
+.orphantext{flex:1 1 260px; min-width:0}
+.orphanbig{margin:0; font-size:13.5px; color:var(--text)}
+.orphansub{margin:5px 0 0; color:var(--muted); font-size:12.5px; line-height:1.55}
+.orphanacts{display:flex; gap:8px; flex-wrap:wrap}
+
 /* Which method the Learn tab is showing. */
 .mswitch{display:flex; gap:6px; margin:0 0 16px}
 .msb{
@@ -1922,7 +1940,7 @@ MODULES = [
     "clock.js", "vault.js", "draw.js", "profile.js", "whatif.js", "precheck.js", "shelf.js",
     "watchlist.js", "lock.js", "inds.js", "imports.js", "folder.js",
     "funded.js", "jdun.js",
-    "replay.js", "demo.js", "diary.js", "videos.js", "system.js",
+    "replay.js", "diary.js", "videos.js", "system.js",
     "dashboard.js",
 ]
 

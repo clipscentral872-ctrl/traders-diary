@@ -166,32 +166,16 @@ function fundedFig() {
                : `left of ${plain(plan.drawdown)} before it closes`);
 }
 
-/** The three numbers worth carrying, small, plus the funded and demo accounts. */
+/** The three numbers worth carrying, small, beside the account guard. */
 function figures() {
   const live = mine();
   const box = $("dashyou");
   if (!box) return;
 
-  let d = null;
-  try { d = JSON.parse(P.get("demo")); } catch { /* fresh */ }
-  /* A Demo account that was never opened is not worth a tile on the home
-     page of a journal that has real accounts in it. */
-  const hasReal = (window.TRADES || []).some(t => (t.source || "live") === "live")
-    || (() => { try { return (JSON.parse(P.get("funded.balances")) || []).length; }
-                catch { return 0; } })();
-  const demoFig = (!d || typeof d.balance !== "number") && hasReal ? ""
-    : !d || typeof d.balance !== "number"
-    ? fig("Demo", "not started", "", "open the Demo tab")
-    : fig("Demo", plain(d.balance), d.balance - 100000 >= 0 ? "win" : "loss",
-           d.pos ? `${d.pos.side.toLowerCase()} ${d.pos.qty} ${d.pos.symbol} open`
-                 : `${money(d.balance - 100000)} over `
-                   + `${(d.trades || []).length} trades`);
-
   const funded = fundedFig();
-  // A journal with nothing in it still has an account to watch, if one was
-  // imported: the demo tile on its own is what made the home page look like
-  // it was about the demo account.
-  if (!live.length) { box.innerHTML = funded + demoFig; return; }
+  // A journal with no trades in it still has an account to watch, if one was
+  // imported.
+  if (!live.length) { box.innerHTML = funded; return; }
 
   const s = E.summarise(live);
   const scored = live.filter(t => t.got_r !== null && t.got_r !== undefined);
@@ -207,7 +191,6 @@ function figures() {
     fig("Worst drawdown", plain(s.max_dd), "loss",
          `${s.worst_streak} loss${s.worst_streak === 1 ? "" : "es"} in a row`),
     funded,
-    demoFig,
   ].join("");
 }
 
@@ -277,7 +260,6 @@ function leak() {
 const GLYPH = {
   import: '<path d="M12 16V4M12 4 7 9M12 4l5 5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>',
   diary: '<path d="M3 5h7a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H3zM21 5h-7a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h7z"/>',
-  demo: '<path d="M4 20V9M10 20V4M16 20v-7M4 13l6-6 6 6 5-6"/>',
   replay: '<path d="M4 12a8 8 0 1 0 2.6-5.9M4 3v4h4"/><path d="M11 9l5 3-5 3z"/>',
   videos: '<rect x="2" y="5" width="15" height="14" rx="2"/><path d="M17 10l5-3v10l-5-3z"/>',
   system: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>',
@@ -290,7 +272,6 @@ const GLYPH = {
 const DOORS = [
   ["import", "Import", "Drop your six TradingView exports"],
   ["diary", "Diary", "Watch your trades back on the chart"],
-  ["demo", "Demo", "Place a trade on today's market"],
   ["replay", "Replay", "Cut a past session and trade it out"],
   ["videos", "Videos", "Your winners and losers, in folders"],
   ["system", "System", "What the robot has been doing"],

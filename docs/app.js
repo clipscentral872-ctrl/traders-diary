@@ -12,7 +12,6 @@ import * as RP from "./replay.js";
 import * as IND from "./inds.js";
 import * as SYS from "./system.js";
 import * as LOCK from "./lock.js";
-import * as DEMO from "./demo.js";
 import * as RV from "./revisit.js";
 import * as DASH from "./dashboard.js";
 import * as VID from "./videos.js";
@@ -149,11 +148,9 @@ const feedsFor = trades => trades.map(t => E.FEED[t.symbol]);
 
 /* ------------------------------------------------------------ panels */
 
-const SOURCES = [["live", "Live"], ["demo", "Demo"],
-                 ["replay", "Replay"], ["all", "All"]];
+const SOURCES = [["live", "Live"], ["replay", "Replay"], ["all", "All"]];
 const SOURCE_NOTE = {
   live: "Trades you actually placed.",
-  demo: "Placed on the Demo account at a delayed price. Kept out of your live figures.",
   replay: "Practice. Deliberately kept out of your live figures.",
   all: "Everything together. Useful for volume, misleading as a record.",
 };
@@ -174,7 +171,6 @@ function stat(label, value, cls = "") {
 
 function renderPanels() {
   renderAccounts();
-  hideDemoIfUnused();
   const all = window.ofAccount(window.TRADES);
   // One trade is not "1 trades". The whole phrase is written here rather
   // than a number beside a fixed word, which cannot be made to agree.
@@ -238,6 +234,7 @@ function renderPanels() {
   }).join("");
 
   renderStanding();
+  renderOrphans();
   renderDays();
   renderGroups();
   renderHabits();
@@ -928,28 +925,6 @@ $("loadpick").addEventListener("change", async () => {
   }
 });
 
-/* The Demo account was for learning the buttons. Once the money is real it is
-   noise in the record, so it can go on its own without taking the rest with
-   it: the account's own balance and position, and every trade it sent to the
-   Diary. Live and replay trades are untouched. */
-$("wipedemo").addEventListener("click", () => {
-  const demo = window.TRADES.filter(t => (t.source || "live") === "demo");
-  let had = false;
-  try { had = !!PROF.get("demo"); } catch { had = false; }
-  if (!demo.length && !had) { say("There is no Demo account data to erase."); return; }
-  if (!confirm(`Erase the Demo account and its ${demo.length} trade`
-             + `${demo.length === 1 ? "" : "s"}? Your live trades are not touched.`))
-    return;
-  PROF.remove("demo");
-  window.TRADES = window.TRADES.filter(t => (t.source || "live") !== "demo");
-  const warn = save(window.TRADES, window.START);
-  DEMO.reload();
-  renderPanels();
-  renderFunded();
-  storeLine();
-  say(warn || "The Demo account is gone. Your live trades are still here.", !!warn);
-});
-
 $("wipe").addEventListener("click", () => {
   if (!window.TRADES.length) { say("There is nothing stored to erase."); return; }
   if (!confirm(`Erase all ${window.TRADES.length} trades from this browser? `
@@ -989,7 +964,6 @@ showSel.addEventListener("change", () => {
   C.reset();
   renderPanels();
   DIARY.redraw();
-  DEMO.redraw();
   RP.redraw();
   say(showSel.value === "device"
       ? "Times now follow this device."
@@ -1188,7 +1162,6 @@ function goTab(name, push) {
     DIARY.redraw();
   }
   if (name === "replay") RP.redraw();
-  if (name === "demo") DEMO.redraw();
   if (name === "system") SYS.show();
   if (name === "learn") showRevisitFacts();
   if (name === "home") DASH.show();
@@ -1210,6 +1183,12 @@ document.addEventListener("click", e => {
   // and a hunt for the right panel. Still inside the click, which is what
   // lets a browser open a file dialog at all.
   if (b.dataset.import) $("pick").click();
+  // A button that names a tab can also name what to scroll to once there.
+  if (b.dataset.scroll) {
+    const el = $(b.dataset.scroll);
+    if (el) requestAnimationFrame(() =>
+      el.scrollIntoView({block: "center", behavior: "smooth"}));
+  }
 });
 addEventListener("hashchange", () => goTab(location.hash.slice(1), false));
 
@@ -1492,22 +1471,6 @@ window.pickAccount = function (acc) {
   try { VID.refilter(); } catch { /* library not loaded yet */ }
 };
 
-/* The Demo account was a place to learn which buttons do what. Once there
-   are real accounts in the journal it is a tab in the way, and the Diary is
-   about the evaluations, so it steps aside until it has something in it. */
-function hideDemoIfUnused() {
-  let used = false;
-  try { used = !!PROF.get("demo"); } catch { used = false; }
-  if (!used) used = window.TRADES.some(t => (t.source || "live") === "demo");
-  const real = window.TRADES.some(t => (t.source || "live") === "live")
-    || balancesNow().length > 0;
-  const hide = real && !used;
-  const btn = document.querySelector('.tb[data-go="demo"]');
-  if (btn) btn.hidden = hide;
-  const open = document.querySelector(".tabpane:not([hidden])");
-  if (hide && open && open.dataset.tab === "demo") goTab("home", true);
-}
-
 function renderAccounts() {
   /* Accounts come from the balance history as well as from trades. Tradovate
      hands those two files out separately, and the balance one carries the
@@ -1537,6 +1500,31 @@ function renderAccounts() {
     if (el) { el.innerHTML = ""; el.hidden = true; }
   }
 }
+
+/* Trades the journal cannot attribute, said on the page where they are doing
+   the damage, with the button that fixes it right there. The same tool lives
+   on the Learn tab, which is two taps away and might as well be nowhere:
+   Chris asked twice why an old practice account was still driving his
+   headline. */
+function renderOrphans() {
+  const sec = $("orphansec"), line = $("orphanbig");
+  if (!sec || !line) return;
+  const loose = window.TRADES.filter(t => (t.source || "live") === "live"
+    && !(t.account || "").trim());
+  // Only worth saying when there is something to tell them apart from.
+  const named = window.TRADES.some(t => (t.account || "").trim())
+    || balancesNow().length > 0;
+  if (!loose.length || !named) { sec.hidden = true; return; }
+  sec.hidden = false;
+  const net = Math.round(loose.reduce((n, t) => n + (t.pnl || 0), 0));
+  const from = loose.map(t => t.open_t).sort()[0].slice(0, 10);
+  line.textContent = `${loose.length} trade${loose.length === 1 ? "" : "s"} `
+    + `in here belong to no account, going back to ${from}, `
+    + `${net >= 0 ? "+" : "-"}$${Math.abs(net).toLocaleString("en-US")} between them.`;
+}
+
+const orphanGo = $("orphango");
+if (orphanGo) orphanGo.addEventListener("click", () => dropAccount(""));
 
 /**
  * What is actually in this journal, by account, and a way to take a group
@@ -1590,8 +1578,11 @@ function renderGroups() {
 
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-drop]");
-  if (!b) return;
-  const acc = b.dataset.drop;
+  if (b) dropAccount(b.dataset.drop);
+});
+
+/** Take one account's live trades out of the journal, for good. */
+function dropAccount(acc) {
   const hit = window.TRADES.filter(t => (t.source || "live") === "live"
     && (t.account || "").trim() === acc);
   if (!hit.length) return;
@@ -1612,8 +1603,9 @@ document.addEventListener("click", e => {
   renderDays();
   renderGroups();
   storeLine();
-  say(warn || `Removed ${hit.length} trade${hit.length === 1 ? "" : "s"}.`, !!warn);
-});
+  say(warn || `Removed ${hit.length} trade${hit.length === 1 ? "" : "s"}. `
+    + "Your home page is your own accounts now.", !!warn);
+}
 
 /* ------------------------------------------------------ which method, Learn */
 
@@ -1743,7 +1735,6 @@ async function opened(pin) {
   renderFunded();
   storeLine();
   lockState();
-  DEMO.reload();
   RP.reopen();
   IND.reopen();
   // Anything new in the watched folder, now that there is a journal to put
@@ -2114,13 +2105,6 @@ VID.init();
 const basePickSource = window.pickSource;
 window.pickSource = src => { DIARY.setSource(src); basePickSource(src); };
 
-DEMO.setClock(tzOffset);
-DEMO.init(
-  trades => intoDiary(trades, "demo"),
-  // A demo trade that settles while you are looking at another tab should
-  // still show up in the numbers when you come back to them.
-  () => { renderPanels(); storeLine(); });
-
 goTab(location.hash.slice(1) || HOME, false);
 
 /* --------------------------------------------------------- new versions */
@@ -2155,7 +2139,6 @@ function busy() {
     if (box.value.trim() !== ((t && t.mine) || "").trim()) return "an unsaved note";
   }
   if (RP.inTrade()) return "a replay position still open";
-  if (DEMO.inTrade()) return "a demo position still open";
   if (document.getElementById("drop").classList.contains("busy")) return "an import";
   return null;
 }

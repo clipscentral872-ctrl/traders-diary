@@ -1276,6 +1276,25 @@ body{overflow:hidden}
   .track i{transition:none}
 }
 
+/* The notice about trades that belong to no account. Loud enough to be seen
+   once, quiet enough not to be an alarm. */
+.orphan{display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  padding:14px 16px; margin-bottom:14px;
+  border-left:3px solid var(--warn)}
+.orphantext{flex:1 1 260px; min-width:0}
+.orphanbig{margin:0; font-size:13.5px; color:var(--text)}
+.orphansub{margin:5px 0 0; color:var(--muted); font-size:12.5px; line-height:1.55}
+
+/* The notice about trades that belong to no account. Loud enough to be seen
+   once, quiet enough not to be an alarm. */
+.orphan{display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  padding:14px 16px; margin-bottom:14px;
+  border-left:3px solid var(--warn)}
+.orphantext{flex:1 1 260px; min-width:0}
+.orphanbig{margin:0; font-size:13.5px; color:var(--text)}
+.orphansub{margin:5px 0 0; color:var(--muted); font-size:12.5px; line-height:1.55}
+.orphanacts{display:flex; gap:8px; flex-wrap:wrap}
+
 /* Which method the Learn tab is showing. */
 .mswitch{display:flex; gap:6px; margin:0 0 16px}
 .msb{
@@ -1856,7 +1875,7 @@ body{overflow:hidden}
 <div class="app">
 <div class="appbar">
   <span class="brand">Traders&nbsp;Diary</span>
-  <nav class="tabs2" role="tablist" aria-label="Sections"><button class="tb" role="tab" data-go="home" aria-selected="true">Home</button><button class="tb" role="tab" data-go="diary" aria-selected="false">Diary</button><button class="tb" role="tab" data-go="demo" aria-selected="false">Demo</button><button class="tb" role="tab" data-go="replay" aria-selected="false">Replay</button><button class="tb" role="tab" data-go="videos" aria-selected="false">Videos</button><button class="tb" role="tab" data-go="system" aria-selected="false">System</button><button class="tb" role="tab" data-go="learn" aria-selected="false">Learn</button></nav>
+  <nav class="tabs2" role="tablist" aria-label="Sections"><button class="tb" role="tab" data-go="home" aria-selected="true">Home</button><button class="tb" role="tab" data-go="diary" aria-selected="false">Diary</button><button class="tb" role="tab" data-go="replay" aria-selected="false">Replay</button><button class="tb" role="tab" data-go="videos" aria-selected="false">Videos</button><button class="tb" role="tab" data-go="system" aria-selected="false">System</button><button class="tb" role="tab" data-go="learn" aria-selected="false">Learn</button></nav>
 
   <div class="accrow bar" id="accbar" hidden></div>
   <span class="appmeta" id="appmeta">no trades</span>
@@ -1991,6 +2010,22 @@ body{overflow:hidden}
   <div id="dashleak"></div>
 </section>
 
+<section id="orphansec" hidden>
+  <div class="card hud orphan">
+    <div class="orphantext">
+      <p class="orphanbig" id="orphanbig"></p>
+      <p class="orphansub">These came in before the journal knew about
+      accounts, so they are almost always practice from an older platform.
+      They are counting toward every figure on this page.</p>
+    </div>
+    <div class="orphanacts">
+      <button class="bigbtn" id="orphango">Remove them</button>
+      <button class="bigbtn ghost" data-go="learn" data-scroll="groups">See
+      them first</button>
+    </div>
+  </div>
+</section>
+
 <section id="accsec">
   <div class="accrow" id="accrow" hidden></div>
 </section>
@@ -2112,7 +2147,6 @@ body{overflow:hidden}
   <div class="toolrow">
     <button class="bigbtn" id="save">Save a backup file</button>
     <button class="bigbtn ghost" id="load">Restore from a backup</button>
-    <button class="bigbtn ghost" id="wipedemo">Erase the Demo account</button>
     <button class="bigbtn ghost" id="wipe">Erase everything</button>
     <input type="file" id="loadpick" accept=".json" hidden>
   </div>
@@ -2205,62 +2239,6 @@ body{overflow:hidden}
   cannot flatter a result.
 </footer>
 
-</div>
-</div>
-
-<div class="tabpane" data-tab="demo" hidden>
-<div class="ws">
-  <div class="wsrail">
-    <div class="drawrail" id="dtools" role="group" aria-label="Drawing tools"></div>
-    <button class="rbtn2" id="dwipe" title="Remove every drawing on this contract">Clr</button>
-    <span class="raildiv"></span>
-    <button class="rbtn2" id="dlevels" aria-pressed="true" title="Session highs and lows">Lv</button>
-    <button class="rbtn2" id="dzin" title="Zoom in">+</button>
-    <button class="rbtn2" id="dzout" title="Zoom out">&minus;</button>
-    <button class="rbtn2" id="dfit" title="Fit the chart">Fit</button>
-  </div>
-
-  <div class="wsmain">
-    <div class="wstop">
-      <select id="dsym" class="psel" aria-label="Contract"></select>
-      <div class="tfrow" id="dtf" role="group" aria-label="Timeframe"></div>
-      <span class="pstale" id="dread"></span>
-      <span class="pclock" id="dclock"></span>
-    </div>
-    <div class="wsstage"><canvas id="dc"></canvas><div class="plegend" id="dohlc"></div></div>
-    <div class="wsfoot"><span id="dposline"></span></div>
-  </div>
-
-  <div class="wspanel">
-    <div class="pblock watchblock">
-      <h4>Watchlist</h4>
-      <div class="wlist" id="dwatch"></div>
-    </div>
-    <div class="pblock">
-      <h4>Order</h4>
-      <div class="tq">
-        <label for="dqty">Qty</label><input type="number" id="dqty" min="1" step="1" value="1">
-        <label for="drisk">Stop pts</label><input type="number" id="drisk" min="0.25" step="0.25" value="20">
-        <label for="drr">Target R</label><input type="number" id="drr" min="0.1" step="0.1" value="2">
-      </div>
-      <div class="tbtns">
-        <button class="tbuy" id="dbuy"><b>Buy</b><span id="dbuypx"></span></button>
-        <button class="tsell" id="dsell"><b>Sell</b><span id="dsellpx"></span></button>
-      </div>
-      <button class="tflat" id="dflat" hidden>Close at market</button>
-      <p class="trisk" id="drisknote"></p>
-      <div class="precheck" id="dpre" hidden></div>
-    </div>
-    <div class="pblock">
-      <h4>Account</h4>
-      <div class="stats hud" id="dstats"></div>
-      <ul class="rplist" id="dlist"></ul>
-      <div class="toolrow">
-        <button class="bigbtn" id="dsend" hidden>Send to the Diary</button>
-        <button class="bigbtn ghost" id="dreset">Reset</button>
-      </div>
-    </div>
-  </div>
 </div>
 </div>
 
@@ -2773,7 +2751,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=5ba0cd8a74df","./chart.js":"./chart.js?v=5ba0cd8a74df","./levels.js":"./levels.js?v=5ba0cd8a74df","./revisit.js":"./revisit.js?v=5ba0cd8a74df","./series.js":"./series.js?v=5ba0cd8a74df","./clock.js":"./clock.js?v=5ba0cd8a74df","./vault.js":"./vault.js?v=5ba0cd8a74df","./draw.js":"./draw.js?v=5ba0cd8a74df","./profile.js":"./profile.js?v=5ba0cd8a74df","./whatif.js":"./whatif.js?v=5ba0cd8a74df","./precheck.js":"./precheck.js?v=5ba0cd8a74df","./shelf.js":"./shelf.js?v=5ba0cd8a74df","./watchlist.js":"./watchlist.js?v=5ba0cd8a74df","./lock.js":"./lock.js?v=5ba0cd8a74df","./inds.js":"./inds.js?v=5ba0cd8a74df","./imports.js":"./imports.js?v=5ba0cd8a74df","./folder.js":"./folder.js?v=5ba0cd8a74df","./funded.js":"./funded.js?v=5ba0cd8a74df","./jdun.js":"./jdun.js?v=5ba0cd8a74df","./replay.js":"./replay.js?v=5ba0cd8a74df","./demo.js":"./demo.js?v=5ba0cd8a74df","./diary.js":"./diary.js?v=5ba0cd8a74df","./videos.js":"./videos.js?v=5ba0cd8a74df","./system.js":"./system.js?v=5ba0cd8a74df","./dashboard.js":"./dashboard.js?v=5ba0cd8a74df"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=d17bd36e0883","./chart.js":"./chart.js?v=d17bd36e0883","./levels.js":"./levels.js?v=d17bd36e0883","./revisit.js":"./revisit.js?v=d17bd36e0883","./series.js":"./series.js?v=d17bd36e0883","./clock.js":"./clock.js?v=d17bd36e0883","./vault.js":"./vault.js?v=d17bd36e0883","./draw.js":"./draw.js?v=d17bd36e0883","./profile.js":"./profile.js?v=d17bd36e0883","./whatif.js":"./whatif.js?v=d17bd36e0883","./precheck.js":"./precheck.js?v=d17bd36e0883","./shelf.js":"./shelf.js?v=d17bd36e0883","./watchlist.js":"./watchlist.js?v=d17bd36e0883","./lock.js":"./lock.js?v=d17bd36e0883","./inds.js":"./inds.js?v=d17bd36e0883","./imports.js":"./imports.js?v=d17bd36e0883","./folder.js":"./folder.js?v=d17bd36e0883","./funded.js":"./funded.js?v=d17bd36e0883","./jdun.js":"./jdun.js?v=d17bd36e0883","./replay.js":"./replay.js?v=d17bd36e0883","./diary.js":"./diary.js?v=d17bd36e0883","./videos.js":"./videos.js?v=d17bd36e0883","./system.js":"./system.js?v=d17bd36e0883","./dashboard.js":"./dashboard.js?v=d17bd36e0883"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -2789,7 +2767,6 @@ import * as RP from "./replay.js";
 import * as IND from "./inds.js";
 import * as SYS from "./system.js";
 import * as LOCK from "./lock.js";
-import * as DEMO from "./demo.js";
 import * as RV from "./revisit.js";
 import * as DASH from "./dashboard.js";
 import * as VID from "./videos.js";
@@ -2926,11 +2903,9 @@ const feedsFor = trades => trades.map(t => E.FEED[t.symbol]);
 
 /* ------------------------------------------------------------ panels */
 
-const SOURCES = [["live", "Live"], ["demo", "Demo"],
-                 ["replay", "Replay"], ["all", "All"]];
+const SOURCES = [["live", "Live"], ["replay", "Replay"], ["all", "All"]];
 const SOURCE_NOTE = {
   live: "Trades you actually placed.",
-  demo: "Placed on the Demo account at a delayed price. Kept out of your live figures.",
   replay: "Practice. Deliberately kept out of your live figures.",
   all: "Everything together. Useful for volume, misleading as a record.",
 };
@@ -2951,7 +2926,6 @@ function stat(label, value, cls = "") {
 
 function renderPanels() {
   renderAccounts();
-  hideDemoIfUnused();
   const all = window.ofAccount(window.TRADES);
   // One trade is not "1 trades". The whole phrase is written here rather
   // than a number beside a fixed word, which cannot be made to agree.
@@ -3015,6 +2989,7 @@ function renderPanels() {
   }).join("");
 
   renderStanding();
+  renderOrphans();
   renderDays();
   renderGroups();
   renderHabits();
@@ -3705,28 +3680,6 @@ $("loadpick").addEventListener("change", async () => {
   }
 });
 
-/* The Demo account was for learning the buttons. Once the money is real it is
-   noise in the record, so it can go on its own without taking the rest with
-   it: the account's own balance and position, and every trade it sent to the
-   Diary. Live and replay trades are untouched. */
-$("wipedemo").addEventListener("click", () => {
-  const demo = window.TRADES.filter(t => (t.source || "live") === "demo");
-  let had = false;
-  try { had = !!PROF.get("demo"); } catch { had = false; }
-  if (!demo.length && !had) { say("There is no Demo account data to erase."); return; }
-  if (!confirm(`Erase the Demo account and its ${demo.length} trade`
-             + `${demo.length === 1 ? "" : "s"}? Your live trades are not touched.`))
-    return;
-  PROF.remove("demo");
-  window.TRADES = window.TRADES.filter(t => (t.source || "live") !== "demo");
-  const warn = save(window.TRADES, window.START);
-  DEMO.reload();
-  renderPanels();
-  renderFunded();
-  storeLine();
-  say(warn || "The Demo account is gone. Your live trades are still here.", !!warn);
-});
-
 $("wipe").addEventListener("click", () => {
   if (!window.TRADES.length) { say("There is nothing stored to erase."); return; }
   if (!confirm(`Erase all ${window.TRADES.length} trades from this browser? `
@@ -3766,7 +3719,6 @@ showSel.addEventListener("change", () => {
   C.reset();
   renderPanels();
   DIARY.redraw();
-  DEMO.redraw();
   RP.redraw();
   say(showSel.value === "device"
       ? "Times now follow this device."
@@ -3965,7 +3917,6 @@ function goTab(name, push) {
     DIARY.redraw();
   }
   if (name === "replay") RP.redraw();
-  if (name === "demo") DEMO.redraw();
   if (name === "system") SYS.show();
   if (name === "learn") showRevisitFacts();
   if (name === "home") DASH.show();
@@ -3987,6 +3938,12 @@ document.addEventListener("click", e => {
   // and a hunt for the right panel. Still inside the click, which is what
   // lets a browser open a file dialog at all.
   if (b.dataset.import) $("pick").click();
+  // A button that names a tab can also name what to scroll to once there.
+  if (b.dataset.scroll) {
+    const el = $(b.dataset.scroll);
+    if (el) requestAnimationFrame(() =>
+      el.scrollIntoView({block: "center", behavior: "smooth"}));
+  }
 });
 addEventListener("hashchange", () => goTab(location.hash.slice(1), false));
 
@@ -4269,22 +4226,6 @@ window.pickAccount = function (acc) {
   try { VID.refilter(); } catch { /* library not loaded yet */ }
 };
 
-/* The Demo account was a place to learn which buttons do what. Once there
-   are real accounts in the journal it is a tab in the way, and the Diary is
-   about the evaluations, so it steps aside until it has something in it. */
-function hideDemoIfUnused() {
-  let used = false;
-  try { used = !!PROF.get("demo"); } catch { used = false; }
-  if (!used) used = window.TRADES.some(t => (t.source || "live") === "demo");
-  const real = window.TRADES.some(t => (t.source || "live") === "live")
-    || balancesNow().length > 0;
-  const hide = real && !used;
-  const btn = document.querySelector('.tb[data-go="demo"]');
-  if (btn) btn.hidden = hide;
-  const open = document.querySelector(".tabpane:not([hidden])");
-  if (hide && open && open.dataset.tab === "demo") goTab("home", true);
-}
-
 function renderAccounts() {
   /* Accounts come from the balance history as well as from trades. Tradovate
      hands those two files out separately, and the balance one carries the
@@ -4314,6 +4255,31 @@ function renderAccounts() {
     if (el) { el.innerHTML = ""; el.hidden = true; }
   }
 }
+
+/* Trades the journal cannot attribute, said on the page where they are doing
+   the damage, with the button that fixes it right there. The same tool lives
+   on the Learn tab, which is two taps away and might as well be nowhere:
+   Chris asked twice why an old practice account was still driving his
+   headline. */
+function renderOrphans() {
+  const sec = $("orphansec"), line = $("orphanbig");
+  if (!sec || !line) return;
+  const loose = window.TRADES.filter(t => (t.source || "live") === "live"
+    && !(t.account || "").trim());
+  // Only worth saying when there is something to tell them apart from.
+  const named = window.TRADES.some(t => (t.account || "").trim())
+    || balancesNow().length > 0;
+  if (!loose.length || !named) { sec.hidden = true; return; }
+  sec.hidden = false;
+  const net = Math.round(loose.reduce((n, t) => n + (t.pnl || 0), 0));
+  const from = loose.map(t => t.open_t).sort()[0].slice(0, 10);
+  line.textContent = `${loose.length} trade${loose.length === 1 ? "" : "s"} `
+    + `in here belong to no account, going back to ${from}, `
+    + `${net >= 0 ? "+" : "-"}$${Math.abs(net).toLocaleString("en-US")} between them.`;
+}
+
+const orphanGo = $("orphango");
+if (orphanGo) orphanGo.addEventListener("click", () => dropAccount(""));
 
 /**
  * What is actually in this journal, by account, and a way to take a group
@@ -4367,8 +4333,11 @@ function renderGroups() {
 
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-drop]");
-  if (!b) return;
-  const acc = b.dataset.drop;
+  if (b) dropAccount(b.dataset.drop);
+});
+
+/** Take one account's live trades out of the journal, for good. */
+function dropAccount(acc) {
   const hit = window.TRADES.filter(t => (t.source || "live") === "live"
     && (t.account || "").trim() === acc);
   if (!hit.length) return;
@@ -4389,8 +4358,9 @@ document.addEventListener("click", e => {
   renderDays();
   renderGroups();
   storeLine();
-  say(warn || `Removed ${hit.length} trade${hit.length === 1 ? "" : "s"}.`, !!warn);
-});
+  say(warn || `Removed ${hit.length} trade${hit.length === 1 ? "" : "s"}. `
+    + "Your home page is your own accounts now.", !!warn);
+}
 
 /* ------------------------------------------------------ which method, Learn */
 
@@ -4520,7 +4490,6 @@ async function opened(pin) {
   renderFunded();
   storeLine();
   lockState();
-  DEMO.reload();
   RP.reopen();
   IND.reopen();
   // Anything new in the watched folder, now that there is a journal to put
@@ -4891,13 +4860,6 @@ VID.init();
 const basePickSource = window.pickSource;
 window.pickSource = src => { DIARY.setSource(src); basePickSource(src); };
 
-DEMO.setClock(tzOffset);
-DEMO.init(
-  trades => intoDiary(trades, "demo"),
-  // A demo trade that settles while you are looking at another tab should
-  // still show up in the numbers when you come back to them.
-  () => { renderPanels(); storeLine(); });
-
 goTab(location.hash.slice(1) || HOME, false);
 
 /* --------------------------------------------------------- new versions */
@@ -4932,7 +4894,6 @@ function busy() {
     if (box.value.trim() !== ((t && t.mine) || "").trim()) return "an unsaved note";
   }
   if (RP.inTrade()) return "a replay position still open";
-  if (DEMO.inTrade()) return "a demo position still open";
   if (document.getElementById("drop").classList.contains("busy")) return "an import";
   return null;
 }

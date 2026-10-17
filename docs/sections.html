@@ -31,6 +31,22 @@
   <div id="dashleak"></div>
 </section>
 
+<section id="orphansec" hidden>
+  <div class="card hud orphan">
+    <div class="orphantext">
+      <p class="orphanbig" id="orphanbig"></p>
+      <p class="orphansub">These came in before the journal knew about
+      accounts, so they are almost always practice from an older platform.
+      They are counting toward every figure on this page.</p>
+    </div>
+    <div class="orphanacts">
+      <button class="bigbtn" id="orphango">Remove them</button>
+      <button class="bigbtn ghost" data-go="learn" data-scroll="groups">See
+      them first</button>
+    </div>
+  </div>
+</section>
+
 <section id="accsec">
   <div class="accrow" id="accrow" hidden></div>
 </section>
@@ -99,62 +115,6 @@
   <!--READING-->
 </details>
 <!--FOOTER-->
-</div>
-</div>
-
-<div class="tabpane" data-tab="demo" hidden>
-<div class="ws">
-  <div class="wsrail">
-    <div class="drawrail" id="dtools" role="group" aria-label="Drawing tools"></div>
-    <button class="rbtn2" id="dwipe" title="Remove every drawing on this contract">Clr</button>
-    <span class="raildiv"></span>
-    <button class="rbtn2" id="dlevels" aria-pressed="true" title="Session highs and lows">Lv</button>
-    <button class="rbtn2" id="dzin" title="Zoom in">+</button>
-    <button class="rbtn2" id="dzout" title="Zoom out">&minus;</button>
-    <button class="rbtn2" id="dfit" title="Fit the chart">Fit</button>
-  </div>
-
-  <div class="wsmain">
-    <div class="wstop">
-      <select id="dsym" class="psel" aria-label="Contract"></select>
-      <div class="tfrow" id="dtf" role="group" aria-label="Timeframe"></div>
-      <span class="pstale" id="dread"></span>
-      <span class="pclock" id="dclock"></span>
-    </div>
-    <div class="wsstage"><canvas id="dc"></canvas><div class="plegend" id="dohlc"></div></div>
-    <div class="wsfoot"><span id="dposline"></span></div>
-  </div>
-
-  <div class="wspanel">
-    <div class="pblock watchblock">
-      <h4>Watchlist</h4>
-      <div class="wlist" id="dwatch"></div>
-    </div>
-    <div class="pblock">
-      <h4>Order</h4>
-      <div class="tq">
-        <label for="dqty">Qty</label><input type="number" id="dqty" min="1" step="1" value="1">
-        <label for="drisk">Stop pts</label><input type="number" id="drisk" min="0.25" step="0.25" value="20">
-        <label for="drr">Target R</label><input type="number" id="drr" min="0.1" step="0.1" value="2">
-      </div>
-      <div class="tbtns">
-        <button class="tbuy" id="dbuy"><b>Buy</b><span id="dbuypx"></span></button>
-        <button class="tsell" id="dsell"><b>Sell</b><span id="dsellpx"></span></button>
-      </div>
-      <button class="tflat" id="dflat" hidden>Close at market</button>
-      <p class="trisk" id="drisknote"></p>
-      <div class="precheck" id="dpre" hidden></div>
-    </div>
-    <div class="pblock">
-      <h4>Account</h4>
-      <div class="stats hud" id="dstats"></div>
-      <ul class="rplist" id="dlist"></ul>
-      <div class="toolrow">
-        <button class="bigbtn" id="dsend" hidden>Send to the Diary</button>
-        <button class="bigbtn ghost" id="dreset">Reset</button>
-      </div>
-    </div>
-  </div>
 </div>
 </div>
 
