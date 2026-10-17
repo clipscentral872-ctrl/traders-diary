@@ -177,8 +177,15 @@ function renderPanels() {
   const all = window.ofAccount(window.TRADES);
   // One trade is not "1 trades". The whole phrase is written here rather
   // than a number beside a fixed word, which cannot be made to agree.
-  $("appmeta").textContent = all.length === 0 ? "no trades"
-    : all.length === 1 ? "1 trade" : `${all.length} trades`;
+  /* The corner of the bar says what is in the journal. With balances and no
+     fills it used to say "no trades", which is true and reads as "empty". */
+  const sessions = balancesNow().filter(b => window.ACCOUNT === "all"
+    || (b.account || "") === window.ACCOUNT).length;
+  $("appmeta").textContent =
+      all.length === 1 ? "1 trade"
+    : all.length ? `${all.length} trades`
+    : sessions ? `${sessions} session${sessions === 1 ? "" : "s"}`
+    : "no trades";
 
   const present = SOURCES.filter(([k]) =>
     all.some(t => k === "all" || (t.source || "live") === k));
@@ -661,7 +668,7 @@ function renderFunded() {
         trades: window.TRADES.filter(t => (t.account || "") === name),
       });
       const w = Math.round(st.roomPct * 100);
-      return `<p class="fundline"><b>${esc(name)}</b> &nbsp; `
+      return `<p class="fundline"><b>${esc(window.accountName(name))}</b> &nbsp; `
         + `${dollars(st.room).replace("+", "")} of `
         + `$${Math.round(plan.drawdown).toLocaleString("en-US")} left`
         + (st.breached ? " &nbsp; <b>breached</b>" : "")
@@ -1295,7 +1302,10 @@ function renderDays() {
     const green = st.days.filter(d => d.pnl > 0).length;
     const flat = st.days.length - red - green;
     const worst = st.days.length ? Math.min(...st.days.map(d => d.pnl)) : 0;
-    return (names.length > 1 ? `<h3 class="dayacc">${esc(name)}</h3>` : "")
+    return (names.length > 1
+      ? `<h3 class="dayacc">${esc(window.accountName(name))}`
+        + `<button class="renamebtn" onclick="renameAccount('${esc(name)}')">`
+        + "rename</button></h3>" : "")
       + `<p class="srcnote">${st.days.length} session`
       + `${st.days.length === 1 ? "" : "s"}, ${green} green and ${red} red`
       + (flat ? `, ${flat} with no trade` : "") + `, `
@@ -1337,7 +1347,39 @@ function renderHabits() {
 /* Two evaluation accounts, kept apart. Everything that shows the record
    reads through ofAccount, so one pick moves the whole app. */
 const ACC_KEY = "jdun.account";
+const NAMES_KEY = "accounts.names";
 window.ACCOUNT = "all";
+
+/* A broker's account id is not a name. "TDFYSL50154604439" tells you nothing
+   at a glance and two of them side by side tell you less, so the app shows
+   the last four digits until you give it something better, and lets you give
+   it something better. */
+const namesNow = () => {
+  try { return JSON.parse(PROF.get(NAMES_KEY)) || {}; } catch { return {}; }
+};
+
+window.accountName = id => {
+  const key = String(id || "");
+  if (!key) return "";
+  const own = namesNow()[key];
+  if (own) return own;
+  const tail = key.slice(-4);
+  return /^[0-9]{4}$/.test(tail) ? "Account " + tail : key;
+};
+
+window.renameAccount = function (id) {
+  const now = window.accountName(id);
+  const want = prompt(`What do you want to call ${id}?`, now);
+  if (want === null) return;
+  const names = namesNow();
+  const clean = want.trim().slice(0, 28);
+  if (clean) names[id] = clean; else delete names[id];
+  PROF.set(NAMES_KEY, JSON.stringify(names));
+  renderPanels();
+  renderFunded();
+  renderDays();
+  DASH.refreshRecord();
+};
 
 window.ofAccount = (list, acc = window.ACCOUNT) =>
   acc === "all" ? list : list.filter(t => (t.account || "") === acc);
@@ -1368,7 +1410,8 @@ function renderAccounts() {
   const show = names.length > 1;
   if (!names.includes(window.ACCOUNT)) window.ACCOUNT = "all";
   const html = !show ? "" :
-    [["all", "Both"], ...names.map(n => [n, n])].map(([k, label]) => {
+    [["all", "Both"], ...names.map(n => [n, window.accountName(n)])]
+      .map(([k, label]) => {
       const n = k === "all" ? window.TRADES.filter(t => (t.source || "live") === "live").length
         : window.ofAccount(window.TRADES, k)
           .filter(t => (t.source || "live") === "live").length;
@@ -1709,6 +1752,15 @@ const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent)
   // An iPad on iPadOS 13+ reports itself as a Mac, and the touch points are
   // the only thing that gives it away.
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+/* The steps are a tap away. On a phone the four lines explaining where the
+   browser menu is were the whole first screen, above the account. */
+const instHow = document.getElementById("insthow");
+if (instHow) instHow.addEventListener("click", () => {
+  const card = instHow.closest(".install");
+  const open = card.classList.toggle("open");
+  instHow.setAttribute("aria-expanded", String(open));
+});
 
 function showInstall() {
   if (standalone()) return;

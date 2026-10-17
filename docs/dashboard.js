@@ -74,6 +74,27 @@ function hero() {
   const box = $("hmain");
   if (!box) return;
   if (!live.length) {
+    /* No trades is not the same as no account. With the broker's balance
+       history imported, the headline is what the account has actually done,
+       and the import button is for the trades that are still missing. A
+       screen that said "Nothing yet" over a real account that was $222 from
+       being closed was the worst thing on this page. */
+    const {plan, forAccount} = planAndBalances();
+    if (forAccount.length && plan.drawdown) {
+      const s = FUND.state(plan, {balances: forAccount});
+      const red = s.days.filter(d => d.pnl < 0).length;
+      const green = s.days.filter(d => d.pnl > 0).length;
+      const who = window.ACCOUNT && window.ACCOUNT !== "all"
+        ? named(window.ACCOUNT) : "Your accounts";
+      box.innerHTML = `<span class="hk">${esc(who)}</span>`
+        + `<span class="hv ${s.profit >= 0 ? "win" : "loss"}">${money(s.profit)}</span>`
+        + `<span class="hsub">${s.days.length} session`
+        + `${s.days.length === 1 ? "" : "s"}, ${green} green and ${red} red. `
+        + `${plain(s.room)} left before the drawdown closes it.</span>`
+        + '<span class="hact"><button class="bigbtn" data-go="diary" '
+        + 'data-import="1">Add the trades</button></span>';
+      return;
+    }
     // A sentence telling you where the button is, when it could just be the
     // button. This is the first screen a new journal shows.
     box.innerHTML = '<span class="hk">Your record</span>'
@@ -102,13 +123,22 @@ function hero() {
  * figures: it is how much room is left before the firm's drawdown closes
  * it. The plan and the broker's own daily balances are kept by the app;
  * this only reads them. */
-function fundedFig() {
+function planAndBalances() {
   let plan = FUND.preset(FUND.DEFAULT_PLAN), balances = [];
   try {
     const saved = JSON.parse(P.get("funded.plan"));
     if (saved && typeof saved === "object") plan = {...FUND.preset(saved.id), ...saved};
   } catch { /* the preset, then */ }
   try { balances = JSON.parse(P.get("funded.balances")) || []; } catch { balances = []; }
+  const forAccount = window.ACCOUNT && window.ACCOUNT !== "all"
+    ? balances.filter(b => (b.account || "") === window.ACCOUNT) : balances;
+  return {plan, balances, forAccount};
+}
+
+const named = id => (window.accountName ? window.accountName(id) : id);
+
+function fundedFig() {
+  const {plan, balances} = planAndBalances();
   const trades = window.ofAccount ? window.ofAccount(window.TRADES || [])
                                   : (window.TRADES || []);
   if (plan.id === "none" || !plan.drawdown) return "";
@@ -132,7 +162,7 @@ function fundedFig() {
   return fig(name ? "Tightest account" : "Funded account",
              plain(s.room), s.roomPct < 0.25 ? "loss" : "win",
              name && states.length > 1
-               ? `left on ${name} of ${plain(plan.drawdown)}`
+               ? `left on ${named(name)} of ${plain(plan.drawdown)}`
                : `left of ${plain(plan.drawdown)} before it closes`);
 }
 
@@ -144,7 +174,13 @@ function figures() {
 
   let d = null;
   try { d = JSON.parse(P.get("demo")); } catch { /* fresh */ }
-  const demoFig = !d || typeof d.balance !== "number"
+  /* A Demo account that was never opened is not worth a tile on the home
+     page of a journal that has real accounts in it. */
+  const hasReal = (window.TRADES || []).some(t => (t.source || "live") === "live")
+    || (() => { try { return (JSON.parse(P.get("funded.balances")) || []).length; }
+                catch { return 0; } })();
+  const demoFig = (!d || typeof d.balance !== "number") && hasReal ? ""
+    : !d || typeof d.balance !== "number"
     ? fig("Demo", "not started", "", "open the Demo tab")
     : fig("Demo", plain(d.balance), d.balance - 100000 >= 0 ? "win" : "loss",
            d.pos ? `${d.pos.side.toLowerCase()} ${d.pos.qty} ${d.pos.symbol} open`
@@ -361,13 +397,27 @@ function spark() {
   const css = n => getComputedStyle(document.documentElement)
     .getPropertyValue(n).trim();
 
+  /* With no trades imported, the balance history is the curve. It is the
+     same shape drawn from the broker's own closing balances instead of from
+     fills, which is the only equity curve that exists until the fills land. */
+  let base, eq;
   if (live.length < 2) {
-    if (note) note.textContent = live.length ? "one trade so far" : "";
-    return;
+    const {plan, forAccount} = planAndBalances();
+    if (forAccount.length >= 2 && plan.drawdown) {
+      const st = FUND.state(plan, {balances: forAccount});
+      base = st.start;
+      eq = [base, ...st.days.map(d => d.balance)];
+      if (note) note.textContent = `${st.days.length} sessions, from the `
+        + "broker's own balances";
+    } else {
+      if (note) note.textContent = live.length ? "one trade so far" : "";
+      return;
+    }
+  } else {
+    base = window.START == null ? 0 : window.START;
+    eq = [base];
+    for (const t of live) eq.push(eq[eq.length - 1] + t.pnl);
   }
-  const base = window.START == null ? 0 : window.START;
-  const eq = [base];
-  for (const t of live) eq.push(eq[eq.length - 1] + t.pnl);
   const lo = Math.min(...eq), hi = Math.max(...eq);
   const pad = (hi - lo) * 0.12 || 1;
 

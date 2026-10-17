@@ -81,7 +81,8 @@ INSTALL = """<section id="installbar" hidden>
   <div class="card hud install">
     <div class="insticon" aria-hidden="true"></div>
     <div class="insttext">
-      <p class="instbig">Put this on your home screen</p>
+      <button class="instbig" id="insthow" aria-expanded="false">Put this on
+      your home screen</button>
       <p class="instsub" id="inststeps"></p>
     </div>
     <button class="bigbtn" id="instgo" hidden>Install</button>
@@ -1031,7 +1032,11 @@ body{overflow:hidden}
 /* The account day by day, from the broker's own balances. Reads as a
    statement: date, what it made, where it closed, what was left. */
 .dayacc{font-size:12px; color:var(--muted); margin:14px 0 4px;
-  text-transform:uppercase; letter-spacing:.04em}
+  text-transform:uppercase; letter-spacing:.04em; display:flex;
+  align-items:center; gap:10px}
+.renamebtn{background:none; border:none; color:var(--accent); font-size:11px;
+  text-transform:none; letter-spacing:0; padding:4px 2px; cursor:pointer;
+  min-height:28px}
 .days{list-style:none; margin:8px 0 0; padding:0; display:flex;
   flex-direction:column}
 .dayrow{display:grid; grid-template-columns:auto 1fr auto auto; gap:4px 12px;
@@ -1219,7 +1224,17 @@ body{overflow:hidden}
 .hpanel::after{
   content:none;
 }
-.hface{display:flex; flex-direction:column; gap:7px; max-width:min(100%, 620px)}
+.hface{display:flex; flex-direction:column; gap:7px; max-width:min(100%, 620px);
+  position:relative}
+/* The words sit on the panel's own colour rather than on the curve. Without
+   this the equity line ran straight through the number and the button, which
+   is exactly where the eye goes first. */
+.hface>*{position:relative}
+.hface::before{
+  content:""; position:absolute; inset:-10px -14px; z-index:-1;
+  background:radial-gradient(120% 90% at 0% 40%, var(--raised) 58%,
+    color-mix(in srgb, var(--raised) 72%, transparent) 78%, transparent 100%);
+}
 .hk{
   color:var(--muted); font-size:10px; text-transform:uppercase;
   letter-spacing:.04em; font-weight:600;
@@ -1374,28 +1389,35 @@ body{overflow:hidden}
 .more>summary+*{margin-top:4px}
 
 .install{
-  display:flex; align-items:center; gap:18px; flex-wrap:wrap;
-  padding:20px 22px; margin-bottom:34px;
+  display:flex; align-items:center; gap:12px; flex-wrap:nowrap;
+  padding:11px 14px; margin-bottom:14px;
 }
 .insticon{
-  flex:none; width:38px; height:38px; border:2px solid var(--accent);
-  border-radius:9px; position:relative; box-shadow:var(--shadow);
+  flex:none; width:26px; height:26px; border:2px solid var(--accent);
+  border-radius:7px; position:relative;
 }
 .insticon::before{
-  content:""; position:absolute; left:50%; top:9px; width:2px; height:15px;
+  content:""; position:absolute; left:50%; top:5px; width:2px; height:11px;
   background:var(--accent); transform:translateX(-50%);
 }
 .insticon::after{
-  content:""; position:absolute; left:50%; top:8px; width:9px; height:9px;
+  content:""; position:absolute; left:50%; top:4px; width:7px; height:7px;
   border-left:2px solid var(--accent); border-top:2px solid var(--accent);
   transform:translateX(-50%) rotate(45deg);
 }
-.insttext{flex:1 1 240px; min-width:0}
+.insttext{flex:1 1 auto; min-width:0}
 .instbig{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:14px;
-  letter-spacing:.07em; text-transform:uppercase; margin:0 0 5px;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:700; font-size:12.5px;
+  letter-spacing:.02em; text-transform:none; margin:0; text-align:left;
+  background:none; border:none; color:var(--text); padding:6px 0;
+  min-height:32px;
 }
-.instsub{margin:0; color:var(--muted); font-size:13.5px; line-height:1.6}
+/* The how-to is one tap away rather than four lines on the first screen of a
+   phone. The prompt is a reminder, not a tutorial. */
+.instsub{margin:4px 0 0; color:var(--muted); font-size:12.5px; line-height:1.55;
+  display:none}
+.install.open .instsub{display:block}
+.instbig{cursor:pointer}
 .instsub b{color:var(--text)}
 .instx{
   background:none; border:none; color:var(--faint); cursor:pointer;
