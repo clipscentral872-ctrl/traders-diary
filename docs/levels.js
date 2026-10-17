@@ -17,18 +17,24 @@
 
 // New York minutes-from-midnight. Asia wraps past midnight, which is why it is
 // stored as a start later than its end.
+/* These are the hours from Chris's own TradingView indicator, so the lines
+   here and the lines on his chart are the same lines. New York starts at
+   08:30 rather than at the equity open: that is where the data releases land
+   and where his script starts it, and it leaves no gap between London
+   closing and New York opening. */
 export const SESSIONS = [
   {key: "asia", label: "Asia", from: 18 * 60, to: 3 * 60},
   {key: "london", label: "London", from: 3 * 60, to: 8 * 60 + 30},
-  {key: "ny", label: "New York", from: 9 * 60 + 30, to: 16 * 60},
+  {key: "ny", label: "NY", from: 8 * 60 + 30, to: 16 * 60},
 ];
 
 // Days of history to look at. Asia opens the evening before, and the
 // previous day's range is wanted, so three covers every level drawn here.
 const DAYS_BACK = 3;
 
+/* His indicator's own colours, for the same reason. */
 export const FAMILY_COLOUR = {
-  asia: "#8B7BE8", london: "#E8A33D", ny: "#35E0F0", day: "#7E90A8",
+  asia: "#00B450", london: "#00B9DC", ny: "#787D91", day: "#7E90A8",
 };
 
 const NY = new Intl.DateTimeFormat("en-CA", {

@@ -51,14 +51,32 @@ check("london is not shown at 04:00", find(ls, "London High"), null);
 ls = levelsAt(bars, at(3, 10, 0).ms);
 check("london appears once 08:30 has passed", find(ls, "London High"), 125);
 check("london low too", find(ls, "London Low"), 108);
-check("new york is not shown at 10:00", find(ls, "New York High"), null);
+check("new york is not shown at 10:00", find(ls, "NY High"), null);
+
+console.log("\nnew york starts at 08:30, the way his indicator has it");
+{
+  /* The hour between 08:30 and the equity open belongs to New York, so a
+     bar in it must widen the New York range rather than fall through a gap
+     between two sessions. */
+  const early = [
+    at(3, 4, 0, 120, 110),      // London
+    at(3, 8, 0, 122, 112),      // London, up to 08:30
+    at(3, 9, 0, 160, 100),      // 09:00: inside New York now
+    at(3, 14, 0, 150, 128),
+    at(3, 17, 0, 145, 135),     // after the close
+  ];
+  const after = levelsAt(early, at(3, 17, 0).ms);
+  check("an 09:00 bar is inside the New York range", find(after, "NY High"), 160);
+  check("and sets its low", find(after, "NY Low"), 100);
+  check("london still ends at 08:30", find(after, "London High"), 122);
+}
 
 console.log("\nnew york appears only after 16:00");
 ls = levelsAt(bars, at(3, 14, 0).ms);
-check("still hidden at 14:00", find(ls, "New York High"), null);
+check("still hidden at 14:00", find(ls, "NY High"), null);
 ls = levelsAt(bars, at(3, 17, 0).ms);
-check("shown at 17:00", find(ls, "New York High"), 150);
-check("and its low", find(ls, "New York Low"), 128);
+check("shown at 17:00", find(ls, "NY High"), 150);
+check("and its low", find(ls, "NY Low"), 128);
 
 console.log("\nthe boundaries are New York, not UTC");
 // 03:30 New York is 07:30 UTC. Read as UTC, this bar would land in Asia.
@@ -82,16 +100,16 @@ check("the New York range is not leaked early",
 console.log("\na closed session from an earlier day says so");
 // Two full days, read from inside the second day's New York session, when the
 // most recent CLOSED New York range is the previous day's. Calling that
-// "New York High" reads as today's, which is the one way this could mislead.
+// "NY High" reads as today's, which is the one way this could mislead.
 const twoDays = [
   at(2, 10, 0, 200, 190), at(2, 15, 0, 210, 180),   // 2nd, New York
   at(3, 4, 0, 120, 110),                            // 3rd, London
   at(3, 11, 0, 140, 130),                           // 3rd, New York, still open
 ];
 ls = levelsAt(twoDays, at(3, 11, 0).ms);
-check("yesterday's range is labelled Prev", find(ls, "Prev New York High"), 210);
-check("and is not passed off as today's", find(ls, "New York High"), null);
-check("today's low is not leaked either", find(ls, "New York Low"), null);
+check("yesterday's range is labelled Prev", find(ls, "Prev NY High"), 210);
+check("and is not passed off as today's", find(ls, "NY High"), null);
+check("today's low is not leaked either", find(ls, "NY Low"), null);
 check("london closed today needs no Prev", find(ls, "London High"), 120);
 
 console.log(failed ? `\n${failed} check(s) failed` : "\nall checks passed");

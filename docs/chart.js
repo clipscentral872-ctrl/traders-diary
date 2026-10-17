@@ -217,7 +217,7 @@ export function createChart(canvas, opts = {}) {
     if (opts.beforeCandles) opts.beforeCandles({x, Y, plot, css, visible: v, range: r});
     zones(x, Y);
     volume(x, v);
-    levels(x, Y);
+    levels(x, Y, v);
     candles(x, Y, v);
     lines(x, Y, v);
     tradeMarks(x, Y, v);
@@ -413,7 +413,13 @@ export function createChart(canvas, opts = {}) {
     }
   }
 
-  function levels(x, Y) {
+  /* How far back the solid part of a level runs, in bars, counted from the
+     last candle. Chris's own TradingView indicator draws the line from the
+     fifth most recent candle out past the right edge, so the level sits
+     beside the current price instead of cutting the whole chart in half. */
+  const LEVEL_BACK = 4;
+
+  function levels(x, Y, v) {
     if (!state.levels.length) return;
     x.font = FONT.replace("11px", "10px");
     x.textBaseline = "middle";
@@ -427,23 +433,41 @@ export function createChart(canvas, opts = {}) {
       .map(m => ({m, y: Y(m.price)}))
       .filter(o => o.y >= plot.y - 4 && o.y <= plot.y + plot.h + 4)
       .sort((a, b) => a.y - b.y);
+    /* The faint dotted line still crosses the whole chart, because when you
+       are looking back at a trade you want to see where the level was all
+       along. The solid stretch and the name sit at the right, beside the
+       price, which is where his indicator puts them. */
+    const bars = (v && v.bars.length) ? v.bars.length - 1 : 0;
+    const solidFrom = Math.max(plot.x, xOf(Math.max(0, bars - LEVEL_BACK)));
+    const right = plot.x + plot.w;
     let lastLabel = -Infinity;
+    x.textAlign = "right";
     for (const o of on) {
       const {m, y} = o;
+      const yy = Math.round(y) + 0.5;
       x.strokeStyle = x.fillStyle = m.colour || css("--faint");
-      x.globalAlpha = 0.45;
+
+      x.globalAlpha = 0.22;
       x.setLineDash([2, 4]);
       x.beginPath();
-      x.moveTo(plot.x, Math.round(y) + 0.5);
-      x.lineTo(plot.x + plot.w, Math.round(y) + 0.5);
+      x.moveTo(plot.x, yy);
+      x.lineTo(solidFrom, yy);
       x.stroke();
       x.setLineDash([]);
-      x.globalAlpha = 0.9;
+
+      x.globalAlpha = 0.95;
+      x.lineWidth = 1;
+      x.beginPath();
+      x.moveTo(solidFrom, yy);
+      x.lineTo(right, yy);
+      x.stroke();
+
       const ly = Math.max(y - 7, lastLabel + 11);
-      x.fillText(m.label, plot.x + 5, ly);
+      x.fillText(m.label, right - 5, ly);
       lastLabel = ly;
       x.globalAlpha = 1;
     }
+    x.textAlign = "left";
   }
 
   /* Volume along the bottom, behind the price, the way TradingView shows it.

@@ -16,7 +16,7 @@
 // Stamped by tools/build_web.py from the content of the files below. A
 // fixed version meant a cache-first shell served the old page forever:
 // once installed, no update could reach anyone.
-const VERSION = "a6767a200a20";
+const VERSION = "5ba0cd8a74df";
 const SHELL = "diary-shell-" + VERSION;
 const DATA = "diary-bars-" + VERSION;
 
