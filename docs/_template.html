@@ -6,13 +6,31 @@
 /* One committed dark treatment. This is read beside a dark charting platform,
    so the ground is painted explicitly rather than following the host theme. */
 :root{
-  /* TradingView's light theme, because that is the screen this is read
-     beside all day and two different looks for the same chart is one look
-     too many. White ground, hairline greys, one blue.
+  /* Dark by default, the way a trading screen is read at six in the morning
+     and at eight at night. A near black ground with a blue cast, panels
+     lifted off it rather than outlined, and the only bright things on the
+     page are the numbers that matter: money, and the bar showing how much
+     account is left.
 
-     The bars are blue and black rather than green and red. Money keeps its
-     green and red, because there the colour is the meaning: a loss should
-     not need reading twice. */
+     Green and red carry meaning here, so they are the loudest colours and
+     nothing else competes with them. */
+  --ground:#0A0E16; --raised:#121826; --lift:#1B2334;
+  --line:#242E42; --line-soft:#1A2231;
+  --text:#E9EDF6; --muted:#8B97AE; --faint:#616E89;
+  --accent:#4C8DFF; --accent-dim:rgba(76,141,255,.16);
+  --win:#2BE08A; --loss:#FF5C6E;
+  --win-faded:#1C7A52; --loss-faded:#8E3540;
+  --win-zone:rgba(43,224,138,.09); --loss-zone:rgba(255,92,110,.09);
+  --candle-up:#2BE08A; --candle-dn:#FF5C6E;
+  --warn:#FFC24B;
+  --glow-win:0 0 26px rgba(43,224,138,.32);
+  --glow-loss:0 0 26px rgba(255,92,110,.30);
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px rgba(0,0,0,.42);
+}
+
+/* The old light theme, kept whole for anyone who wants the page to match a
+   white chart beside it. Chosen in Settings; dark is what loads first. */
+:root[data-theme="light"]{
   --ground:#FFFFFF; --raised:#FFFFFF; --lift:#F0F3FA;
   --line:#E0E3EB; --line-soft:#F5F6FA;
   --text:#131722; --muted:#787B86; --faint:#9598A1;
@@ -21,6 +39,8 @@
   --win-faded:#7FCFBE; --loss-faded:#F7A3AB;
   --win-zone:rgba(8,153,129,.07); --loss-zone:rgba(242,54,69,.07);
   --candle-up:#2962FF; --candle-dn:#131722;
+  --warn:#C98A24;
+  --glow-win:none; --glow-loss:none;
   --shadow:0 1px 3px rgba(19,23,34,.10), 0 4px 14px rgba(19,23,34,.06);
 }
 *{box-sizing:border-box}

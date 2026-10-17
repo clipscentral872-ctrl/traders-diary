@@ -174,6 +174,7 @@ function stat(label, value, cls = "") {
 
 function renderPanels() {
   renderAccounts();
+  hideDemoIfUnused();
   const all = window.ofAccount(window.TRADES);
   // One trade is not "1 trades". The whole phrase is written here rather
   // than a number beside a fixed word, which cannot be made to agree.
@@ -641,6 +642,76 @@ function renderPlanForm(plan) {
   };
 }
 
+/**
+ * One account, drawn as the two things that decide whether it survives.
+ *
+ * The room before the floor is a health bar, because that is exactly what it
+ * is: it only goes down on a bad day, it never comes back up on a good one
+ * past the high water mark, and at zero the account is gone. The target is a
+ * second bar going the other way. Seeing both at once is the whole picture,
+ * and a number alone never gave it.
+ */
+function accountCard(name, plan, allBal) {
+  const bal = allBal.filter(b => (b.account || "") === name);
+  const st = FUND.state(plan, {
+    balances: bal,
+    trades: window.TRADES.filter(t => (t.account || "") === name),
+  });
+  const cap = JD.dailyCap(jdunPlan());
+  const days = st.days;
+  const clean = days.filter(d => d.pnl >= -cap).length;
+
+  /* The streak that matters is sessions kept inside the daily cap, counted
+     back from the most recent one. It is the one thing in here that is
+     entirely his to control. */
+  let streak = 0;
+  for (let i = days.length - 1; i >= 0; i--) {
+    if (days[i].pnl < -cap) break;
+    streak++;
+  }
+
+  const pct = Math.max(0, Math.min(100, Math.round(st.roomPct * 100)));
+  const level = st.breached ? "gone" : pct < 25 ? "low" : pct < 55 ? "mid" : "high";
+  const target = plan.target || 0;
+  const tpct = target ? Math.max(0, Math.min(100, Math.round(st.profit / target * 100))) : 0;
+
+  return `<div class="acct ${level}">`
+    + `<div class="acctop"><span class="acctname">${esc(window.accountName(name))}</span>`
+    + `<span class="acctbal">$${Math.round(st.balance).toLocaleString("en-US")}</span></div>`
+
+    + '<div class="meter health">'
+    + `<span class="mlab">Account health</span>`
+    + `<span class="mval">${dollars(st.room).replace("+", "")}`
+    + `<small>of $${Math.round(plan.drawdown).toLocaleString("en-US")}</small></span>`
+    + `<div class="track"><i data-w="${pct}"></i>`
+    + '<em style="left:25%"></em><em style="left:50%"></em><em style="left:75%"></em>'
+    + "</div></div>"
+
+    + (target ? '<div class="meter goal">'
+        + '<span class="mlab">Profit target</span>'
+        + `<span class="mval">${dollars(st.profit)}`
+        + `<small>of $${Math.round(target).toLocaleString("en-US")}</small></span>`
+        + `<div class="track"><i data-w="${tpct}"></i></div></div>` : "")
+
+    + '<div class="acctfoot">'
+    + `<span class="pip ${streak ? "on" : ""}">${streak} session`
+    + `${streak === 1 ? "" : "s"} inside the cap</span>`
+    + `<span class="pip">${clean} of ${days.length} clean</span>`
+    + (st.breached ? '<span class="pip bad">breached</span>' : "")
+    + "</div></div>";
+}
+
+/* The frame after the bars land, so they animate from empty to where they
+   actually are. Setting the width in the markup means the browser has
+   nothing to transition from. */
+function fillBars(root) {
+  const bars = (root || document).querySelectorAll(".track i[data-w]");
+  if (!bars.length) return;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    for (const b of bars) b.style.width = b.dataset.w + "%";
+  }));
+}
+
 function renderFunded() {
   const sec = $("fundedsec"), card = $("fundedcard");
   if (!sec || !card) return;
@@ -662,21 +733,10 @@ function renderFunded() {
   const names = [...new Set([...allBal.map(b => b.account || ""),
     ...live.map(t => t.account || "")].filter(Boolean))].sort();
   if (window.ACCOUNT === "all" && names.length > 1) {
-    card.innerHTML = names.map(name => {
-      const st = FUND.state(plan, {
-        balances: allBal.filter(b => (b.account || "") === name),
-        trades: window.TRADES.filter(t => (t.account || "") === name),
-      });
-      const w = Math.round(st.roomPct * 100);
-      return `<p class="fundline"><b>${esc(window.accountName(name))}</b> &nbsp; `
-        + `${dollars(st.room).replace("+", "")} of `
-        + `$${Math.round(plan.drawdown).toLocaleString("en-US")} left`
-        + (st.breached ? " &nbsp; <b>breached</b>" : "")
-        + `</p><div class="fundbar${st.roomPct < 0.25 ? " warn" : ""}">`
-        + `<i style="width:${w}%"></i></div>`;
-    }).join("")
+    card.innerHTML = names.map(name => accountCard(name, plan, allBal)).join("")
       + '<p class="fundnote">Pick one account above for its own card, the '
       + "rules it still has to meet, and the sizer.</p>";
+    fillBars(card);
     return;
   }
 
@@ -707,15 +767,22 @@ function renderFunded() {
       + `$${plan.qualifyingDay}+ to count.`);
   if (s.ready) todo.push("Every rule on this list is met.");
 
+  /* The same two bars the all-accounts view shows, so switching between one
+     account and both does not switch between two different designs. */
+  const only = window.ACCOUNT !== "all" ? window.ACCOUNT
+    : [...new Set(allBal.map(b => b.account || "").filter(Boolean))][0];
   card.innerHTML =
-    `<p class="fundline">Room before the account is closed: `
-    + `<b>${dollars(s.room).replace("+", "")}</b> of `
-    + `$${Math.round(plan.drawdown).toLocaleString("en-US")}</p>`
-    + `<div class="fundbar${tight ? " warn" : ""}"><i style="width:${pct}%"></i></div>`
+    (only ? accountCard(only, plan, allBal)
+          : `<p class="fundline">Room before the account is closed: `
+            + `<b>${dollars(s.room).replace("+", "")}</b> of `
+            + `$${Math.round(plan.drawdown).toLocaleString("en-US")}</p>`
+            + `<div class="fundbar${tight ? " warn" : ""}">`
+            + `<i style="width:${pct}%"></i></div>`)
     + `<div class="stats hud">${rows}</div>`
     + sizerHtml(sizeNow())
     + todo.map(t => `<p class="fundnote">${t}</p>`).join("")
     + s.notes.map(n => `<p class="fundnote">${esc(n)}</p>`).join("");
+  fillBars(card);
   wireSizer(s.room, plan);
 }
 
@@ -1192,6 +1259,30 @@ if (noteBox) {
   });
 }
 
+/* ------------------------------------------------------------ dark or light */
+
+/* The theme is the device's, not the journal's: it is applied before a PIN
+   has been typed, so it cannot live behind one. */
+const THEME_KEY = "tradersdiary.theme";
+
+function applyTheme(name) {
+  const light = name === "light";
+  if (light) document.documentElement.dataset.theme = "light";
+  else delete document.documentElement.dataset.theme;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", light ? "#FFFFFF" : "#0A0E16");
+  try { localStorage.setItem(THEME_KEY, light ? "light" : "dark"); } catch { /* fine */ }
+  // Everything drawn on a canvas reads the CSS colours once, at draw time.
+  try { DASH.refreshRecord(); } catch { /* nothing drawn yet */ }
+  try { DIARY.redraw(); } catch { /* not open */ }
+  try { RP.redraw(); } catch { /* not open */ }
+}
+
+const themeBtn = $("themebtn");
+if (themeBtn) themeBtn.addEventListener("click", () => {
+  applyTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light");
+});
+
 /* ------------------------------------------------ did you follow the plan */
 
 /* The method is only worth anything if it was actually followed, and the
@@ -1398,6 +1489,22 @@ window.pickAccount = function (acc) {
   renderFunded();
   renderDays();
 };
+
+/* The Demo account was a place to learn which buttons do what. Once there
+   are real accounts in the journal it is a tab in the way, and the Diary is
+   about the evaluations, so it steps aside until it has something in it. */
+function hideDemoIfUnused() {
+  let used = false;
+  try { used = !!PROF.get("demo"); } catch { used = false; }
+  if (!used) used = window.TRADES.some(t => (t.source || "live") === "demo");
+  const real = window.TRADES.some(t => (t.source || "live") === "live")
+    || balancesNow().length > 0;
+  const hide = real && !used;
+  const btn = document.querySelector('.tb[data-go="demo"]');
+  if (btn) btn.hidden = hide;
+  const open = document.querySelector(".tabpane:not([hidden])");
+  if (hide && open && open.dataset.tab === "demo") goTab("home", true);
+}
 
 function renderAccounts() {
   /* Accounts come from the balance history as well as from trades. Tradovate

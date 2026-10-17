@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#FFFFFF">
+<meta name="theme-color" content="#0A0E16">
 <meta name="description" content="A trading journal that shows you the trade, not just the number.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -8,6 +8,17 @@
 <meta name="apple-mobile-web-app-title" content="Traders Diary">
 <link rel="apple-touch-icon" href="logo-180.png">
 <link rel="icon" href="logo.svg" type="image/svg+xml">
+<script>
+/* Applied before the first paint, so a light theme never flashes dark on the
+   way in. Kept in plain storage rather than against a journal, because the
+   lock screen is painted before any journal is open. */
+try {
+  var t = localStorage.getItem("tradersdiary.theme");
+  if (t === "light") document.documentElement.dataset.theme = "light";
+  var m = document.querySelector('meta[name="theme-color"]');
+  if (m && t === "light") m.setAttribute("content", "#FFFFFF");
+} catch (e) { /* storage blocked, dark it is */ }
+</script>
 <!-- A PNG behind the SVG. Safari and a few others will not use an SVG for a
      tab or a desktop shortcut, and quietly show nothing rather than saying
      so, which is how an app ends up with a blank square for a logo. -->
@@ -22,13 +33,31 @@
 /* One committed dark treatment. This is read beside a dark charting platform,
    so the ground is painted explicitly rather than following the host theme. */
 :root{
-  /* TradingView's light theme, because that is the screen this is read
-     beside all day and two different looks for the same chart is one look
-     too many. White ground, hairline greys, one blue.
+  /* Dark by default, the way a trading screen is read at six in the morning
+     and at eight at night. A near black ground with a blue cast, panels
+     lifted off it rather than outlined, and the only bright things on the
+     page are the numbers that matter: money, and the bar showing how much
+     account is left.
 
-     The bars are blue and black rather than green and red. Money keeps its
-     green and red, because there the colour is the meaning: a loss should
-     not need reading twice. */
+     Green and red carry meaning here, so they are the loudest colours and
+     nothing else competes with them. */
+  --ground:#0A0E16; --raised:#121826; --lift:#1B2334;
+  --line:#242E42; --line-soft:#1A2231;
+  --text:#E9EDF6; --muted:#8B97AE; --faint:#616E89;
+  --accent:#4C8DFF; --accent-dim:rgba(76,141,255,.16);
+  --win:#2BE08A; --loss:#FF5C6E;
+  --win-faded:#1C7A52; --loss-faded:#8E3540;
+  --win-zone:rgba(43,224,138,.09); --loss-zone:rgba(255,92,110,.09);
+  --candle-up:#2BE08A; --candle-dn:#FF5C6E;
+  --warn:#FFC24B;
+  --glow-win:0 0 26px rgba(43,224,138,.32);
+  --glow-loss:0 0 26px rgba(255,92,110,.30);
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px rgba(0,0,0,.42);
+}
+
+/* The old light theme, kept whole for anyone who wants the page to match a
+   white chart beside it. Chosen in Settings; dark is what loads first. */
+:root[data-theme="light"]{
   --ground:#FFFFFF; --raised:#FFFFFF; --lift:#F0F3FA;
   --line:#E0E3EB; --line-soft:#F5F6FA;
   --text:#131722; --muted:#787B86; --faint:#9598A1;
@@ -37,6 +66,8 @@
   --win-faded:#7FCFBE; --loss-faded:#F7A3AB;
   --win-zone:rgba(8,153,129,.07); --loss-zone:rgba(242,54,69,.07);
   --candle-up:#2962FF; --candle-dn:#131722;
+  --warn:#C98A24;
+  --glow-win:none; --glow-loss:none;
   --shadow:0 1px 3px rgba(19,23,34,.10), 0 4px 14px rgba(19,23,34,.06);
 }
 *{box-sizing:border-box}
@@ -592,7 +623,7 @@ footer{
      is dark for that reason.
      Solid, not nearly solid: at 97% the app header behind it still read
      through the title bar as grey ghost text. */
-  position:fixed; inset:0; z-index:70; background:#131722;
+  position:fixed; inset:0; z-index:70; background:var(--ground);
   display:flex; flex-direction:column; gap:12px;
   padding:calc(18px + env(safe-area-inset-top, 0px)) 18px
           calc(18px + env(safe-area-inset-bottom, 0px));
@@ -644,6 +675,25 @@ body{overflow:hidden}
   font-size:11.5px; color:var(--muted); white-space:nowrap;
 }
 .appmeta b{color:var(--text)}
+/* Dark or light, one tap, next to the count. A sun or a moon drawn in CSS
+   rather than another file to fetch. */
+.themebtn{
+  flex:none; width:34px; height:34px; margin-left:10px; border-radius:8px;
+  border:1px solid var(--line); background:var(--raised); cursor:pointer;
+  position:relative; padding:0;
+}
+.themebtn:hover{border-color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.themebtn::before{
+  content:""; position:absolute; inset:0; margin:auto; width:13px; height:13px;
+  border-radius:50%; background:var(--muted);
+  box-shadow:inset -4px -3px 0 0 var(--raised);
+  transition:box-shadow .2s ease, background .2s ease;
+}
+:root[data-theme="light"] .themebtn::before{
+  box-shadow:0 0 0 2px var(--raised), 0 0 0 3px var(--muted);
+  width:9px; height:9px; background:var(--warn);
+}
 .appmeta .win{color:var(--win)} .appmeta .loss{color:var(--loss)}
 
 .appbody{flex:1; min-height:0; position:relative}
@@ -1124,6 +1174,74 @@ body{overflow:hidden}
 .jfr{font-size:11.5px; color:var(--text)}
 .jfw{font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
 .jfi{font-size:11px; color:var(--faint); line-height:1.5}
+
+/* An account, drawn as the two bars that decide whether it survives.
+   Health goes down and never back up past its high water mark, the target
+   goes up, and both move when the page draws so the change is felt rather
+   than read. */
+.acct{
+  border:1px solid var(--line); border-radius:10px; padding:14px 15px 12px;
+  margin:0 0 12px; background:var(--lift); position:relative; overflow:hidden;
+}
+.acct::after{
+  content:""; position:absolute; inset:0 auto 0 0; width:3px;
+  background:var(--win); opacity:.9;
+}
+.acct.mid::after{background:var(--warn)}
+.acct.low::after, .acct.gone::after{background:var(--loss)}
+.acctop{display:flex; align-items:baseline; justify-content:space-between;
+  gap:12px; margin-bottom:12px}
+.acctname{font-size:14px; font-weight:600; color:var(--text)}
+.acctbal{font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums}
+.meter{display:grid; grid-template-columns:1fr auto; gap:3px 10px;
+  margin-bottom:11px}
+.mlab{font-size:10.5px; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--faint)}
+.mval{font-size:13px; color:var(--text); font-variant-numeric:tabular-nums;
+  text-align:right}
+.mval small{color:var(--faint); font-size:11px; margin-left:5px}
+.track{
+  grid-column:1/-1; position:relative; height:12px; border-radius:7px;
+  background:var(--ground); border:1px solid var(--line); overflow:hidden;
+}
+.track i{
+  display:block; height:100%; width:0; border-radius:6px;
+  background:linear-gradient(90deg,
+    color-mix(in srgb, var(--win) 70%, transparent), var(--win));
+  box-shadow:var(--glow-win);
+  transition:width .85s cubic-bezier(.2,.75,.25,1);
+}
+.acct.mid .health .track i{
+  background:linear-gradient(90deg,
+    color-mix(in srgb, var(--warn) 65%, transparent), var(--warn));
+  box-shadow:none;
+}
+.acct.low .health .track i, .acct.gone .health .track i{
+  background:linear-gradient(90deg,
+    color-mix(in srgb, var(--loss) 65%, transparent), var(--loss));
+  box-shadow:var(--glow-loss);
+}
+/* The quarter marks, so "a quarter left" is seen rather than worked out. */
+.track em{
+  position:absolute; top:0; bottom:0; width:1px; background:var(--line);
+  opacity:.8;
+}
+.goal .track i{background:linear-gradient(90deg,
+  color-mix(in srgb, var(--accent) 60%, transparent), var(--accent));
+  box-shadow:0 0 18px rgba(76,141,255,.35)}
+.acctfoot{display:flex; flex-wrap:wrap; gap:6px; margin-top:2px}
+.pip{
+  font-size:11px; color:var(--muted); background:var(--ground);
+  border:1px solid var(--line); border-radius:999px; padding:3px 9px;
+}
+.pip.on{color:var(--win); border-color:color-mix(in srgb, var(--win) 45%, transparent)}
+.pip.bad{color:var(--loss); border-color:color-mix(in srgb, var(--loss) 45%, transparent)}
+
+/* A bar that is already full when the page paints says nothing. They start
+   empty and fill, once, on the frame after they land. */
+@media (prefers-reduced-motion: reduce){
+  .track i{transition:none}
+}
 
 /* An empty Diary is a question with an answer, not a blank chart. */
 .dempty{
@@ -1681,6 +1799,8 @@ body{overflow:hidden}
   <nav class="tabs2" role="tablist" aria-label="Sections"><button class="tb" role="tab" data-go="home" aria-selected="true">Home</button><button class="tb" role="tab" data-go="diary" aria-selected="false">Diary</button><button class="tb" role="tab" data-go="demo" aria-selected="false">Demo</button><button class="tb" role="tab" data-go="replay" aria-selected="false">Replay</button><button class="tb" role="tab" data-go="videos" aria-selected="false">Videos</button><button class="tb" role="tab" data-go="system" aria-selected="false">System</button><button class="tb" role="tab" data-go="learn" aria-selected="false">Learn</button></nav>
 
   <span class="appmeta" id="appmeta">no trades</span>
+  <button class="themebtn" id="themebtn" type="button"
+          aria-label="Switch between dark and light"></button>
 </div>
 <div class="appbody">
 <div class="tabpane" data-tab="diary" hidden><div class="ws">
@@ -2527,7 +2647,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=d574b203ac76","./chart.js":"./chart.js?v=d574b203ac76","./levels.js":"./levels.js?v=d574b203ac76","./revisit.js":"./revisit.js?v=d574b203ac76","./series.js":"./series.js?v=d574b203ac76","./clock.js":"./clock.js?v=d574b203ac76","./vault.js":"./vault.js?v=d574b203ac76","./draw.js":"./draw.js?v=d574b203ac76","./profile.js":"./profile.js?v=d574b203ac76","./whatif.js":"./whatif.js?v=d574b203ac76","./precheck.js":"./precheck.js?v=d574b203ac76","./shelf.js":"./shelf.js?v=d574b203ac76","./watchlist.js":"./watchlist.js?v=d574b203ac76","./lock.js":"./lock.js?v=d574b203ac76","./inds.js":"./inds.js?v=d574b203ac76","./imports.js":"./imports.js?v=d574b203ac76","./folder.js":"./folder.js?v=d574b203ac76","./funded.js":"./funded.js?v=d574b203ac76","./jdun.js":"./jdun.js?v=d574b203ac76","./replay.js":"./replay.js?v=d574b203ac76","./demo.js":"./demo.js?v=d574b203ac76","./diary.js":"./diary.js?v=d574b203ac76","./videos.js":"./videos.js?v=d574b203ac76","./system.js":"./system.js?v=d574b203ac76","./dashboard.js":"./dashboard.js?v=d574b203ac76"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=58245a722d87","./chart.js":"./chart.js?v=58245a722d87","./levels.js":"./levels.js?v=58245a722d87","./revisit.js":"./revisit.js?v=58245a722d87","./series.js":"./series.js?v=58245a722d87","./clock.js":"./clock.js?v=58245a722d87","./vault.js":"./vault.js?v=58245a722d87","./draw.js":"./draw.js?v=58245a722d87","./profile.js":"./profile.js?v=58245a722d87","./whatif.js":"./whatif.js?v=58245a722d87","./precheck.js":"./precheck.js?v=58245a722d87","./shelf.js":"./shelf.js?v=58245a722d87","./watchlist.js":"./watchlist.js?v=58245a722d87","./lock.js":"./lock.js?v=58245a722d87","./inds.js":"./inds.js?v=58245a722d87","./imports.js":"./imports.js?v=58245a722d87","./folder.js":"./folder.js?v=58245a722d87","./funded.js":"./funded.js?v=58245a722d87","./jdun.js":"./jdun.js?v=58245a722d87","./replay.js":"./replay.js?v=58245a722d87","./demo.js":"./demo.js?v=58245a722d87","./diary.js":"./diary.js?v=58245a722d87","./videos.js":"./videos.js?v=58245a722d87","./system.js":"./system.js?v=58245a722d87","./dashboard.js":"./dashboard.js?v=58245a722d87"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -2705,6 +2825,7 @@ function stat(label, value, cls = "") {
 
 function renderPanels() {
   renderAccounts();
+  hideDemoIfUnused();
   const all = window.ofAccount(window.TRADES);
   // One trade is not "1 trades". The whole phrase is written here rather
   // than a number beside a fixed word, which cannot be made to agree.
@@ -3172,6 +3293,76 @@ function renderPlanForm(plan) {
   };
 }
 
+/**
+ * One account, drawn as the two things that decide whether it survives.
+ *
+ * The room before the floor is a health bar, because that is exactly what it
+ * is: it only goes down on a bad day, it never comes back up on a good one
+ * past the high water mark, and at zero the account is gone. The target is a
+ * second bar going the other way. Seeing both at once is the whole picture,
+ * and a number alone never gave it.
+ */
+function accountCard(name, plan, allBal) {
+  const bal = allBal.filter(b => (b.account || "") === name);
+  const st = FUND.state(plan, {
+    balances: bal,
+    trades: window.TRADES.filter(t => (t.account || "") === name),
+  });
+  const cap = JD.dailyCap(jdunPlan());
+  const days = st.days;
+  const clean = days.filter(d => d.pnl >= -cap).length;
+
+  /* The streak that matters is sessions kept inside the daily cap, counted
+     back from the most recent one. It is the one thing in here that is
+     entirely his to control. */
+  let streak = 0;
+  for (let i = days.length - 1; i >= 0; i--) {
+    if (days[i].pnl < -cap) break;
+    streak++;
+  }
+
+  const pct = Math.max(0, Math.min(100, Math.round(st.roomPct * 100)));
+  const level = st.breached ? "gone" : pct < 25 ? "low" : pct < 55 ? "mid" : "high";
+  const target = plan.target || 0;
+  const tpct = target ? Math.max(0, Math.min(100, Math.round(st.profit / target * 100))) : 0;
+
+  return `<div class="acct ${level}">`
+    + `<div class="acctop"><span class="acctname">${esc(window.accountName(name))}</span>`
+    + `<span class="acctbal">$${Math.round(st.balance).toLocaleString("en-US")}</span></div>`
+
+    + '<div class="meter health">'
+    + `<span class="mlab">Account health</span>`
+    + `<span class="mval">${dollars(st.room).replace("+", "")}`
+    + `<small>of $${Math.round(plan.drawdown).toLocaleString("en-US")}</small></span>`
+    + `<div class="track"><i data-w="${pct}"></i>`
+    + '<em style="left:25%"></em><em style="left:50%"></em><em style="left:75%"></em>'
+    + "</div></div>"
+
+    + (target ? '<div class="meter goal">'
+        + '<span class="mlab">Profit target</span>'
+        + `<span class="mval">${dollars(st.profit)}`
+        + `<small>of $${Math.round(target).toLocaleString("en-US")}</small></span>`
+        + `<div class="track"><i data-w="${tpct}"></i></div></div>` : "")
+
+    + '<div class="acctfoot">'
+    + `<span class="pip ${streak ? "on" : ""}">${streak} session`
+    + `${streak === 1 ? "" : "s"} inside the cap</span>`
+    + `<span class="pip">${clean} of ${days.length} clean</span>`
+    + (st.breached ? '<span class="pip bad">breached</span>' : "")
+    + "</div></div>";
+}
+
+/* The frame after the bars land, so they animate from empty to where they
+   actually are. Setting the width in the markup means the browser has
+   nothing to transition from. */
+function fillBars(root) {
+  const bars = (root || document).querySelectorAll(".track i[data-w]");
+  if (!bars.length) return;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    for (const b of bars) b.style.width = b.dataset.w + "%";
+  }));
+}
+
 function renderFunded() {
   const sec = $("fundedsec"), card = $("fundedcard");
   if (!sec || !card) return;
@@ -3193,21 +3384,10 @@ function renderFunded() {
   const names = [...new Set([...allBal.map(b => b.account || ""),
     ...live.map(t => t.account || "")].filter(Boolean))].sort();
   if (window.ACCOUNT === "all" && names.length > 1) {
-    card.innerHTML = names.map(name => {
-      const st = FUND.state(plan, {
-        balances: allBal.filter(b => (b.account || "") === name),
-        trades: window.TRADES.filter(t => (t.account || "") === name),
-      });
-      const w = Math.round(st.roomPct * 100);
-      return `<p class="fundline"><b>${esc(window.accountName(name))}</b> &nbsp; `
-        + `${dollars(st.room).replace("+", "")} of `
-        + `$${Math.round(plan.drawdown).toLocaleString("en-US")} left`
-        + (st.breached ? " &nbsp; <b>breached</b>" : "")
-        + `</p><div class="fundbar${st.roomPct < 0.25 ? " warn" : ""}">`
-        + `<i style="width:${w}%"></i></div>`;
-    }).join("")
+    card.innerHTML = names.map(name => accountCard(name, plan, allBal)).join("")
       + '<p class="fundnote">Pick one account above for its own card, the '
       + "rules it still has to meet, and the sizer.</p>";
+    fillBars(card);
     return;
   }
 
@@ -3238,15 +3418,22 @@ function renderFunded() {
       + `$${plan.qualifyingDay}+ to count.`);
   if (s.ready) todo.push("Every rule on this list is met.");
 
+  /* The same two bars the all-accounts view shows, so switching between one
+     account and both does not switch between two different designs. */
+  const only = window.ACCOUNT !== "all" ? window.ACCOUNT
+    : [...new Set(allBal.map(b => b.account || "").filter(Boolean))][0];
   card.innerHTML =
-    `<p class="fundline">Room before the account is closed: `
-    + `<b>${dollars(s.room).replace("+", "")}</b> of `
-    + `$${Math.round(plan.drawdown).toLocaleString("en-US")}</p>`
-    + `<div class="fundbar${tight ? " warn" : ""}"><i style="width:${pct}%"></i></div>`
+    (only ? accountCard(only, plan, allBal)
+          : `<p class="fundline">Room before the account is closed: `
+            + `<b>${dollars(s.room).replace("+", "")}</b> of `
+            + `$${Math.round(plan.drawdown).toLocaleString("en-US")}</p>`
+            + `<div class="fundbar${tight ? " warn" : ""}">`
+            + `<i style="width:${pct}%"></i></div>`)
     + `<div class="stats hud">${rows}</div>`
     + sizerHtml(sizeNow())
     + todo.map(t => `<p class="fundnote">${t}</p>`).join("")
     + s.notes.map(n => `<p class="fundnote">${esc(n)}</p>`).join("");
+  fillBars(card);
   wireSizer(s.room, plan);
 }
 
@@ -3723,6 +3910,30 @@ if (noteBox) {
   });
 }
 
+/* ------------------------------------------------------------ dark or light */
+
+/* The theme is the device's, not the journal's: it is applied before a PIN
+   has been typed, so it cannot live behind one. */
+const THEME_KEY = "tradersdiary.theme";
+
+function applyTheme(name) {
+  const light = name === "light";
+  if (light) document.documentElement.dataset.theme = "light";
+  else delete document.documentElement.dataset.theme;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", light ? "#FFFFFF" : "#0A0E16");
+  try { localStorage.setItem(THEME_KEY, light ? "light" : "dark"); } catch { /* fine */ }
+  // Everything drawn on a canvas reads the CSS colours once, at draw time.
+  try { DASH.refreshRecord(); } catch { /* nothing drawn yet */ }
+  try { DIARY.redraw(); } catch { /* not open */ }
+  try { RP.redraw(); } catch { /* not open */ }
+}
+
+const themeBtn = $("themebtn");
+if (themeBtn) themeBtn.addEventListener("click", () => {
+  applyTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light");
+});
+
 /* ------------------------------------------------ did you follow the plan */
 
 /* The method is only worth anything if it was actually followed, and the
@@ -3929,6 +4140,22 @@ window.pickAccount = function (acc) {
   renderFunded();
   renderDays();
 };
+
+/* The Demo account was a place to learn which buttons do what. Once there
+   are real accounts in the journal it is a tab in the way, and the Diary is
+   about the evaluations, so it steps aside until it has something in it. */
+function hideDemoIfUnused() {
+  let used = false;
+  try { used = !!PROF.get("demo"); } catch { used = false; }
+  if (!used) used = window.TRADES.some(t => (t.source || "live") === "demo");
+  const real = window.TRADES.some(t => (t.source || "live") === "live")
+    || balancesNow().length > 0;
+  const hide = real && !used;
+  const btn = document.querySelector('.tb[data-go="demo"]');
+  if (btn) btn.hidden = hide;
+  const open = document.querySelector(".tabpane:not([hidden])");
+  if (hide && open && open.dataset.tab === "demo") goTab("home", true);
+}
 
 function renderAccounts() {
   /* Accounts come from the balance history as well as from trades. Tradovate

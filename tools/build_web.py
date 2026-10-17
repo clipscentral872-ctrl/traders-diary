@@ -40,7 +40,7 @@ FLAG_TEXT = {
 
 HEAD_TAGS = """<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#FFFFFF">
+<meta name="theme-color" content="#0A0E16">
 <meta name="description" content="A trading journal that shows you the trade, not just the number.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -48,6 +48,17 @@ HEAD_TAGS = """<meta charset="utf-8">
 <meta name="apple-mobile-web-app-title" content="Traders Diary">
 <link rel="apple-touch-icon" href="logo-180.png">
 <link rel="icon" href="logo.svg" type="image/svg+xml">
+<script>
+/* Applied before the first paint, so a light theme never flashes dark on the
+   way in. Kept in plain storage rather than against a journal, because the
+   lock screen is painted before any journal is open. */
+try {
+  var t = localStorage.getItem("tradersdiary.theme");
+  if (t === "light") document.documentElement.dataset.theme = "light";
+  var m = document.querySelector('meta[name="theme-color"]');
+  if (m && t === "light") m.setAttribute("content", "#FFFFFF");
+} catch (e) { /* storage blocked, dark it is */ }
+</script>
 <!-- A PNG behind the SVG. Safari and a few others will not use an SVG for a
      tab or a desktop shortcut, and quietly show nothing rather than saying
      so, which is how an app ends up with a blank square for a logo. -->
@@ -105,6 +116,8 @@ APPBAR = """<div class="appbar">
   <span class="brand">Traders&nbsp;Diary</span>
   __NAV__
   <span class="appmeta" id="appmeta">no trades</span>
+  <button class="themebtn" id="themebtn" type="button"
+          aria-label="Switch between dark and light"></button>
 </div>
 """
 
@@ -497,7 +510,7 @@ EXTRA_CSS = """
      is dark for that reason.
      Solid, not nearly solid: at 97% the app header behind it still read
      through the title bar as grey ghost text. */
-  position:fixed; inset:0; z-index:70; background:#131722;
+  position:fixed; inset:0; z-index:70; background:var(--ground);
   display:flex; flex-direction:column; gap:12px;
   padding:calc(18px + env(safe-area-inset-top, 0px)) 18px
           calc(18px + env(safe-area-inset-bottom, 0px));
@@ -549,6 +562,25 @@ body{overflow:hidden}
   font-size:11.5px; color:var(--muted); white-space:nowrap;
 }
 .appmeta b{color:var(--text)}
+/* Dark or light, one tap, next to the count. A sun or a moon drawn in CSS
+   rather than another file to fetch. */
+.themebtn{
+  flex:none; width:34px; height:34px; margin-left:10px; border-radius:8px;
+  border:1px solid var(--line); background:var(--raised); cursor:pointer;
+  position:relative; padding:0;
+}
+.themebtn:hover{border-color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.themebtn::before{
+  content:""; position:absolute; inset:0; margin:auto; width:13px; height:13px;
+  border-radius:50%; background:var(--muted);
+  box-shadow:inset -4px -3px 0 0 var(--raised);
+  transition:box-shadow .2s ease, background .2s ease;
+}
+:root[data-theme="light"] .themebtn::before{
+  box-shadow:0 0 0 2px var(--raised), 0 0 0 3px var(--muted);
+  width:9px; height:9px; background:var(--warn);
+}
 .appmeta .win{color:var(--win)} .appmeta .loss{color:var(--loss)}
 
 .appbody{flex:1; min-height:0; position:relative}
@@ -1029,6 +1061,74 @@ body{overflow:hidden}
 .jfr{font-size:11.5px; color:var(--text)}
 .jfw{font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
 .jfi{font-size:11px; color:var(--faint); line-height:1.5}
+
+/* An account, drawn as the two bars that decide whether it survives.
+   Health goes down and never back up past its high water mark, the target
+   goes up, and both move when the page draws so the change is felt rather
+   than read. */
+.acct{
+  border:1px solid var(--line); border-radius:10px; padding:14px 15px 12px;
+  margin:0 0 12px; background:var(--lift); position:relative; overflow:hidden;
+}
+.acct::after{
+  content:""; position:absolute; inset:0 auto 0 0; width:3px;
+  background:var(--win); opacity:.9;
+}
+.acct.mid::after{background:var(--warn)}
+.acct.low::after, .acct.gone::after{background:var(--loss)}
+.acctop{display:flex; align-items:baseline; justify-content:space-between;
+  gap:12px; margin-bottom:12px}
+.acctname{font-size:14px; font-weight:600; color:var(--text)}
+.acctbal{font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums}
+.meter{display:grid; grid-template-columns:1fr auto; gap:3px 10px;
+  margin-bottom:11px}
+.mlab{font-size:10.5px; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--faint)}
+.mval{font-size:13px; color:var(--text); font-variant-numeric:tabular-nums;
+  text-align:right}
+.mval small{color:var(--faint); font-size:11px; margin-left:5px}
+.track{
+  grid-column:1/-1; position:relative; height:12px; border-radius:7px;
+  background:var(--ground); border:1px solid var(--line); overflow:hidden;
+}
+.track i{
+  display:block; height:100%; width:0; border-radius:6px;
+  background:linear-gradient(90deg,
+    color-mix(in srgb, var(--win) 70%, transparent), var(--win));
+  box-shadow:var(--glow-win);
+  transition:width .85s cubic-bezier(.2,.75,.25,1);
+}
+.acct.mid .health .track i{
+  background:linear-gradient(90deg,
+    color-mix(in srgb, var(--warn) 65%, transparent), var(--warn));
+  box-shadow:none;
+}
+.acct.low .health .track i, .acct.gone .health .track i{
+  background:linear-gradient(90deg,
+    color-mix(in srgb, var(--loss) 65%, transparent), var(--loss));
+  box-shadow:var(--glow-loss);
+}
+/* The quarter marks, so "a quarter left" is seen rather than worked out. */
+.track em{
+  position:absolute; top:0; bottom:0; width:1px; background:var(--line);
+  opacity:.8;
+}
+.goal .track i{background:linear-gradient(90deg,
+  color-mix(in srgb, var(--accent) 60%, transparent), var(--accent));
+  box-shadow:0 0 18px rgba(76,141,255,.35)}
+.acctfoot{display:flex; flex-wrap:wrap; gap:6px; margin-top:2px}
+.pip{
+  font-size:11px; color:var(--muted); background:var(--ground);
+  border:1px solid var(--line); border-radius:999px; padding:3px 9px;
+}
+.pip.on{color:var(--win); border-color:color-mix(in srgb, var(--win) 45%, transparent)}
+.pip.bad{color:var(--loss); border-color:color-mix(in srgb, var(--loss) 45%, transparent)}
+
+/* A bar that is already full when the page paints says nothing. They start
+   empty and fill, once, on the frame after they land. */
+@media (prefers-reduced-motion: reduce){
+  .track i{transition:none}
+}
 
 /* An empty Diary is a question with an answer, not a blank chart. */
 .dempty{
