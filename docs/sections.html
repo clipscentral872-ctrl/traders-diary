@@ -362,10 +362,65 @@
 <div class="col">
 
 <section>
-  <h2>The method, in four steps</h2>
-  <p class="lead">This is the sequence the system looks for and the one your
-  own trades are read against. Each step has to happen in order. A setup that
-  skips one is not a setup.</p>
+  <h2>The method, step by step</h2>
+  <div class="mswitch" role="group" aria-label="Which method">
+    <button class="msb" data-method="jdun" aria-pressed="true">Jdun</button>
+    <button class="msb" data-method="tjr" aria-pressed="false">TJR</button>
+  </div>
+
+  <div class="methodbox" data-method="jdun">
+    <p class="lead">The method you trade now, and the one your trades are
+    graded against on every card in the Diary. Each step has to happen in
+    order, and the first two happen before you are allowed to do anything.</p>
+    <ol class="steps">
+      <li>
+        <h3>Mark the levels before the open</h3>
+        <p>Pre-market high and low, previous day high and low, Asia high and
+        low, and the round numbers. VWAP on the chart. This is done before
+        09:30 New York, which is 15:30 at home, because nothing decided after
+        the bell was decided calmly.</p>
+      </li>
+      <li>
+        <h3>Sit out the first fifteen minutes</h3>
+        <p>The first three five minute candles build the opening range. There
+        is no level to retest while the level is still forming, so there is no
+        setup to take. This is the danger zone and the rule is simply no
+        trades.</p>
+      </li>
+      <li>
+        <h3>The trend setting candle</h3>
+        <p>A five minute candle closes beyond the range, ideally a full body,
+        with volume clearly bigger than the bars before it. Price moved and
+        the volume went with it. Weak volume is a pass, not a smaller
+        position.</p>
+      </li>
+      <li>
+        <h3>Draw the pocket on that candle</h3>
+        <p>A Fibonacci retracement across the trend setting candle, low to
+        high for an up move and high to low for a down move, with only the 0.5
+        and 0.618 levels kept. That band is where the entry lives.</p>
+      </li>
+      <li>
+        <h3>Enter on the retest, not the break</h3>
+        <p>Wait for price to come back into the pocket. Best of all when a
+        level you already marked sits under it. Stop beyond the candle where
+        the idea is wrong, size so that stop costs half your daily cap, and
+        target a level at least 1.5 times the risk away.</p>
+      </li>
+      <li>
+        <h3>Trim at 1R, then let it run</h3>
+        <p>Take the first piece at one times your risk, move the stop to your
+        entry, and let the rest go to the level you picked before you entered.
+        Two full losses and the day is over, whatever is forming.</p>
+      </li>
+    </ol>
+  </div>
+
+  <div class="methodbox" data-method="tjr" hidden>
+  <p class="lead">The sequence the built-in detector looks for. Kept here
+  because it is what the system and the replay practice were built around,
+  and because the two methods disagree about what a setup is, which is worth
+  being able to read side by side.</p>
   <ol class="steps">
     <li>
       <h3>Liquidity is taken</h3>
@@ -392,6 +447,7 @@
       not the first.</p>
     </li>
   </ol>
+  </div>
 </section>
 
 <section>

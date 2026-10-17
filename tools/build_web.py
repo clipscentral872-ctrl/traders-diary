@@ -1164,6 +1164,18 @@ body{overflow:hidden}
   .track i{transition:none}
 }
 
+/* Which method the Learn tab is showing. */
+.mswitch{display:flex; gap:6px; margin:0 0 16px}
+.msb{
+  background:var(--raised); border:1px solid var(--line); border-radius:999px;
+  color:var(--muted); padding:7px 16px; font-size:13px; min-height:36px;
+  cursor:pointer;
+}
+.msb[aria-pressed="true"]{color:var(--text); border-color:var(--accent);
+  background:var(--accent-dim)}
+.msb:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.methodbox[hidden]{display:none}
+
 /* What is in the journal, by account, with a way to take a group out. */
 .grp{
   display:grid; grid-template-columns:1fr auto; gap:4px 14px;

@@ -1265,6 +1265,18 @@ body{overflow:hidden}
   .track i{transition:none}
 }
 
+/* Which method the Learn tab is showing. */
+.mswitch{display:flex; gap:6px; margin:0 0 16px}
+.msb{
+  background:var(--raised); border:1px solid var(--line); border-radius:999px;
+  color:var(--muted); padding:7px 16px; font-size:13px; min-height:36px;
+  cursor:pointer;
+}
+.msb[aria-pressed="true"]{color:var(--text); border-color:var(--accent);
+  background:var(--accent-dim)}
+.msb:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.methodbox[hidden]{display:none}
+
 /* What is in the journal, by account, with a way to take a group out. */
 .grp{
   display:grid; grid-template-columns:1fr auto; gap:4px 14px;
@@ -2445,10 +2457,65 @@ body{overflow:hidden}
 <div class="col">
 
 <section>
-  <h2>The method, in four steps</h2>
-  <p class="lead">This is the sequence the system looks for and the one your
-  own trades are read against. Each step has to happen in order. A setup that
-  skips one is not a setup.</p>
+  <h2>The method, step by step</h2>
+  <div class="mswitch" role="group" aria-label="Which method">
+    <button class="msb" data-method="jdun" aria-pressed="true">Jdun</button>
+    <button class="msb" data-method="tjr" aria-pressed="false">TJR</button>
+  </div>
+
+  <div class="methodbox" data-method="jdun">
+    <p class="lead">The method you trade now, and the one your trades are
+    graded against on every card in the Diary. Each step has to happen in
+    order, and the first two happen before you are allowed to do anything.</p>
+    <ol class="steps">
+      <li>
+        <h3>Mark the levels before the open</h3>
+        <p>Pre-market high and low, previous day high and low, Asia high and
+        low, and the round numbers. VWAP on the chart. This is done before
+        09:30 New York, which is 15:30 at home, because nothing decided after
+        the bell was decided calmly.</p>
+      </li>
+      <li>
+        <h3>Sit out the first fifteen minutes</h3>
+        <p>The first three five minute candles build the opening range. There
+        is no level to retest while the level is still forming, so there is no
+        setup to take. This is the danger zone and the rule is simply no
+        trades.</p>
+      </li>
+      <li>
+        <h3>The trend setting candle</h3>
+        <p>A five minute candle closes beyond the range, ideally a full body,
+        with volume clearly bigger than the bars before it. Price moved and
+        the volume went with it. Weak volume is a pass, not a smaller
+        position.</p>
+      </li>
+      <li>
+        <h3>Draw the pocket on that candle</h3>
+        <p>A Fibonacci retracement across the trend setting candle, low to
+        high for an up move and high to low for a down move, with only the 0.5
+        and 0.618 levels kept. That band is where the entry lives.</p>
+      </li>
+      <li>
+        <h3>Enter on the retest, not the break</h3>
+        <p>Wait for price to come back into the pocket. Best of all when a
+        level you already marked sits under it. Stop beyond the candle where
+        the idea is wrong, size so that stop costs half your daily cap, and
+        target a level at least 1.5 times the risk away.</p>
+      </li>
+      <li>
+        <h3>Trim at 1R, then let it run</h3>
+        <p>Take the first piece at one times your risk, move the stop to your
+        entry, and let the rest go to the level you picked before you entered.
+        Two full losses and the day is over, whatever is forming.</p>
+      </li>
+    </ol>
+  </div>
+
+  <div class="methodbox" data-method="tjr" hidden>
+  <p class="lead">The sequence the built-in detector looks for. Kept here
+  because it is what the system and the replay practice were built around,
+  and because the two methods disagree about what a setup is, which is worth
+  being able to read side by side.</p>
   <ol class="steps">
     <li>
       <h3>Liquidity is taken</h3>
@@ -2475,6 +2542,7 @@ body{overflow:hidden}
       not the first.</p>
     </li>
   </ol>
+  </div>
 </section>
 
 <section>
@@ -2693,7 +2761,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=e65843f82f61","./chart.js":"./chart.js?v=e65843f82f61","./levels.js":"./levels.js?v=e65843f82f61","./revisit.js":"./revisit.js?v=e65843f82f61","./series.js":"./series.js?v=e65843f82f61","./clock.js":"./clock.js?v=e65843f82f61","./vault.js":"./vault.js?v=e65843f82f61","./draw.js":"./draw.js?v=e65843f82f61","./profile.js":"./profile.js?v=e65843f82f61","./whatif.js":"./whatif.js?v=e65843f82f61","./precheck.js":"./precheck.js?v=e65843f82f61","./shelf.js":"./shelf.js?v=e65843f82f61","./watchlist.js":"./watchlist.js?v=e65843f82f61","./lock.js":"./lock.js?v=e65843f82f61","./inds.js":"./inds.js?v=e65843f82f61","./imports.js":"./imports.js?v=e65843f82f61","./folder.js":"./folder.js?v=e65843f82f61","./funded.js":"./funded.js?v=e65843f82f61","./jdun.js":"./jdun.js?v=e65843f82f61","./replay.js":"./replay.js?v=e65843f82f61","./demo.js":"./demo.js?v=e65843f82f61","./diary.js":"./diary.js?v=e65843f82f61","./videos.js":"./videos.js?v=e65843f82f61","./system.js":"./system.js?v=e65843f82f61","./dashboard.js":"./dashboard.js?v=e65843f82f61"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=572b08b6dec2","./chart.js":"./chart.js?v=572b08b6dec2","./levels.js":"./levels.js?v=572b08b6dec2","./revisit.js":"./revisit.js?v=572b08b6dec2","./series.js":"./series.js?v=572b08b6dec2","./clock.js":"./clock.js?v=572b08b6dec2","./vault.js":"./vault.js?v=572b08b6dec2","./draw.js":"./draw.js?v=572b08b6dec2","./profile.js":"./profile.js?v=572b08b6dec2","./whatif.js":"./whatif.js?v=572b08b6dec2","./precheck.js":"./precheck.js?v=572b08b6dec2","./shelf.js":"./shelf.js?v=572b08b6dec2","./watchlist.js":"./watchlist.js?v=572b08b6dec2","./lock.js":"./lock.js?v=572b08b6dec2","./inds.js":"./inds.js?v=572b08b6dec2","./imports.js":"./imports.js?v=572b08b6dec2","./folder.js":"./folder.js?v=572b08b6dec2","./funded.js":"./funded.js?v=572b08b6dec2","./jdun.js":"./jdun.js?v=572b08b6dec2","./replay.js":"./replay.js?v=572b08b6dec2","./demo.js":"./demo.js?v=572b08b6dec2","./diary.js":"./diary.js?v=572b08b6dec2","./videos.js":"./videos.js?v=572b08b6dec2","./system.js":"./system.js?v=572b08b6dec2","./dashboard.js":"./dashboard.js?v=572b08b6dec2"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -4312,6 +4380,28 @@ document.addEventListener("click", e => {
   say(warn || `Removed ${hit.length} trade${hit.length === 1 ? "" : "s"}.`, !!warn);
 });
 
+/* ------------------------------------------------------ which method, Learn */
+
+/* Two methods are written up in the Learn tab. Chris trades Jdun's and the
+   built-in detector looks for TJR's, so both stay and the page shows one at
+   a time. The choice is remembered, and it is a reading choice only: the
+   grading on every trade card follows Jdun's rules either way. */
+const METHOD_KEY = "learn.method";
+
+function showMethod(which) {
+  const want = which === "tjr" ? "tjr" : "jdun";
+  for (const box of document.querySelectorAll(".methodbox"))
+    box.hidden = box.dataset.method !== want;
+  for (const b of document.querySelectorAll(".msb"))
+    b.setAttribute("aria-pressed", String(b.dataset.method === want));
+  try { PROF.set(METHOD_KEY, want); } catch { /* not open yet */ }
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest(".msb");
+  if (b) showMethod(b.dataset.method);
+});
+
 /** How many sessions of broker balances are in the journal, for the screens
  *  that need to explain what is and is not here yet. */
 window.sessionCount = () => balancesNow().filter(b => window.ACCOUNT === "all"
@@ -4413,6 +4503,7 @@ async function opened(pin) {
   if (tzSel) tzSel.value = String(tzOffset());
   if ($("showtz")) $("showtz").value = displayZone();
   window.ACCOUNT = PROF.get(ACC_KEY) || "all";
+  showMethod(PROF.get(METHOD_KEY) || "jdun");
   renderPanels();
   renderFunded();
   storeLine();

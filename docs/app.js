@@ -1615,6 +1615,28 @@ document.addEventListener("click", e => {
   say(warn || `Removed ${hit.length} trade${hit.length === 1 ? "" : "s"}.`, !!warn);
 });
 
+/* ------------------------------------------------------ which method, Learn */
+
+/* Two methods are written up in the Learn tab. Chris trades Jdun's and the
+   built-in detector looks for TJR's, so both stay and the page shows one at
+   a time. The choice is remembered, and it is a reading choice only: the
+   grading on every trade card follows Jdun's rules either way. */
+const METHOD_KEY = "learn.method";
+
+function showMethod(which) {
+  const want = which === "tjr" ? "tjr" : "jdun";
+  for (const box of document.querySelectorAll(".methodbox"))
+    box.hidden = box.dataset.method !== want;
+  for (const b of document.querySelectorAll(".msb"))
+    b.setAttribute("aria-pressed", String(b.dataset.method === want));
+  try { PROF.set(METHOD_KEY, want); } catch { /* not open yet */ }
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest(".msb");
+  if (b) showMethod(b.dataset.method);
+});
+
 /** How many sessions of broker balances are in the journal, for the screens
  *  that need to explain what is and is not here yet. */
 window.sessionCount = () => balancesNow().filter(b => window.ACCOUNT === "all"
@@ -1716,6 +1738,7 @@ async function opened(pin) {
   if (tzSel) tzSel.value = String(tzOffset());
   if ($("showtz")) $("showtz").value = displayZone();
   window.ACCOUNT = PROF.get(ACC_KEY) || "all";
+  showMethod(PROF.get(METHOD_KEY) || "jdun");
   renderPanels();
   renderFunded();
   storeLine();
