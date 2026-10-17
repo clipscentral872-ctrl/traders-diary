@@ -2492,7 +2492,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=2fda0946198c","./chart.js":"./chart.js?v=2fda0946198c","./levels.js":"./levels.js?v=2fda0946198c","./revisit.js":"./revisit.js?v=2fda0946198c","./series.js":"./series.js?v=2fda0946198c","./clock.js":"./clock.js?v=2fda0946198c","./vault.js":"./vault.js?v=2fda0946198c","./draw.js":"./draw.js?v=2fda0946198c","./profile.js":"./profile.js?v=2fda0946198c","./whatif.js":"./whatif.js?v=2fda0946198c","./precheck.js":"./precheck.js?v=2fda0946198c","./shelf.js":"./shelf.js?v=2fda0946198c","./watchlist.js":"./watchlist.js?v=2fda0946198c","./lock.js":"./lock.js?v=2fda0946198c","./inds.js":"./inds.js?v=2fda0946198c","./imports.js":"./imports.js?v=2fda0946198c","./folder.js":"./folder.js?v=2fda0946198c","./funded.js":"./funded.js?v=2fda0946198c","./jdun.js":"./jdun.js?v=2fda0946198c","./replay.js":"./replay.js?v=2fda0946198c","./demo.js":"./demo.js?v=2fda0946198c","./diary.js":"./diary.js?v=2fda0946198c","./videos.js":"./videos.js?v=2fda0946198c","./system.js":"./system.js?v=2fda0946198c","./dashboard.js":"./dashboard.js?v=2fda0946198c"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=ca3e50856693","./chart.js":"./chart.js?v=ca3e50856693","./levels.js":"./levels.js?v=ca3e50856693","./revisit.js":"./revisit.js?v=ca3e50856693","./series.js":"./series.js?v=ca3e50856693","./clock.js":"./clock.js?v=ca3e50856693","./vault.js":"./vault.js?v=ca3e50856693","./draw.js":"./draw.js?v=ca3e50856693","./profile.js":"./profile.js?v=ca3e50856693","./whatif.js":"./whatif.js?v=ca3e50856693","./precheck.js":"./precheck.js?v=ca3e50856693","./shelf.js":"./shelf.js?v=ca3e50856693","./watchlist.js":"./watchlist.js?v=ca3e50856693","./lock.js":"./lock.js?v=ca3e50856693","./inds.js":"./inds.js?v=ca3e50856693","./imports.js":"./imports.js?v=ca3e50856693","./folder.js":"./folder.js?v=ca3e50856693","./funded.js":"./funded.js?v=ca3e50856693","./jdun.js":"./jdun.js?v=ca3e50856693","./replay.js":"./replay.js?v=ca3e50856693","./demo.js":"./demo.js?v=ca3e50856693","./diary.js":"./diary.js?v=ca3e50856693","./videos.js":"./videos.js?v=ca3e50856693","./system.js":"./system.js?v=ca3e50856693","./dashboard.js":"./dashboard.js?v=ca3e50856693"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -2754,9 +2754,22 @@ function renderStanding() {
   const n = mine.length;
 
   if (!n) {
-    row("warn", "Nothing imported yet",
-      "Drop your TradingView exports above and this fills in. Until then there "
-      + "is nothing here to be right or wrong about.");
+    /* Balances without fills is a real state, not an empty journal, and it is
+       exactly where a broken Tradovate export leaves you. Saying "nothing
+       imported" there is wrong and sends you back to re-import files that
+       did arrive. */
+    const days = balancesNow().filter(b => window.ACCOUNT === "all"
+      || (b.account || "") === window.ACCOUNT).length;
+    if (days)
+      row("warn", `${days} session${days === 1 ? "" : "s"} of balances, no trades`,
+        "The day by day record above is from your broker's own balance "
+        + "history. The trades inside those days need the Fills export, and "
+        + "the stops need the orders panel, exported at the end of a session. "
+        + "Until both are in, there is no R to measure and no trade to grade.");
+    else
+      row("warn", "Nothing imported yet",
+        "Drop your exports above and this fills in. Until then there "
+        + "is nothing here to be right or wrong about.");
     $("stands").innerHTML = rows.join("");
     return;
   }

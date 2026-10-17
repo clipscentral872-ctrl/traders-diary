@@ -258,9 +258,22 @@ function renderStanding() {
   const n = mine.length;
 
   if (!n) {
-    row("warn", "Nothing imported yet",
-      "Drop your TradingView exports above and this fills in. Until then there "
-      + "is nothing here to be right or wrong about.");
+    /* Balances without fills is a real state, not an empty journal, and it is
+       exactly where a broken Tradovate export leaves you. Saying "nothing
+       imported" there is wrong and sends you back to re-import files that
+       did arrive. */
+    const days = balancesNow().filter(b => window.ACCOUNT === "all"
+      || (b.account || "") === window.ACCOUNT).length;
+    if (days)
+      row("warn", `${days} session${days === 1 ? "" : "s"} of balances, no trades`,
+        "The day by day record above is from your broker's own balance "
+        + "history. The trades inside those days need the Fills export, and "
+        + "the stops need the orders panel, exported at the end of a session. "
+        + "Until both are in, there is no R to measure and no trade to grade.");
+    else
+      row("warn", "Nothing imported yet",
+        "Drop your exports above and this fills in. Until then there "
+        + "is nothing here to be right or wrong about.");
     $("stands").innerHTML = rows.join("");
     return;
   }
