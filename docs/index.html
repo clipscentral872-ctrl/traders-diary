@@ -1147,6 +1147,28 @@ body{overflow:hidden}
   background:var(--ground)}
 .acc .sn{font-variant-numeric:tabular-nums; color:var(--faint); font-size:11px}
 .accrow.mini{margin:0}
+/* The same picker in the bar, on every tab, because "which account am I
+   looking at" is a question every screen in here answers differently. */
+.accrow.bar{margin:0 0 0 14px; flex:none; gap:4px}
+.accrow.bar .acc{padding:4px 10px; min-height:28px; font-size:11.5px}
+.accrow.bar .acc .sn{display:none}
+
+/* Winners, losers, everything. One tap at the top of the library. */
+.vfilter{display:flex; gap:6px; flex-wrap:wrap; margin:0 0 12px}
+.vfb{
+  display:flex; align-items:center; gap:7px; background:var(--raised);
+  border:1px solid var(--line); border-radius:999px; color:var(--muted);
+  padding:6px 13px; font-size:12.5px; min-height:34px; cursor:pointer;
+}
+.vfb .sn{font-size:11px; color:var(--faint); font-variant-numeric:tabular-nums}
+.vfb[aria-pressed="true"]{color:var(--text); border-color:var(--accent);
+  background:var(--accent-dim)}
+.vfb.win[aria-pressed="true"]{color:var(--win);
+  border-color:color-mix(in srgb, var(--win) 55%, transparent);
+  background:var(--win-zone)}
+.vfb.loss[aria-pressed="true"]{color:var(--loss);
+  border-color:color-mix(in srgb, var(--loss) 55%, transparent);
+  background:var(--loss-zone)}
 
 /* Did you follow the plan. The verdict first, then the six questions only
    Chris can answer, then every rule the record could judge on its own. */
@@ -1798,6 +1820,7 @@ body{overflow:hidden}
   <span class="brand">Traders&nbsp;Diary</span>
   <nav class="tabs2" role="tablist" aria-label="Sections"><button class="tb" role="tab" data-go="home" aria-selected="true">Home</button><button class="tb" role="tab" data-go="diary" aria-selected="false">Diary</button><button class="tb" role="tab" data-go="demo" aria-selected="false">Demo</button><button class="tb" role="tab" data-go="replay" aria-selected="false">Replay</button><button class="tb" role="tab" data-go="videos" aria-selected="false">Videos</button><button class="tb" role="tab" data-go="system" aria-selected="false">System</button><button class="tb" role="tab" data-go="learn" aria-selected="false">Learn</button></nav>
 
+  <div class="accrow bar" id="accbar" hidden></div>
   <span class="appmeta" id="appmeta">no trades</span>
   <button class="themebtn" id="themebtn" type="button"
           aria-label="Switch between dark and light"></button>
@@ -2647,7 +2670,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=58245a722d87","./chart.js":"./chart.js?v=58245a722d87","./levels.js":"./levels.js?v=58245a722d87","./revisit.js":"./revisit.js?v=58245a722d87","./series.js":"./series.js?v=58245a722d87","./clock.js":"./clock.js?v=58245a722d87","./vault.js":"./vault.js?v=58245a722d87","./draw.js":"./draw.js?v=58245a722d87","./profile.js":"./profile.js?v=58245a722d87","./whatif.js":"./whatif.js?v=58245a722d87","./precheck.js":"./precheck.js?v=58245a722d87","./shelf.js":"./shelf.js?v=58245a722d87","./watchlist.js":"./watchlist.js?v=58245a722d87","./lock.js":"./lock.js?v=58245a722d87","./inds.js":"./inds.js?v=58245a722d87","./imports.js":"./imports.js?v=58245a722d87","./folder.js":"./folder.js?v=58245a722d87","./funded.js":"./funded.js?v=58245a722d87","./jdun.js":"./jdun.js?v=58245a722d87","./replay.js":"./replay.js?v=58245a722d87","./demo.js":"./demo.js?v=58245a722d87","./diary.js":"./diary.js?v=58245a722d87","./videos.js":"./videos.js?v=58245a722d87","./system.js":"./system.js?v=58245a722d87","./dashboard.js":"./dashboard.js?v=58245a722d87"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=bf33c11c02bf","./chart.js":"./chart.js?v=bf33c11c02bf","./levels.js":"./levels.js?v=bf33c11c02bf","./revisit.js":"./revisit.js?v=bf33c11c02bf","./series.js":"./series.js?v=bf33c11c02bf","./clock.js":"./clock.js?v=bf33c11c02bf","./vault.js":"./vault.js?v=bf33c11c02bf","./draw.js":"./draw.js?v=bf33c11c02bf","./profile.js":"./profile.js?v=bf33c11c02bf","./whatif.js":"./whatif.js?v=bf33c11c02bf","./precheck.js":"./precheck.js?v=bf33c11c02bf","./shelf.js":"./shelf.js?v=bf33c11c02bf","./watchlist.js":"./watchlist.js?v=bf33c11c02bf","./lock.js":"./lock.js?v=bf33c11c02bf","./inds.js":"./inds.js?v=bf33c11c02bf","./imports.js":"./imports.js?v=bf33c11c02bf","./folder.js":"./folder.js?v=bf33c11c02bf","./funded.js":"./funded.js?v=bf33c11c02bf","./jdun.js":"./jdun.js?v=bf33c11c02bf","./replay.js":"./replay.js?v=bf33c11c02bf","./demo.js":"./demo.js?v=bf33c11c02bf","./diary.js":"./diary.js?v=bf33c11c02bf","./videos.js":"./videos.js?v=bf33c11c02bf","./system.js":"./system.js?v=bf33c11c02bf","./dashboard.js":"./dashboard.js?v=bf33c11c02bf"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -4139,6 +4162,7 @@ window.pickAccount = function (acc) {
   renderPanels();
   renderFunded();
   renderDays();
+  try { VID.refilter(); } catch { /* library not loaded yet */ }
 };
 
 /* The Demo account was a place to learn which buttons do what. Once there
@@ -4169,20 +4193,21 @@ function renderAccounts() {
   // happened yet. Either way the row stays out of the way.
   const show = names.length > 1;
   if (!names.includes(window.ACCOUNT)) window.ACCOUNT = "all";
-  const html = !show ? "" :
-    [["all", "Both"], ...names.map(n => [n, window.accountName(n)])]
-      .map(([k, label]) => {
-      const n = k === "all" ? window.TRADES.filter(t => (t.source || "live") === "live").length
-        : window.ofAccount(window.TRADES, k)
-          .filter(t => (t.source || "live") === "live").length;
-      return `<button class="acc" data-acc="${esc(k)}" `
-        + `aria-pressed="${k === window.ACCOUNT}" `
-        + `onclick="pickAccount('${esc(k)}')">${esc(label)}`
-        + (n ? `<span class="sn">${n}</span>` : "") + "</button>";
-    }).join("");
+  const pairs = [["all", "Both"], ...names.map(n => [n, window.accountName(n)])];
+  const shortHtml = !show ? "" : pairs.map(([k, label]) => {
+    const tail = k === "all" ? label : label.replace(/^Account\s+/, "");
+    return `<button class="acc" data-acc="${esc(k)}" `
+      + `aria-pressed="${k === window.ACCOUNT}" `
+      + `onclick="pickAccount('${esc(k)}')">${esc(tail)}</button>`;
+  }).join("");
+  /* One picker, in the bar, on every tab. It used to be drawn again on Home
+     and again beside the chart, which is three of the same control on one
+     screen and a question about which one is in charge. */
+  const bar = $("accbar");
+  if (bar) { bar.innerHTML = shortHtml; bar.hidden = !show; }
   for (const id of ["accrow", "accrow2"]) {
     const el = $(id);
-    if (el) { el.innerHTML = html; el.hidden = !show; }
+    if (el) { el.innerHTML = ""; el.hidden = true; }
   }
 }
 

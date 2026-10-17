@@ -21,6 +21,7 @@ const $ = id => document.getElementById(id);
 
 let files = [];          // {name, size, path}
 let at = [];             // which folder is open
+let only = "all";        // all, win or loss
 const urls = new Map();  // name -> object URL, made only when played
 
 const pretty = name => name.replace(/\.mp4$/i, "").replace(/_/g, " ");
@@ -45,6 +46,55 @@ const FOLDER_ICON =
  * same library shown the way anybody already knows how to look through a lot
  * of files.
  */
+/**
+ * The library, narrowed to what you asked for.
+ *
+ * Two questions get asked of this tab over and over: show me my losers, and
+ * show me this account. The renderer already splits winners from losers in
+ * the filenames, and the journal knows which account a trade belongs to, so
+ * both are a filter rather than a hunt through folders.
+ */
+function visible() {
+  let list = files;
+  if (only !== "all") list = list.filter(f => SH.outcome(f.name) === only);
+
+  const acc = window.ACCOUNT;
+  if (acc && acc !== "all") {
+    const mine = (window.TRADES || []).filter(t => (t.account || "") === acc
+      && (t.source || "live") === "live");
+    // With no trades on record the names cannot be traced to an account, and
+    // hiding the whole library would be worse than showing it.
+    if (mine.length) {
+      const keys = new Set(mine.map(t => tradeKey(t)));
+      const days = new Set(mine.map(t => String(t.open_t || "").slice(0, 10)));
+      list = list.filter(f => {
+        if (/^Trade /i.test(f.name) || (f.path || []).includes("Per Trade"))
+          return [...keys].some(k => f.name.includes(k));
+        const d = (f.name.match(/\d{4}-\d{2}-\d{2}/) || [])[0];
+        return d ? days.has(d) : true;
+      });
+    }
+  }
+  return list;
+}
+
+/** The same key the per trade renderer writes into a filename. */
+function tradeKey(t) {
+  const stamp = String(t.open_t || "");
+  return `${t.symbol} ${stamp.slice(0, 10)} `
+       + `${stamp.slice(11, 13)}${stamp.slice(14, 16)}${stamp.slice(17, 19)}`;
+}
+
+function filterBar() {
+  const n = k => files.filter(f => k === "all" || SH.outcome(f.name) === k).length;
+  return '<div class="vfilter" role="group" aria-label="Which videos">'
+    + [["all", "Everything"], ["win", "Winners"], ["loss", "Losers"]]
+      .map(([k, label]) => `<button class="vfb ${k}" data-only="${k}" `
+        + `aria-pressed="${only === k}">${label}`
+        + `<span class="sn">${n(k)}</span></button>`).join("")
+    + "</div>";
+}
+
 function render() {
   const box = $("vlib");
   if (!box) return;
@@ -57,7 +107,7 @@ function render() {
   if (sec) sec.classList.toggle("stocked", !!files.length);
   if (!files.length) { box.innerHTML = ""; return; }
 
-  const {folders, files: here} = SH.listing(files, at);
+  const {folders, files: here} = SH.listing(visible(), at);
   const trail = SH.crumbs(at).map((c, i, a) =>
     i === a.length - 1
       ? `<span class="crumb on">${esc(c.name)}</span>`
@@ -77,7 +127,8 @@ function render() {
     + '<span class="shm"></span>'
     + `<span class="shs">${mb(f.size)}</span></button>`).join("");
 
-  box.innerHTML = `<div class="shbar"><div class="shtrail">${trail}</div>`
+  box.innerHTML = filterBar()
+    + `<div class="shbar"><div class="shtrail">${trail}</div>`
     + (at.length ? '<button class="shup" data-up="1">Up one</button>' : "")
     + "</div>"
     + `<div class="shlist">${rows
@@ -215,6 +266,15 @@ export async function init() {
   });
 
   $("vlib").addEventListener("click", e => {
+    const f2 = e.target.closest("[data-only]");
+    if (f2) {
+      only = f2.dataset.only;
+      // Back to the top of the tree: a folder that was open may hold nothing
+      // once the filter is on, and an empty folder is a confusing answer.
+      at = [];
+      render();
+      return;
+    }
     const open = e.target.closest("[data-open]");
     if (open) { at = [...at, open.dataset.open]; render(); return; }
     const crumb = e.target.closest("[data-go]");
@@ -286,3 +346,6 @@ export function playTrade(t) {
 }
 
 export const count = () => files.length;
+
+/** Redrawn when the account changes, so the library follows the picker. */
+export function refilter() { if (files.length) render(); }

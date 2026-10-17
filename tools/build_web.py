@@ -115,6 +115,7 @@ INSTALL = """<section id="installbar" hidden>
 APPBAR = """<div class="appbar">
   <span class="brand">Traders&nbsp;Diary</span>
   __NAV__
+  <div class="accrow bar" id="accbar" hidden></div>
   <span class="appmeta" id="appmeta">no trades</span>
   <button class="themebtn" id="themebtn" type="button"
           aria-label="Switch between dark and light"></button>
@@ -1034,6 +1035,28 @@ body{overflow:hidden}
   background:var(--ground)}
 .acc .sn{font-variant-numeric:tabular-nums; color:var(--faint); font-size:11px}
 .accrow.mini{margin:0}
+/* The same picker in the bar, on every tab, because "which account am I
+   looking at" is a question every screen in here answers differently. */
+.accrow.bar{margin:0 0 0 14px; flex:none; gap:4px}
+.accrow.bar .acc{padding:4px 10px; min-height:28px; font-size:11.5px}
+.accrow.bar .acc .sn{display:none}
+
+/* Winners, losers, everything. One tap at the top of the library. */
+.vfilter{display:flex; gap:6px; flex-wrap:wrap; margin:0 0 12px}
+.vfb{
+  display:flex; align-items:center; gap:7px; background:var(--raised);
+  border:1px solid var(--line); border-radius:999px; color:var(--muted);
+  padding:6px 13px; font-size:12.5px; min-height:34px; cursor:pointer;
+}
+.vfb .sn{font-size:11px; color:var(--faint); font-variant-numeric:tabular-nums}
+.vfb[aria-pressed="true"]{color:var(--text); border-color:var(--accent);
+  background:var(--accent-dim)}
+.vfb.win[aria-pressed="true"]{color:var(--win);
+  border-color:color-mix(in srgb, var(--win) 55%, transparent);
+  background:var(--win-zone)}
+.vfb.loss[aria-pressed="true"]{color:var(--loss);
+  border-color:color-mix(in srgb, var(--loss) 55%, transparent);
+  background:var(--loss-zone)}
 
 /* Did you follow the plan. The verdict first, then the six questions only
    Chris can answer, then every rule the record could judge on its own. */

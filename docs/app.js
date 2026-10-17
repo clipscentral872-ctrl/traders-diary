@@ -1488,6 +1488,7 @@ window.pickAccount = function (acc) {
   renderPanels();
   renderFunded();
   renderDays();
+  try { VID.refilter(); } catch { /* library not loaded yet */ }
 };
 
 /* The Demo account was a place to learn which buttons do what. Once there
@@ -1518,20 +1519,21 @@ function renderAccounts() {
   // happened yet. Either way the row stays out of the way.
   const show = names.length > 1;
   if (!names.includes(window.ACCOUNT)) window.ACCOUNT = "all";
-  const html = !show ? "" :
-    [["all", "Both"], ...names.map(n => [n, window.accountName(n)])]
-      .map(([k, label]) => {
-      const n = k === "all" ? window.TRADES.filter(t => (t.source || "live") === "live").length
-        : window.ofAccount(window.TRADES, k)
-          .filter(t => (t.source || "live") === "live").length;
-      return `<button class="acc" data-acc="${esc(k)}" `
-        + `aria-pressed="${k === window.ACCOUNT}" `
-        + `onclick="pickAccount('${esc(k)}')">${esc(label)}`
-        + (n ? `<span class="sn">${n}</span>` : "") + "</button>";
-    }).join("");
+  const pairs = [["all", "Both"], ...names.map(n => [n, window.accountName(n)])];
+  const shortHtml = !show ? "" : pairs.map(([k, label]) => {
+    const tail = k === "all" ? label : label.replace(/^Account\s+/, "");
+    return `<button class="acc" data-acc="${esc(k)}" `
+      + `aria-pressed="${k === window.ACCOUNT}" `
+      + `onclick="pickAccount('${esc(k)}')">${esc(tail)}</button>`;
+  }).join("");
+  /* One picker, in the bar, on every tab. It used to be drawn again on Home
+     and again beside the chart, which is three of the same control on one
+     screen and a question about which one is in charge. */
+  const bar = $("accbar");
+  if (bar) { bar.innerHTML = shortHtml; bar.hidden = !show; }
   for (const id of ["accrow", "accrow2"]) {
     const el = $(id);
-    if (el) { el.innerHTML = html; el.hidden = !show; }
+    if (el) { el.innerHTML = ""; el.hidden = true; }
   }
 }
 
