@@ -144,5 +144,35 @@ console.log("\nwhat it refuses to do");
         && empty.found.length === 0);
 }
 
+console.log("\ntwo accounts, one contract");
+{
+  /* Both evaluation accounts long MNQ at the same minute, both out later.
+     Keyed on the contract alone, account B's sell would have closed account
+     A's long and invented a trade across two accounts that never happened. */
+  const both = `Fill ID,Timestamp,Date,Account,B/S,Quantity,Price,Contract,Product
+5001,09/16/2026 09:50:00,9/16/26,EVAL111, Buy,2,25000.00,MNQZ6,MNQ
+5002,09/16/2026 09:50:00,9/16/26,EVAL222, Buy,3,25001.00,MNQZ6,MNQ
+5003,09/16/2026 10:10:00,9/16/26,EVAL222, Sell,3,25011.00,MNQZ6,MNQ
+5004,09/16/2026 10:30:00,9/16/26,EVAL111, Sell,2,25020.00,MNQZ6,MNQ
+`;
+  const {fills} = readAny([file("Fills.csv", both)], parseCSV);
+  check("the account comes through on every fill",
+        fills.length === 4 && fills.every(f => f["Account"]),
+        JSON.stringify(fills.map(f => f["Account"])));
+
+  const {trades} = pairTrades(fills);
+  check("two accounts give two trades, not one crossed pair",
+        trades.length === 2, String(trades.length));
+  const a = trades.find(t => t.account === "EVAL111");
+  const b = trades.find(t => t.account === "EVAL222");
+  check("each trade knows its own account", !!a && !!b,
+        JSON.stringify(trades.map(t => t.account)));
+  check("and pairs with its own fills, not the other account's",
+        a.qty === 2 && a.exit === 25020 && b.qty === 3 && b.exit === 25011,
+        JSON.stringify([a.qty, a.exit, b.qty, b.exit]));
+  check("so the money is each account's own",
+        a.pnl === 80 && b.pnl === 60, JSON.stringify([a.pnl, b.pnl]));
+}
+
 console.log(failed ? `\n${failed} check(s) failed` : "\nall checks passed");
 process.exit(failed ? 1 : 0);

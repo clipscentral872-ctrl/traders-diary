@@ -55,8 +55,12 @@ function barsOf(t) {
   });
 }
 
+/* Which account the journal is showing. The app owns the choice; this reads
+   it so the Diary never shows one account's trades under another's heading. */
+const ofAcc = list => (window.ofAccount ? window.ofAccount(list) : list);
+
 function matching() {
-  const all = (window.TRADES || [])
+  const all = ofAcc(window.TRADES || [])
     .filter(t => S.source === "all" || (t.source || "live") === S.source);
   if (S.filter === "won") return all.filter(t => t.pnl > 0);
   if (S.filter === "lost") return all.filter(t => t.pnl < 0);
@@ -77,7 +81,7 @@ function strip() {
 }
 
 function counts() {
-  const all = (window.TRADES || [])
+  const all = ofAcc(window.TRADES || [])
     .filter(t => S.source === "all" || (t.source || "live") === S.source);
   const w = all.filter(t => t.pnl > 0).length;
   const l = all.filter(t => t.pnl < 0).length;
@@ -139,6 +143,7 @@ export function pick(i) {
     $("dnote").textContent = "";
     $("dtrail").innerHTML = "";
     if (window.showMyNote) window.showMyNote(null);
+    if (onShow) onShow(null);
     if (chart) chart.setData([]).setTrade(null);
     $("dprev").disabled = $("dnext").disabled = true;
     return;

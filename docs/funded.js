@@ -39,6 +39,23 @@ export const PLANS = {
        size is twenty micros. Check it against your own dashboard. */
     maxMicros: 20,
   },
+  /* The $50,000 evaluation, the size Chris is on now. Firms differ on every
+     one of these numbers, so it is a starting point to be checked against
+     the dashboard rather than a claim about any particular firm. */
+  "eval-50k": {
+    id: "eval-50k",
+    name: "Evaluation, $50,000",
+    start: 50000,
+    drawdown: 2000,
+    trail: "eod",
+    locksAt: "start",
+    dailyLoss: null,
+    qualifyingDay: 0,
+    minDays: 1,
+    consistency: 0,
+    target: 3000,
+    maxMicros: 50,
+  },
   none: {id: "none", name: "No funded account", start: 0, drawdown: 0},
 };
 

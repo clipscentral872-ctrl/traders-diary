@@ -210,7 +210,8 @@ export function pairTrades(fills) {
     const pts = o.side === "sell" ? o.px - px : px - o.px;
     const pv = POINT[sym] ?? 1;
     trades.push({
-      symbol: sym, side: o.side === "sell" ? "Short" : "Long", qty,
+      symbol: sym, account: o.account || "",
+      side: o.side === "sell" ? "Short" : "Long", qty,
       open_t: o.t, entry: Math.round(o.px * 1e4) / 1e4,
       close_t: t, exit: px, pnl: Math.round(pts * pv * qty * 100) / 100,
       exit_type: r["Type"] || "",
@@ -225,9 +226,15 @@ export function pairTrades(fills) {
     const px = num(r["Fill price"]), qty = num(r["Quantity"]);
     const t = r["Closing time"];
     if (px === null || qty === null) continue;
-    const o = open.get(sym);
+    /* One position per account per contract. Chris runs two evaluation
+       accounts on the same contract, so keyed on the symbol alone, a sell on
+       one account would close the long on the other and invent a trade that
+       never happened. */
+    const acct = String(r["Account"] || "").trim();
+    const key = acct + "|" + sym;
+    const o = open.get(key);
 
-    if (!o) { open.set(sym, {side, px, qty, t}); continue; }
+    if (!o) { open.set(key, {side, px, qty, t, account: acct}); continue; }
 
     if (side === o.side) {           // scaling in: size-weighted average entry
       const total = o.qty + qty;
@@ -240,11 +247,11 @@ export function pairTrades(fills) {
     close(sym, o, px, t, r, done);
     const left = o.qty - done;
     if (left > 1e-9) { o.qty = left; continue; }
-    open.delete(sym);
+    open.delete(key);
     const flipped = qty - done;
-    if (flipped > 1e-9) open.set(sym, {side, px, qty: flipped, t});
+    if (flipped > 1e-9) open.set(key, {side, px, qty: flipped, t, account: acct});
   }
-  return {trades, stillOpen: [...open.keys()]};
+  return {trades, stillOpen: [...open.keys()].map(k => k.split("|").pop())};
 }
 
 /* ------------------------------------------------------------- analysis */
@@ -596,11 +603,24 @@ export function ingest(files, existing, barsBySymbol, offsetHours) {
   const spans = [...logCoverage(files), ...broker.spans];
   const {trades: fresh, stillOpen} = pairTrades(fills);
 
-  const byKey = new Map(existing.map(t => [t.symbol + "|" + t.open_t, t]));
+  /* Keyed on the account as well, so the same contract on two evaluation
+     accounts at the same minute stays two trades.
+     Trades imported before accounts existed have none, so a trade that does
+     not match on the full key is looked up on the old one and stamped with
+     the account it turned out to belong to. Without that, the first import
+     after the change would have doubled every trade already in the journal. */
+  const key = t => (t.account || "") + "|" + t.symbol + "|" + t.open_t;
+  const legacy = t => t.symbol + "|" + t.open_t;
+  const byKey = new Map(existing.map(t => [key(t), t]));
+  const byOld = new Map(existing.map(t => [legacy(t), t]));
   let added = 0, repaired = 0;
   for (const t of fresh) {
-    const k = t.symbol + "|" + t.open_t;
-    const had = byKey.get(k);
+    const k = key(t);
+    let had = byKey.get(k);
+    if (!had) {
+      const old = byOld.get(legacy(t));
+      if (old && !old.account) { old.account = t.account || ""; had = old; }
+    }
     if (had) {
       /* A trade already here can still be missing its stop, and this import
        * may be the one that has it.

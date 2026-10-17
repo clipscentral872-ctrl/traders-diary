@@ -124,6 +124,7 @@ TRADEVIEW = """<div class="ws">
       <button class="ptool" id="dprev" title="Previous trade">&#9664;</button>
       <button class="ptool" id="dnext" title="Next trade">&#9654;</button>
       <div class="srcrow mini" id="srcrow2"></div>
+      <div class="accrow mini" id="accrow2" hidden></div>
       <div class="chead" id="dhead"></div>
     </div>
     <div class="wsstage">
@@ -138,6 +139,12 @@ TRADEVIEW = """<div class="ws">
   </div>
 
   <div class="wspanel">
+    <div class="pblock" id="jblock" hidden>
+      <h4>Did you follow the plan</h4>
+      <div class="jverdict" id="jverdict"></div>
+      <div class="jasks" id="jasks"></div>
+      <ul class="jfind" id="jfind"></ul>
+    </div>
     <div class="pblock">
       <h4>What happened</h4>
       <div class="flags" id="dflags"></div>
@@ -200,6 +207,7 @@ PRIVACY = """<section>
   <div class="toolrow">
     <button class="bigbtn" id="save">Save a backup file</button>
     <button class="bigbtn ghost" id="load">Restore from a backup</button>
+    <button class="bigbtn ghost" id="wipedemo">Erase the Demo account</button>
     <button class="bigbtn ghost" id="wipe">Erase everything</button>
     <input type="file" id="loadpick" accept=".json" hidden>
   </div>
@@ -981,6 +989,58 @@ body{overflow:hidden}
   border-radius:4px; color:var(--text); padding:7px 9px; font-size:13px;
   font-variant-numeric:tabular-nums; min-height:38px}
 
+/* The account picker. Two evaluation accounts have to be told apart at a
+   glance, so it sits above everything that counts money. */
+.accrow{display:flex; gap:6px; flex-wrap:wrap; margin:0 0 6px}
+.accrow[hidden]{display:none}
+.acc{display:flex; align-items:center; gap:6px; background:var(--lift);
+  border:1px solid var(--line); border-radius:999px; color:var(--muted);
+  padding:5px 12px; font-size:12px; min-height:32px; cursor:pointer}
+.acc[aria-pressed="true"]{color:var(--text); border-color:var(--edge);
+  background:var(--ground)}
+.acc .sn{font-variant-numeric:tabular-nums; color:var(--faint); font-size:11px}
+.accrow.mini{margin:0}
+
+/* Did you follow the plan. The verdict first, then the six questions only
+   Chris can answer, then every rule the record could judge on its own. */
+.jverdict{display:flex; flex-direction:column; gap:4px; margin-bottom:10px}
+.jv{font-size:12.5px; line-height:1.5; color:var(--text)}
+.jv.good{color:var(--win)}
+.jv.broken, .jv.lucky{color:var(--loss)}
+.jscore{font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
+.jask{display:flex; align-items:center; gap:8px; padding:5px 0;
+  border-top:1px solid var(--line-soft)}
+.jq{flex:1; font-size:11.5px; color:var(--muted); line-height:1.4}
+.jyn{display:flex; gap:4px; flex:none}
+.jbtn{background:var(--lift); border:1px solid var(--line); border-radius:4px;
+  color:var(--faint); font-size:11px; padding:4px 9px; min-height:28px;
+  cursor:pointer}
+.jbtn.yes.on{color:var(--win); border-color:var(--win)}
+.jbtn.no.on{color:var(--loss); border-color:var(--loss)}
+.jfind{list-style:none; margin:10px 0 0; padding:0; display:flex;
+  flex-direction:column; gap:8px}
+.jf{display:flex; flex-direction:column; gap:2px; padding-left:9px;
+  border-left:2px solid var(--line)}
+.jf.broke{border-left-color:var(--loss)}
+.jf.watch{border-left-color:var(--warn,#C98A24)}
+.jf.kept{border-left-color:var(--win)}
+.jfr{font-size:11.5px; color:var(--text)}
+.jfw{font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
+.jfi{font-size:11px; color:var(--faint); line-height:1.5}
+
+/* Where the plan keeps breaking, on the home page. */
+.habits{list-style:none; margin:0; padding:0; display:flex;
+  flex-direction:column; gap:10px}
+.hab{display:grid; grid-template-columns:auto 1fr auto; gap:4px 10px;
+  align-items:baseline; border-bottom:1px solid var(--line-soft);
+  padding-bottom:10px}
+.habn{font-variant-numeric:tabular-nums; color:var(--text); font-size:13px}
+.habr{color:var(--text); font-size:13px}
+.habc{font-variant-numeric:tabular-nums; font-size:12px; text-align:right}
+.habc small{display:block; color:var(--faint); font-size:10px;
+  font-variant-numeric:normal}
+.habi{grid-column:2/4; color:var(--muted); font-size:11.5px; line-height:1.5}
+
 /* The watched folder, under the drop box. */
 .folderrow{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:12px}
 .folderrow .srcnote{flex:1 1 260px; margin:0}
@@ -1636,7 +1696,7 @@ MODULES = [
     "engine.js", "chart.js", "levels.js", "revisit.js", "series.js",
     "clock.js", "vault.js", "draw.js", "profile.js", "whatif.js", "precheck.js", "shelf.js",
     "watchlist.js", "lock.js", "inds.js", "imports.js", "folder.js",
-    "funded.js",
+    "funded.js", "jdun.js",
     "replay.js", "demo.js", "diary.js", "videos.js", "system.js",
     "dashboard.js",
 ]

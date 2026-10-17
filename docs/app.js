@@ -21,6 +21,7 @@ import * as DRAW from "./draw.js";
 import * as W from "./whatif.js";
 import * as FS from "./folder.js";
 import * as FUND from "./funded.js";
+import * as JD from "./jdun.js";
 
 const $ = id => document.getElementById(id);
 // Names within a journal. The journal itself decides where they land, so
@@ -172,7 +173,8 @@ function stat(label, value, cls = "") {
 }
 
 function renderPanels() {
-  const all = window.TRADES;
+  renderAccounts();
+  const all = window.ofAccount(window.TRADES);
   // One trade is not "1 trades". The whole phrase is written here rather
   // than a number beside a fixed word, which cannot be made to agree.
   $("appmeta").textContent = all.length === 0 ? "no trades"
@@ -228,6 +230,7 @@ function renderPanels() {
   }).join("");
 
   renderStanding();
+  renderHabits();
   renderLearn();
   DASH.refreshRecord();
   DIARY.pick(0);
@@ -249,7 +252,8 @@ function renderStanding() {
     `<li class="stand ${state}"><span class="sl2">${esc(label)}</span>`
     + `<span class="sd">${detail}</span></li>`);
 
-  const mine = window.TRADES.filter(t => (t.source || "live") === "live");
+  const mine = window.ofAccount(window.TRADES)
+    .filter(t => (t.source || "live") === "live");
   const n = mine.length;
 
   if (!n) {
@@ -582,12 +586,26 @@ function wireSizer(room, plan) {
 function renderPlanForm(plan) {
   const box = $("planform");
   if (!box) return;
-  box.innerHTML = FIELDS.map(([key, label]) => {
+  /* The preset first, because changing account size is one choice and not
+     seven numbers typed again. Picking one replaces the lot; the fields
+     under it are still the final word. */
+  const picker = `<label>Plan<select data-preset>`
+    + Object.values(FUND.PLANS).map(pl =>
+        `<option value="${pl.id}"${pl.id === plan.id ? " selected" : ""}>`
+        + `${esc(pl.name)}</option>`).join("")
+    + "</select></label>";
+  box.innerHTML = picker + FIELDS.map(([key, label]) => {
     const value = key === "consistencyPct"
       ? Math.round((plan.consistency || 0) * 100) : (plan[key] ?? 0);
     return `<label>${esc(label)}<input type="number" step="any" `
       + `data-plan="${key}" value="${value}"></label>`;
   }).join("");
+  box.onchange = e => {
+    if (!e.target.matches("[data-preset]")) return;
+    PROF.set(PLAN_KEY, JSON.stringify(FUND.preset(e.target.value)));
+    renderFunded();
+    renderPanels();
+  };
   box.oninput = e => {
     const key = e.target.dataset.plan;
     if (!key) return;
@@ -598,6 +616,7 @@ function renderPlanForm(plan) {
     else next[key] = v;
     PROF.set(PLAN_KEY, JSON.stringify(next));
     renderFunded();
+    renderHabits();
   };
 }
 
@@ -605,16 +624,44 @@ function renderFunded() {
   const sec = $("fundedsec"), card = $("fundedcard");
   if (!sec || !card) return;
   const plan = planNow();
-  const balances = balancesNow();
-  const live = window.TRADES.filter(t => (t.source || "live") === "live");
-  if (plan.id === "none" || (!balances.length && !live.length)) {
+  const allBal = balancesNow();
+  const live = window.ofAccount(window.TRADES)
+    .filter(t => (t.source || "live") === "live");
+  if (plan.id === "none" || (!allBal.length && !live.length)) {
     sec.hidden = true;
     return;
   }
   sec.hidden = false;
   renderPlanForm(plan);
 
-  const s = FUND.state(plan, {balances, trades: window.TRADES});
+  /* Each evaluation account has its own drawdown, and two of them cannot be
+     added together: one account closing is not half an account closing. So
+     with both showing, every account gets its own line, and the full card is
+     what you get once you pick one. */
+  const names = [...new Set([...allBal.map(b => b.account || ""),
+    ...live.map(t => t.account || "")].filter(Boolean))].sort();
+  if (window.ACCOUNT === "all" && names.length > 1) {
+    card.innerHTML = names.map(name => {
+      const st = FUND.state(plan, {
+        balances: allBal.filter(b => (b.account || "") === name),
+        trades: window.TRADES.filter(t => (t.account || "") === name),
+      });
+      const w = Math.round(st.roomPct * 100);
+      return `<p class="fundline"><b>${esc(name)}</b> &nbsp; `
+        + `${dollars(st.room).replace("+", "")} of `
+        + `$${Math.round(plan.drawdown).toLocaleString("en-US")} left`
+        + (st.breached ? " &nbsp; <b>breached</b>" : "")
+        + `</p><div class="fundbar${st.roomPct < 0.25 ? " warn" : ""}">`
+        + `<i style="width:${w}%"></i></div>`;
+    }).join("")
+      + '<p class="fundnote">Pick one account above for its own card, the '
+      + "rules it still has to meet, and the sizer.</p>";
+    return;
+  }
+
+  const balances = window.ACCOUNT === "all" ? allBal
+    : allBal.filter(b => (b.account || "") === window.ACCOUNT);
+  const s = FUND.state(plan, {balances, trades: window.ofAccount(window.TRADES)});
   const pct = Math.round(s.roomPct * 100);
   const tight = s.roomPct < 0.25;
   const rows = [
@@ -792,6 +839,28 @@ $("loadpick").addEventListener("change", async () => {
   }
 });
 
+/* The Demo account was for learning the buttons. Once the money is real it is
+   noise in the record, so it can go on its own without taking the rest with
+   it: the account's own balance and position, and every trade it sent to the
+   Diary. Live and replay trades are untouched. */
+$("wipedemo").addEventListener("click", () => {
+  const demo = window.TRADES.filter(t => (t.source || "live") === "demo");
+  let had = false;
+  try { had = !!PROF.get("demo"); } catch { had = false; }
+  if (!demo.length && !had) { say("There is no Demo account data to erase."); return; }
+  if (!confirm(`Erase the Demo account and its ${demo.length} trade`
+             + `${demo.length === 1 ? "" : "s"}? Your live trades are not touched.`))
+    return;
+  PROF.remove("demo");
+  window.TRADES = window.TRADES.filter(t => (t.source || "live") !== "demo");
+  const warn = save(window.TRADES, window.START);
+  DEMO.reload();
+  renderPanels();
+  renderFunded();
+  storeLine();
+  say(warn || "The Demo account is gone. Your live trades are still here.", !!warn);
+});
+
 $("wipe").addEventListener("click", () => {
   if (!window.TRADES.length) { say("There is nothing stored to erase."); return; }
   if (!confirm(`Erase all ${window.TRADES.length} trades from this browser? `
@@ -882,7 +951,8 @@ const LESSON = {
 const TESTED = new Set(["trailed early", "right, stopped early"]);
 
 function renderLearn() {
-  const mine = window.TRADES.filter(t => (t.source || "live") === "live");
+  const mine = window.ofAccount(window.TRADES)
+    .filter(t => (t.source || "live") === "live");
   const cost = new Map();
   for (const t of mine)
     for (const f of (t.flags || [])) {
@@ -1067,7 +1137,10 @@ document.addEventListener("toggle", e => {
 const noteBox = $("mynotebox"), noteSaved = $("mynotesaved");
 let noteTimer = null;
 
-function keyOf(t) { return t.symbol + "|" + t.open_t; }
+/* The account is part of the key: the same contract at the same minute on
+   two evaluation accounts is two trades, and typing a note against one of
+   them must not land on the other. */
+function keyOf(t) { return (t.account || "") + "|" + t.symbol + "|" + t.open_t; }
 
 window.showMyNote = function (t) {
   if (!noteBox) return;
@@ -1094,6 +1167,148 @@ if (noteBox) {
         : "Saved to this device.";
     }, 600);
   });
+}
+
+/* ------------------------------------------------ did you follow the plan */
+
+/* The method is only worth anything if it was actually followed, and the
+   record alone cannot see a chart. So the panel does two things: it says what
+   the record can prove, and it asks Chris the six questions it cannot answer.
+   His answers are kept against the trade, same as the note, so a backup
+   carries them and the habits are counted from real answers. */
+
+const askRow = (t, ask) => {
+  const v = (t.jdun || {})[ask.id];
+  const on = s => v === s ? " on" : "";
+  return `<div class="jask"><span class="jq">${esc(ask.q)}</span>`
+    + `<span class="jyn">`
+    + `<button class="jbtn yes${on(true)}" data-ask="${ask.id}" data-v="1">Yes</button>`
+    + `<button class="jbtn no${on(false)}" data-ask="${ask.id}" data-v="0">No</button>`
+    + "</span></div>";
+};
+
+const VERDICT = {good: "good", open: "open", lucky: "lucky", broken: "broken"};
+
+function renderReview(t) {
+  const box = $("jblock");
+  if (!box) return;
+  if (!t) { box.hidden = true; return; }
+  box.hidden = false;
+
+  const list = window.ofAccount(window.TRADES)
+    .filter(x => (x.source || "live") === (t.source || "live")
+              && x.open_t.slice(0, 10) === t.open_t.slice(0, 10));
+  const r = JD.review(t, jdunPlan(), {dayTrades: list});
+
+  $("jverdict").innerHTML =
+    `<span class="jv ${VERDICT[r.verdict]}">${esc(r.line)}</span>`
+    + `<span class="jscore">${r.score.kept} of ${r.score.of} rules kept</span>`;
+
+  $("jasks").innerHTML = JD.ASKS.map(a => askRow(t, a)).join("");
+
+  /* Broken first, then the things worth watching, then what was done right.
+     Nobody opens this panel to read what went well, but seeing it under the
+     faults is what keeps a bad day from reading as a bad trader. */
+  const order = {broke: 0, watch: 1, asked: 2, kept: 3};
+  const rows = r.findings
+    .filter(f => f.verdict !== "asked" || f.id === "stop")
+    .sort((a, b) => order[a.verdict] - order[b.verdict])
+    .map(f => `<li class="jf ${f.verdict}">`
+      + `<span class="jfr">${esc(f.rule)}</span>`
+      + `<span class="jfw">${esc(f.what)}</span>`
+      + (f.instead ? `<span class="jfi">${esc(f.instead)}</span>` : "")
+      + "</li>").join("");
+  $("jfind").innerHTML = rows;
+}
+
+/** The plan, with his own account's drawdown in it. */
+function jdunPlan() {
+  const p = planNow();
+  return JD.plan({drawdown: p.drawdown || JD.PLAN.drawdown});
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest(".jbtn");
+  if (!b) return;
+  const t = window.TRADES.find(x => keyOf(x) === (noteBox ? noteBox.dataset.key : ""));
+  if (!t) return;
+  const want = b.dataset.v === "1";
+  t.jdun = {...(t.jdun || {})};
+  // Pressing the answer that is already on takes it back to unanswered,
+  // because a wrong tap should not need a different button to undo.
+  if (t.jdun[b.dataset.ask] === want) delete t.jdun[b.dataset.ask];
+  else t.jdun[b.dataset.ask] = want;
+  save(window.TRADES, window.START);
+  renderReview(t);
+  renderHabits();
+});
+
+/** The one habit worth fixing this week, with what it has cost. */
+function renderHabits() {
+  const box = $("habits");
+  if (!box) return;
+  const live = window.ofAccount(window.TRADES)
+    .filter(t => (t.source || "live") === "live");
+  const list = JD.habits(live, jdunPlan());
+  if (!live.length) {
+    box.innerHTML = '<p class="srcnote">Import a session and this fills in.</p>';
+    return;
+  }
+  if (!list.length) {
+    box.innerHTML = '<p class="srcnote">Nothing in the record broke a rule. '
+      + "Answer the six questions on each trade in the Diary and this will "
+      + "take those in too.</p>";
+    return;
+  }
+  box.innerHTML = list.slice(0, 6).map(h =>
+    `<li class="hab"><span class="habn">${h.n}&times;</span>`
+    + `<span class="habr">${esc(h.rule)}</span>`
+    + `<span class="habc ${h.pnl < 0 ? "loss" : "win"}">${dollars(h.pnl)}`
+    + "<small>on those trades</small></span>"
+    + `<span class="habi">${esc(h.instead)}</span></li>`).join("");
+}
+
+/* -------------------------------------------------------------- accounts */
+
+/* Two evaluation accounts, kept apart. Everything that shows the record
+   reads through ofAccount, so one pick moves the whole app. */
+const ACC_KEY = "jdun.account";
+window.ACCOUNT = "all";
+
+window.ofAccount = (list, acc = window.ACCOUNT) =>
+  acc === "all" ? list : list.filter(t => (t.account || "") === acc);
+
+const accountsIn = list =>
+  [...new Set(list.map(t => (t.account || "").trim()).filter(Boolean))].sort();
+
+window.pickAccount = function (acc) {
+  window.ACCOUNT = acc;
+  PROF.set(ACC_KEY, acc);
+  for (const b of document.querySelectorAll(".acc"))
+    b.setAttribute("aria-pressed", String(b.dataset.acc === acc));
+  renderPanels();
+  renderFunded();
+};
+
+function renderAccounts() {
+  const names = accountsIn(window.TRADES.filter(t => (t.source || "live") === "live"));
+  // One account is not a choice, and no account means the import has not
+  // happened yet. Either way the row stays out of the way.
+  const show = names.length > 1;
+  if (!names.includes(window.ACCOUNT)) window.ACCOUNT = "all";
+  const html = !show ? "" :
+    [["all", "Both"], ...names.map(n => [n, n])].map(([k, label]) => {
+      const n = window.ofAccount(window.TRADES, k)
+        .filter(t => (t.source || "live") === "live").length;
+      return `<button class="acc" data-acc="${esc(k)}" `
+        + `aria-pressed="${k === window.ACCOUNT}" `
+        + `onclick="pickAccount('${esc(k)}')">${esc(label)}`
+        + `<span class="sn">${n}</span></button>`;
+    }).join("");
+  for (const id of ["accrow", "accrow2"]) {
+    const el = $(id);
+    if (el) { el.innerHTML = html; el.hidden = !show; }
+  }
 }
 
 /** Trades imported before the bars were published can still get their chart. */
@@ -1191,6 +1406,7 @@ async function opened(pin) {
   C.setZone(displayZone());
   if (tzSel) tzSel.value = String(tzOffset());
   if ($("showtz")) $("showtz").value = displayZone();
+  window.ACCOUNT = PROF.get(ACC_KEY) || "all";
   renderPanels();
   renderFunded();
   storeLine();
@@ -1535,6 +1751,7 @@ DIARY.setClock(tzOffset);
 DIARY.setOnShow(t => {
   const block = $("dvidblock");
   if (block) block.hidden = !VID.forTrade(t);
+  renderReview(t);
 });
 const vidBtn = $("dvid");
 if (vidBtn) vidBtn.addEventListener("click", () => {

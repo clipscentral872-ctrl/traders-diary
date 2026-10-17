@@ -43,7 +43,8 @@ const FLAG_WORDS = {
   "stopped into the news": "stopped in the last minute before a data release",
 };
 
-const mine = () => (window.TRADES || [])
+const mine = () => (window.ofAccount ? window.ofAccount(window.TRADES || [])
+                                      : (window.TRADES || []))
   .filter(t => (t.source || "live") === "live");
 
 /* Minute bars, for the habits that can actually be tested rather than merely
@@ -108,12 +109,31 @@ function fundedFig() {
     if (saved && typeof saved === "object") plan = {...FUND.preset(saved.id), ...saved};
   } catch { /* the preset, then */ }
   try { balances = JSON.parse(P.get("funded.balances")) || []; } catch { balances = []; }
-  const trades = window.TRADES || [];
+  const trades = window.ofAccount ? window.ofAccount(window.TRADES || [])
+                                  : (window.TRADES || []);
   if (plan.id === "none" || !plan.drawdown) return "";
   if (!balances.length && !mine().length) return "";
-  const s = FUND.state(plan, {balances, trades});
-  return fig("Funded account", plain(s.room), s.roomPct < 0.25 ? "loss" : "win",
-             `left of ${plain(plan.drawdown)} before it closes`);
+
+  /* With two evaluation accounts showing at once, the room left cannot be
+     added up: losing either one ends it. So the tile carries the tighter of
+     the two and says which account it is. */
+  const names = [...new Set(balances.map(b => b.account || "").filter(Boolean))];
+  const pick = window.ACCOUNT && window.ACCOUNT !== "all" ? [window.ACCOUNT]
+    : names.length > 1 ? names : [null];
+  const states = pick.map(name => ({
+    name,
+    s: FUND.state(plan, {
+      balances: name ? balances.filter(b => (b.account || "") === name) : balances,
+      trades: name ? (window.TRADES || []).filter(t => (t.account || "") === name)
+                   : trades,
+    }),
+  })).sort((a, b) => a.s.room - b.s.room);
+  const {name, s} = states[0];
+  return fig(name ? "Tightest account" : "Funded account",
+             plain(s.room), s.roomPct < 0.25 ? "loss" : "win",
+             name && states.length > 1
+               ? `left on ${name} of ${plain(plan.drawdown)}`
+               : `left of ${plain(plan.drawdown)} before it closes`);
 }
 
 /** The three numbers worth carrying, small, plus the funded and demo accounts. */

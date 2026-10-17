@@ -135,6 +135,11 @@ export const SOURCES = [
         if (!qty || price === null || !when || !raw) continue;
         out.push({
           "Symbol": rootSymbol(raw),
+          /* Which account this fill belongs to. The Fills report carries it,
+             the orders panel export does not, and two evaluation accounts
+             trading the same contract have to be kept apart or one will pair
+             its entry with the other's exit. */
+          "Account": String(pick(r, ["account", "accountname", "accountid"]) || "").trim(),
           "Side": BUY.test(side) ? "buy" : SELL.test(side) ? "sell" : side.toLowerCase(),
           "Fill price": String(price),
           "Quantity": String(qty),
