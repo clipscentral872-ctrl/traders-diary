@@ -2022,6 +2022,7 @@ body{overflow:hidden}
       <button class="bigbtn" id="orphango">Remove them</button>
       <button class="bigbtn ghost" data-go="learn" data-scroll="groups">See
       them first</button>
+      <button class="bigbtn ghost" id="orphankeep">Keep them</button>
     </div>
   </div>
 </section>
@@ -2751,7 +2752,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=371fbd1f555a","./chart.js":"./chart.js?v=371fbd1f555a","./levels.js":"./levels.js?v=371fbd1f555a","./revisit.js":"./revisit.js?v=371fbd1f555a","./series.js":"./series.js?v=371fbd1f555a","./clock.js":"./clock.js?v=371fbd1f555a","./vault.js":"./vault.js?v=371fbd1f555a","./draw.js":"./draw.js?v=371fbd1f555a","./profile.js":"./profile.js?v=371fbd1f555a","./whatif.js":"./whatif.js?v=371fbd1f555a","./precheck.js":"./precheck.js?v=371fbd1f555a","./shelf.js":"./shelf.js?v=371fbd1f555a","./watchlist.js":"./watchlist.js?v=371fbd1f555a","./lock.js":"./lock.js?v=371fbd1f555a","./inds.js":"./inds.js?v=371fbd1f555a","./imports.js":"./imports.js?v=371fbd1f555a","./folder.js":"./folder.js?v=371fbd1f555a","./funded.js":"./funded.js?v=371fbd1f555a","./jdun.js":"./jdun.js?v=371fbd1f555a","./replay.js":"./replay.js?v=371fbd1f555a","./diary.js":"./diary.js?v=371fbd1f555a","./videos.js":"./videos.js?v=371fbd1f555a","./system.js":"./system.js?v=371fbd1f555a","./dashboard.js":"./dashboard.js?v=371fbd1f555a"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=e70e541fde05","./chart.js":"./chart.js?v=e70e541fde05","./levels.js":"./levels.js?v=e70e541fde05","./revisit.js":"./revisit.js?v=e70e541fde05","./series.js":"./series.js?v=e70e541fde05","./clock.js":"./clock.js?v=e70e541fde05","./vault.js":"./vault.js?v=e70e541fde05","./draw.js":"./draw.js?v=e70e541fde05","./profile.js":"./profile.js?v=e70e541fde05","./whatif.js":"./whatif.js?v=e70e541fde05","./precheck.js":"./precheck.js?v=e70e541fde05","./shelf.js":"./shelf.js?v=e70e541fde05","./watchlist.js":"./watchlist.js?v=e70e541fde05","./lock.js":"./lock.js?v=e70e541fde05","./inds.js":"./inds.js?v=e70e541fde05","./imports.js":"./imports.js?v=e70e541fde05","./folder.js":"./folder.js?v=e70e541fde05","./funded.js":"./funded.js?v=e70e541fde05","./jdun.js":"./jdun.js?v=e70e541fde05","./replay.js":"./replay.js?v=e70e541fde05","./diary.js":"./diary.js?v=e70e541fde05","./videos.js":"./videos.js?v=e70e541fde05","./system.js":"./system.js?v=e70e541fde05","./dashboard.js":"./dashboard.js?v=e70e541fde05"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -4261,15 +4262,22 @@ function renderAccounts() {
    on the Learn tab, which is two taps away and might as well be nowhere:
    Chris asked twice why an old practice account was still driving his
    headline. */
+const KEEP_LOOSE = "loose.keep";
+
 function renderOrphans() {
   const sec = $("orphansec"), line = $("orphanbig");
   if (!sec || !line) return;
   const loose = window.TRADES.filter(t => (t.source || "live") === "live"
     && !(t.account || "").trim());
-  // Only worth saying when there is something to tell them apart from.
-  const named = window.TRADES.some(t => (t.account || "").trim())
-    || balancesNow().length > 0;
-  if (!loose.length || !named) { sec.hidden = true; return; }
+  /* This used to be shown only when there was a named account to compare
+     against, which is exactly the case Chris was NOT in: his journal held
+     those eighteen trades and nothing else, so the one notice that could
+     have explained his home page was the one thing hidden from him. It
+     shows whenever there are trades with no account, and anyone who wants
+     to keep them can say so once. */
+  let kept = false;
+  try { kept = PROF.get(KEEP_LOOSE) === "1"; } catch { kept = false; }
+  if (!loose.length || kept) { sec.hidden = true; return; }
   sec.hidden = false;
   const net = Math.round(loose.reduce((n, t) => n + (t.pnl || 0), 0));
   const from = loose.map(t => t.open_t).sort()[0].slice(0, 10);
@@ -4280,6 +4288,13 @@ function renderOrphans() {
 
 const orphanGo = $("orphango");
 if (orphanGo) orphanGo.addEventListener("click", () => dropAccount(""));
+
+const orphanKeep = $("orphankeep");
+if (orphanKeep) orphanKeep.addEventListener("click", () => {
+  PROF.set(KEEP_LOOSE, "1");
+  renderOrphans();
+  say("Kept. They stay in your figures and this notice will not come back.");
+});
 
 /**
  * What is actually in this journal, by account, and a way to take a group

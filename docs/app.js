@@ -1506,15 +1506,22 @@ function renderAccounts() {
    on the Learn tab, which is two taps away and might as well be nowhere:
    Chris asked twice why an old practice account was still driving his
    headline. */
+const KEEP_LOOSE = "loose.keep";
+
 function renderOrphans() {
   const sec = $("orphansec"), line = $("orphanbig");
   if (!sec || !line) return;
   const loose = window.TRADES.filter(t => (t.source || "live") === "live"
     && !(t.account || "").trim());
-  // Only worth saying when there is something to tell them apart from.
-  const named = window.TRADES.some(t => (t.account || "").trim())
-    || balancesNow().length > 0;
-  if (!loose.length || !named) { sec.hidden = true; return; }
+  /* This used to be shown only when there was a named account to compare
+     against, which is exactly the case Chris was NOT in: his journal held
+     those eighteen trades and nothing else, so the one notice that could
+     have explained his home page was the one thing hidden from him. It
+     shows whenever there are trades with no account, and anyone who wants
+     to keep them can say so once. */
+  let kept = false;
+  try { kept = PROF.get(KEEP_LOOSE) === "1"; } catch { kept = false; }
+  if (!loose.length || kept) { sec.hidden = true; return; }
   sec.hidden = false;
   const net = Math.round(loose.reduce((n, t) => n + (t.pnl || 0), 0));
   const from = loose.map(t => t.open_t).sort()[0].slice(0, 10);
@@ -1525,6 +1532,13 @@ function renderOrphans() {
 
 const orphanGo = $("orphango");
 if (orphanGo) orphanGo.addEventListener("click", () => dropAccount(""));
+
+const orphanKeep = $("orphankeep");
+if (orphanKeep) orphanKeep.addEventListener("click", () => {
+  PROF.set(KEEP_LOOSE, "1");
+  renderOrphans();
+  say("Kept. They stay in your figures and this notice will not come back.");
+});
 
 /**
  * What is actually in this journal, by account, and a way to take a group
