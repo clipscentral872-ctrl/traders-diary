@@ -131,6 +131,7 @@ TRADEVIEW = """<div class="ws">
     <div class="wsstage">
       <canvas id="dchart"></canvas>
       <div class="plegend" id="dohlc2"></div>
+      <div class="dempty" id="dempty" hidden></div>
       <p class="nobars" id="dnobars" hidden>No candles were stored for this
       trade. The published bars reach back about ten days, so import each
       session while it is recent. The numbers are exact either way.</p>
@@ -1028,6 +1029,18 @@ body{overflow:hidden}
 .jfr{font-size:11.5px; color:var(--text)}
 .jfw{font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
 .jfi{font-size:11px; color:var(--faint); line-height:1.5}
+
+/* An empty Diary is a question with an answer, not a blank chart. */
+.dempty{
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:10px; text-align:center;
+  padding:28px 22px;
+}
+.dempty[hidden]{display:none}
+.dempty h3{margin:0; font-size:16px; color:var(--text)}
+.dempty p{margin:0; max-width:34ch; color:var(--muted); font-size:13px;
+  line-height:1.6}
+.dempty .bigbtn{margin-top:6px}
 
 /* The account day by day, from the broker's own balances. Reads as a
    statement: date, what it made, where it closed, what was left. */

@@ -130,6 +130,36 @@ function details(t) {
 
 /* --------------------------------------------------------------- render */
 
+/**
+ * What to say when there is nothing to draw.
+ *
+ * A blank chart the height of the screen is the worst answer to "where are my
+ * trades". The reason is always one of three, and the app knows which.
+ */
+function emptyStage() {
+  const box = $("dempty");
+  if (!box) return;
+  box.hidden = false;
+  const trades = (window.TRADES || []).length;
+  const sessions = window.sessionCount ? window.sessionCount() : 0;
+  if (trades && (S.filter !== "all" || S.source !== "live"))
+    box.innerHTML = "<h3>Nothing in this filter</h3>"
+      + "<p>There are trades in the journal, just not in this view. Try All, "
+      + "or another account.</p>";
+  else if (sessions)
+    box.innerHTML = "<h3>The days are in, the trades are not</h3>"
+      + `<p>Your journal has ${sessions} session`
+      + `${sessions === 1 ? "" : "s"} of balances from your broker, which is `
+      + "what the drawdown is measured against. The trades inside those days "
+      + "come from the Fills export, and their stops from the orders panel.</p>"
+      + '<button class="bigbtn" data-import="1">Add those exports</button>';
+  else
+    box.innerHTML = "<h3>Nothing imported yet</h3>"
+      + "<p>Drop in Fills and the orders panel from Tradovate, or all six "
+      + "files from TradingView, and every trade lands here with its chart.</p>"
+      + '<button class="bigbtn" data-import="1">Import a session</button>';
+}
+
 export function pick(i) {
   S.list = matching();
   S.i = Math.max(0, Math.min(i, S.list.length - 1));
@@ -137,7 +167,10 @@ export function pick(i) {
 
   if (!S.list.length) {
     $("dtabs").innerHTML = "";
-    $("dhead").innerHTML = '<span class="who">No trades in this view</span>';
+    // The stage underneath says what is missing and what to do about it, so
+    // the header saying it again in smaller type is just noise.
+    $("dhead").innerHTML = "";
+    emptyStage();
     $("dvalues").innerHTML = "";
     $("dflags").innerHTML = "";
     $("dnote").textContent = "";
@@ -150,6 +183,8 @@ export function pick(i) {
   }
 
   const t = S.list[S.i];
+  const empty = $("dempty");
+  if (empty) empty.hidden = true;
   strip();
   $("dhead").innerHTML =
     `<span class="who">${esc(t.symbol)} ${esc(t.side)} &times;${t.qty}</span>`

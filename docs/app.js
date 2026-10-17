@@ -1132,9 +1132,11 @@ document.querySelector(".tabs2").addEventListener("click", e => {
 });
 // The dashboard's jump buttons carry the same data-go as the nav.
 document.addEventListener("click", e => {
-  const b = e.target.closest("button[data-go]");
+  // A button that only opens the picker is already on the right tab, which
+  // is the case for the one the empty Diary offers.
+  const b = e.target.closest("button[data-go],button[data-import]");
   if (!b || b.classList.contains("tb")) return;
-  goTab(b.dataset.go, true);
+  if (b.dataset.go) goTab(b.dataset.go, true);
   // Import goes one step further than the tab it lives on: it opens the file
   // picker too, so "import my trades" is one tap rather than a tab, a scroll
   // and a hunt for the right panel. Still inside the click, which is what
@@ -1425,6 +1427,11 @@ function renderAccounts() {
     if (el) { el.innerHTML = html; el.hidden = !show; }
   }
 }
+
+/** How many sessions of broker balances are in the journal, for the screens
+ *  that need to explain what is and is not here yet. */
+window.sessionCount = () => balancesNow().filter(b => window.ACCOUNT === "all"
+  || (b.account || "") === window.ACCOUNT).length;
 
 /** Trades imported before the bars were published can still get their chart. */
 function fillCandles() {

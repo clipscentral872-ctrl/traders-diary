@@ -1125,6 +1125,18 @@ body{overflow:hidden}
 .jfw{font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
 .jfi{font-size:11px; color:var(--faint); line-height:1.5}
 
+/* An empty Diary is a question with an answer, not a blank chart. */
+.dempty{
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:10px; text-align:center;
+  padding:28px 22px;
+}
+.dempty[hidden]{display:none}
+.dempty h3{margin:0; font-size:16px; color:var(--text)}
+.dempty p{margin:0; max-width:34ch; color:var(--muted); font-size:13px;
+  line-height:1.6}
+.dempty .bigbtn{margin-top:6px}
+
 /* The account day by day, from the broker's own balances. Reads as a
    statement: date, what it made, where it closed, what was left. */
 .dayacc{font-size:12px; color:var(--muted); margin:14px 0 4px;
@@ -1693,6 +1705,7 @@ body{overflow:hidden}
     <div class="wsstage">
       <canvas id="dchart"></canvas>
       <div class="plegend" id="dohlc2"></div>
+      <div class="dempty" id="dempty" hidden></div>
       <p class="nobars" id="dnobars" hidden>No candles were stored for this
       trade. The published bars reach back about ten days, so import each
       session while it is recent. The numbers are exact either way.</p>
@@ -2514,7 +2527,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=9d78bf83cd21","./chart.js":"./chart.js?v=9d78bf83cd21","./levels.js":"./levels.js?v=9d78bf83cd21","./revisit.js":"./revisit.js?v=9d78bf83cd21","./series.js":"./series.js?v=9d78bf83cd21","./clock.js":"./clock.js?v=9d78bf83cd21","./vault.js":"./vault.js?v=9d78bf83cd21","./draw.js":"./draw.js?v=9d78bf83cd21","./profile.js":"./profile.js?v=9d78bf83cd21","./whatif.js":"./whatif.js?v=9d78bf83cd21","./precheck.js":"./precheck.js?v=9d78bf83cd21","./shelf.js":"./shelf.js?v=9d78bf83cd21","./watchlist.js":"./watchlist.js?v=9d78bf83cd21","./lock.js":"./lock.js?v=9d78bf83cd21","./inds.js":"./inds.js?v=9d78bf83cd21","./imports.js":"./imports.js?v=9d78bf83cd21","./folder.js":"./folder.js?v=9d78bf83cd21","./funded.js":"./funded.js?v=9d78bf83cd21","./jdun.js":"./jdun.js?v=9d78bf83cd21","./replay.js":"./replay.js?v=9d78bf83cd21","./demo.js":"./demo.js?v=9d78bf83cd21","./diary.js":"./diary.js?v=9d78bf83cd21","./videos.js":"./videos.js?v=9d78bf83cd21","./system.js":"./system.js?v=9d78bf83cd21","./dashboard.js":"./dashboard.js?v=9d78bf83cd21"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=d574b203ac76","./chart.js":"./chart.js?v=d574b203ac76","./levels.js":"./levels.js?v=d574b203ac76","./revisit.js":"./revisit.js?v=d574b203ac76","./series.js":"./series.js?v=d574b203ac76","./clock.js":"./clock.js?v=d574b203ac76","./vault.js":"./vault.js?v=d574b203ac76","./draw.js":"./draw.js?v=d574b203ac76","./profile.js":"./profile.js?v=d574b203ac76","./whatif.js":"./whatif.js?v=d574b203ac76","./precheck.js":"./precheck.js?v=d574b203ac76","./shelf.js":"./shelf.js?v=d574b203ac76","./watchlist.js":"./watchlist.js?v=d574b203ac76","./lock.js":"./lock.js?v=d574b203ac76","./inds.js":"./inds.js?v=d574b203ac76","./imports.js":"./imports.js?v=d574b203ac76","./folder.js":"./folder.js?v=d574b203ac76","./funded.js":"./funded.js?v=d574b203ac76","./jdun.js":"./jdun.js?v=d574b203ac76","./replay.js":"./replay.js?v=d574b203ac76","./demo.js":"./demo.js?v=d574b203ac76","./diary.js":"./diary.js?v=d574b203ac76","./videos.js":"./videos.js?v=d574b203ac76","./system.js":"./system.js?v=d574b203ac76","./dashboard.js":"./dashboard.js?v=d574b203ac76"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -3650,9 +3663,11 @@ document.querySelector(".tabs2").addEventListener("click", e => {
 });
 // The dashboard's jump buttons carry the same data-go as the nav.
 document.addEventListener("click", e => {
-  const b = e.target.closest("button[data-go]");
+  // A button that only opens the picker is already on the right tab, which
+  // is the case for the one the empty Diary offers.
+  const b = e.target.closest("button[data-go],button[data-import]");
   if (!b || b.classList.contains("tb")) return;
-  goTab(b.dataset.go, true);
+  if (b.dataset.go) goTab(b.dataset.go, true);
   // Import goes one step further than the tab it lives on: it opens the file
   // picker too, so "import my trades" is one tap rather than a tab, a scroll
   // and a hunt for the right panel. Still inside the click, which is what
@@ -3943,6 +3958,11 @@ function renderAccounts() {
     if (el) { el.innerHTML = html; el.hidden = !show; }
   }
 }
+
+/** How many sessions of broker balances are in the journal, for the screens
+ *  that need to explain what is and is not here yet. */
+window.sessionCount = () => balancesNow().filter(b => window.ACCOUNT === "all"
+  || (b.account || "") === window.ACCOUNT).length;
 
 /** Trades imported before the bars were published can still get their chart. */
 function fillCandles() {
