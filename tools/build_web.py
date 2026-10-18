@@ -1174,14 +1174,78 @@ body{overflow:hidden}
   .track i{transition:none}
 }
 
-/* The notice about trades that belong to no account. Loud enough to be seen
-   once, quiet enough not to be an alarm. */
-.orphan{display:flex; align-items:center; gap:16px; flex-wrap:wrap;
-  padding:14px 16px; margin-bottom:14px;
-  border-left:3px solid var(--warn)}
-.orphantext{flex:1 1 260px; min-width:0}
-.orphanbig{margin:0; font-size:13.5px; color:var(--text)}
-.orphansub{margin:5px 0 0; color:var(--muted); font-size:12.5px; line-height:1.55}
+/* The rewards panel. Modelled on the one in Tradeify's own dashboard: a
+   level with a badge, a progress bar, counters, and two columns of missions
+   that tick off. The colour is spent on what has been earned, so the eye
+   goes to progress rather than to failure. */
+.rewards{
+  border:1px solid var(--line); border-radius:12px; padding:16px 18px 14px;
+  background:linear-gradient(160deg,
+    color-mix(in srgb, var(--accent) 7%, var(--raised)) 0%, var(--raised) 46%);
+  margin-bottom:14px;
+}
+.rwtop{display:flex; align-items:center; justify-content:space-between;
+  gap:18px; flex-wrap:wrap}
+.rwlevel{display:flex; align-items:center; gap:12px}
+.rwbadge{
+  width:46px; height:46px; flex:none; display:grid; place-items:center;
+  font-size:19px; font-weight:700; color:#07121F;
+  background:linear-gradient(150deg, #7FE8FF, var(--accent));
+  box-shadow:0 0 22px color-mix(in srgb, var(--accent) 45%, transparent);
+  clip-path:polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+}
+.rwmeta{display:flex; flex-direction:column; gap:2px}
+.rwname{font-size:15px; font-weight:600; color:var(--text)}
+.rwnext{font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums}
+.rwcounts{display:flex; gap:20px; flex-wrap:wrap}
+.rwcount{display:flex; flex-direction:column; align-items:flex-end}
+.rwcount b{font-size:17px; color:var(--text); font-variant-numeric:tabular-nums}
+.rwcount small{font-size:10px; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--faint)}
+.rwtrack{
+  height:9px; border-radius:6px; background:var(--ground);
+  border:1px solid var(--line); overflow:hidden; margin:13px 0 16px;
+}
+.rwtrack i{
+  display:block; height:100%; width:0; border-radius:5px;
+  background:linear-gradient(90deg,
+    color-mix(in srgb, var(--accent) 55%, transparent), #7FE8FF);
+  box-shadow:0 0 16px color-mix(in srgb, var(--accent) 60%, transparent);
+  transition:width .9s cubic-bezier(.2,.75,.25,1);
+}
+.rwcols{display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr));
+  gap:18px}
+.rwhead{font-size:11px; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--muted); margin:0 0 8px; font-weight:600}
+.rwhead span{color:var(--faint); text-transform:none; letter-spacing:0;
+  font-weight:400; margin-left:6px}
+.rwlist{list-style:none; margin:0; padding:0; display:flex;
+  flex-direction:column; gap:7px}
+.rwm{
+  display:grid; grid-template-columns:auto 1fr auto; gap:2px 10px;
+  align-items:center; padding:9px 11px; border-radius:8px;
+  background:var(--ground); border:1px solid var(--line-soft);
+}
+.rwm.got{border-color:color-mix(in srgb, var(--win) 40%, transparent);
+  background:color-mix(in srgb, var(--win) 7%, var(--ground))}
+.rwtick{
+  grid-row:1/3; width:18px; height:18px; border-radius:50%;
+  border:1.5px solid var(--line); position:relative;
+}
+.rwm.got .rwtick{border-color:var(--win); background:var(--win)}
+.rwm.got .rwtick::after{
+  content:""; position:absolute; left:5px; top:2px; width:5px; height:9px;
+  border:solid #07121F; border-width:0 2px 2px 0; transform:rotate(45deg);
+}
+.rwmt{grid-column:2; grid-row:1; font-size:12.5px; color:var(--text)}
+.rwmw{grid-column:2; grid-row:2; font-size:11px; color:var(--muted);
+  line-height:1.45}
+.rwmx{grid-column:3; grid-row:1/3; font-size:12px; color:var(--faint);
+  font-variant-numeric:tabular-nums; text-align:right}
+.rwmx small{display:block; font-size:9px; letter-spacing:.04em}
+.rwm.got .rwmx{color:var(--win)}
+.rwwhy{margin:14px 0 0; color:var(--faint); font-size:11.5px; line-height:1.55}
+@media (prefers-reduced-motion: reduce){ .rwtrack i{transition:none} }
 
 /* The notice about trades that belong to no account. Loud enough to be seen
    once, quiet enough not to be an alarm. */
@@ -1939,7 +2003,7 @@ MODULES = [
     "engine.js", "chart.js", "levels.js", "revisit.js", "series.js",
     "clock.js", "vault.js", "draw.js", "profile.js", "whatif.js", "precheck.js", "shelf.js",
     "watchlist.js", "lock.js", "inds.js", "imports.js", "folder.js",
-    "funded.js", "jdun.js",
+    "funded.js", "jdun.js", "quests.js",
     "replay.js", "diary.js", "videos.js", "system.js",
     "dashboard.js",
 ]

@@ -21,6 +21,7 @@ import * as W from "./whatif.js";
 import * as FS from "./folder.js";
 import * as FUND from "./funded.js";
 import * as JD from "./jdun.js";
+import * as Q from "./quests.js";
 
 const $ = id => document.getElementById(id);
 // Names within a journal. The journal itself decides where they land, so
@@ -234,6 +235,7 @@ function renderPanels() {
   }).join("");
 
   renderStanding();
+  renderQuests();
   renderOrphans();
   renderDays();
   renderGroups();
@@ -1502,6 +1504,55 @@ function renderAccounts() {
     const el = $(id);
     if (el) { el.innerHTML = ""; el.hidden = true; }
   }
+}
+
+/**
+ * The rewards panel: the level, the streak, and today's missions.
+ *
+ * Modelled on the Rewards Center in Tradeify's own dashboard, which is what
+ * Chris meant by wanting the app to feel like a game, and pointed at the one
+ * thing worth making rewarding: the waiting, the sizing down, the stopping
+ * after two losses, the note at the end.
+ */
+function renderQuests() {
+  const sec = $("questsec");
+  if (!sec) return;
+  const live = window.ofAccount(window.TRADES)
+    .filter(t => (t.source || "live") === "live");
+  if (!live.length) { sec.hidden = true; return; }
+  sec.hidden = false;
+
+  const b = Q.board(live, jdunPlan());
+  $("rwbadge").textContent = b.level;
+  $("rwname").textContent = "Level " + b.level;
+  $("rwnext").textContent = b.max
+    ? `${b.xp.toLocaleString("en-US")} XP, the top of the ladder`
+    : `${b.into.toLocaleString("en-US")} / ${b.need.toLocaleString("en-US")} XP`
+      + `  ·  ${b.toNext.toLocaleString("en-US")} to level ${b.level + 1}`;
+  $("rwgems").textContent = b.gems.toLocaleString("en-US");
+  $("rwstreak").textContent = b.streak;
+  $("rwdone").textContent = `${b.done} of ${b.possible}`;
+  const fill = $("rwfill");
+  fill.dataset.w = Math.round(b.pct * 100);
+  fill.style.width = "0%";
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    fill.style.width = fill.dataset.w + "%";
+  }));
+
+  const list = (box, missions) => {
+    box.innerHTML = missions.map(m =>
+      `<li class="rwm ${m.done ? "got" : ""}">`
+      + '<span class="rwtick" aria-hidden="true"></span>'
+      + `<span class="rwmt">${esc(m.title)}</span>`
+      + `<span class="rwmw">${esc(m.done ? m.what : (m.note || m.what))}</span>`
+      + `<span class="rwmx">+${m.xp}<small>XP</small></span></li>`).join("");
+  };
+  const order = ms => [...ms].sort((a, c) => (a.done === c.done ? 0 : a.done ? 1 : -1));
+  list($("rwday"), order(b.today));
+  list($("rwweek"), order(b.thisWeek));
+  $("rwdayon").textContent = b.day ? C.day(C.msOf(b.day + " 12:00:00")) : "";
+  $("rwweekon").textContent = b.week
+    ? "week of " + C.day(C.msOf(b.week + " 12:00:00")) : "";
 }
 
 /* Trades the journal cannot attribute, said on the page where they are doing

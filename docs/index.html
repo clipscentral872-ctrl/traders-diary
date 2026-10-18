@@ -1276,14 +1276,78 @@ body{overflow:hidden}
   .track i{transition:none}
 }
 
-/* The notice about trades that belong to no account. Loud enough to be seen
-   once, quiet enough not to be an alarm. */
-.orphan{display:flex; align-items:center; gap:16px; flex-wrap:wrap;
-  padding:14px 16px; margin-bottom:14px;
-  border-left:3px solid var(--warn)}
-.orphantext{flex:1 1 260px; min-width:0}
-.orphanbig{margin:0; font-size:13.5px; color:var(--text)}
-.orphansub{margin:5px 0 0; color:var(--muted); font-size:12.5px; line-height:1.55}
+/* The rewards panel. Modelled on the one in Tradeify's own dashboard: a
+   level with a badge, a progress bar, counters, and two columns of missions
+   that tick off. The colour is spent on what has been earned, so the eye
+   goes to progress rather than to failure. */
+.rewards{
+  border:1px solid var(--line); border-radius:12px; padding:16px 18px 14px;
+  background:linear-gradient(160deg,
+    color-mix(in srgb, var(--accent) 7%, var(--raised)) 0%, var(--raised) 46%);
+  margin-bottom:14px;
+}
+.rwtop{display:flex; align-items:center; justify-content:space-between;
+  gap:18px; flex-wrap:wrap}
+.rwlevel{display:flex; align-items:center; gap:12px}
+.rwbadge{
+  width:46px; height:46px; flex:none; display:grid; place-items:center;
+  font-size:19px; font-weight:700; color:#07121F;
+  background:linear-gradient(150deg, #7FE8FF, var(--accent));
+  box-shadow:0 0 22px color-mix(in srgb, var(--accent) 45%, transparent);
+  clip-path:polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+}
+.rwmeta{display:flex; flex-direction:column; gap:2px}
+.rwname{font-size:15px; font-weight:600; color:var(--text)}
+.rwnext{font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums}
+.rwcounts{display:flex; gap:20px; flex-wrap:wrap}
+.rwcount{display:flex; flex-direction:column; align-items:flex-end}
+.rwcount b{font-size:17px; color:var(--text); font-variant-numeric:tabular-nums}
+.rwcount small{font-size:10px; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--faint)}
+.rwtrack{
+  height:9px; border-radius:6px; background:var(--ground);
+  border:1px solid var(--line); overflow:hidden; margin:13px 0 16px;
+}
+.rwtrack i{
+  display:block; height:100%; width:0; border-radius:5px;
+  background:linear-gradient(90deg,
+    color-mix(in srgb, var(--accent) 55%, transparent), #7FE8FF);
+  box-shadow:0 0 16px color-mix(in srgb, var(--accent) 60%, transparent);
+  transition:width .9s cubic-bezier(.2,.75,.25,1);
+}
+.rwcols{display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr));
+  gap:18px}
+.rwhead{font-size:11px; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--muted); margin:0 0 8px; font-weight:600}
+.rwhead span{color:var(--faint); text-transform:none; letter-spacing:0;
+  font-weight:400; margin-left:6px}
+.rwlist{list-style:none; margin:0; padding:0; display:flex;
+  flex-direction:column; gap:7px}
+.rwm{
+  display:grid; grid-template-columns:auto 1fr auto; gap:2px 10px;
+  align-items:center; padding:9px 11px; border-radius:8px;
+  background:var(--ground); border:1px solid var(--line-soft);
+}
+.rwm.got{border-color:color-mix(in srgb, var(--win) 40%, transparent);
+  background:color-mix(in srgb, var(--win) 7%, var(--ground))}
+.rwtick{
+  grid-row:1/3; width:18px; height:18px; border-radius:50%;
+  border:1.5px solid var(--line); position:relative;
+}
+.rwm.got .rwtick{border-color:var(--win); background:var(--win)}
+.rwm.got .rwtick::after{
+  content:""; position:absolute; left:5px; top:2px; width:5px; height:9px;
+  border:solid #07121F; border-width:0 2px 2px 0; transform:rotate(45deg);
+}
+.rwmt{grid-column:2; grid-row:1; font-size:12.5px; color:var(--text)}
+.rwmw{grid-column:2; grid-row:2; font-size:11px; color:var(--muted);
+  line-height:1.45}
+.rwmx{grid-column:3; grid-row:1/3; font-size:12px; color:var(--faint);
+  font-variant-numeric:tabular-nums; text-align:right}
+.rwmx small{display:block; font-size:9px; letter-spacing:.04em}
+.rwm.got .rwmx{color:var(--win)}
+.rwwhy{margin:14px 0 0; color:var(--faint); font-size:11.5px; line-height:1.55}
+@media (prefers-reduced-motion: reduce){ .rwtrack i{transition:none} }
 
 /* The notice about trades that belong to no account. Loud enough to be seen
    once, quiet enough not to be an alarm. */
@@ -2008,6 +2072,40 @@ body{overflow:hidden}
   </div>
   <div class="figs" id="dashyou"></div>
   <div id="dashleak"></div>
+</section>
+
+<section id="questsec" hidden>
+  <div class="rewards">
+    <div class="rwtop">
+      <div class="rwlevel">
+        <span class="rwbadge" id="rwbadge">1</span>
+        <div class="rwmeta">
+          <span class="rwname" id="rwname">Level 1</span>
+          <span class="rwnext" id="rwnext"></span>
+        </div>
+      </div>
+      <div class="rwcounts">
+        <span class="rwcount"><b id="rwgems">0</b><small>gems</small></span>
+        <span class="rwcount"><b id="rwstreak">0</b><small>session streak</small></span>
+        <span class="rwcount"><b id="rwdone">0</b><small>missions cleared</small></span>
+      </div>
+    </div>
+    <div class="rwtrack"><i id="rwfill"></i></div>
+    <div class="rwcols">
+      <div class="rwcol">
+        <h3 class="rwhead">Daily missions <span id="rwdayon"></span></h3>
+        <ul class="rwlist" id="rwday"></ul>
+      </div>
+      <div class="rwcol">
+        <h3 class="rwhead">Weekly missions <span id="rwweekon"></span></h3>
+        <ul class="rwlist" id="rwweek"></ul>
+      </div>
+    </div>
+    <p class="rwwhy">Every mission here pays for the process and none of them
+    pays for money. A red day where you kept the rules scores exactly the
+    same as a green one, because points for profit would pay you to take the
+    trade that takes the account.</p>
+  </div>
 </section>
 
 <section id="orphansec" hidden>
@@ -2752,7 +2850,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=02e557046ecc","./chart.js":"./chart.js?v=02e557046ecc","./levels.js":"./levels.js?v=02e557046ecc","./revisit.js":"./revisit.js?v=02e557046ecc","./series.js":"./series.js?v=02e557046ecc","./clock.js":"./clock.js?v=02e557046ecc","./vault.js":"./vault.js?v=02e557046ecc","./draw.js":"./draw.js?v=02e557046ecc","./profile.js":"./profile.js?v=02e557046ecc","./whatif.js":"./whatif.js?v=02e557046ecc","./precheck.js":"./precheck.js?v=02e557046ecc","./shelf.js":"./shelf.js?v=02e557046ecc","./watchlist.js":"./watchlist.js?v=02e557046ecc","./lock.js":"./lock.js?v=02e557046ecc","./inds.js":"./inds.js?v=02e557046ecc","./imports.js":"./imports.js?v=02e557046ecc","./folder.js":"./folder.js?v=02e557046ecc","./funded.js":"./funded.js?v=02e557046ecc","./jdun.js":"./jdun.js?v=02e557046ecc","./replay.js":"./replay.js?v=02e557046ecc","./diary.js":"./diary.js?v=02e557046ecc","./videos.js":"./videos.js?v=02e557046ecc","./system.js":"./system.js?v=02e557046ecc","./dashboard.js":"./dashboard.js?v=02e557046ecc"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=a241c49c4741","./chart.js":"./chart.js?v=a241c49c4741","./levels.js":"./levels.js?v=a241c49c4741","./revisit.js":"./revisit.js?v=a241c49c4741","./series.js":"./series.js?v=a241c49c4741","./clock.js":"./clock.js?v=a241c49c4741","./vault.js":"./vault.js?v=a241c49c4741","./draw.js":"./draw.js?v=a241c49c4741","./profile.js":"./profile.js?v=a241c49c4741","./whatif.js":"./whatif.js?v=a241c49c4741","./precheck.js":"./precheck.js?v=a241c49c4741","./shelf.js":"./shelf.js?v=a241c49c4741","./watchlist.js":"./watchlist.js?v=a241c49c4741","./lock.js":"./lock.js?v=a241c49c4741","./inds.js":"./inds.js?v=a241c49c4741","./imports.js":"./imports.js?v=a241c49c4741","./folder.js":"./folder.js?v=a241c49c4741","./funded.js":"./funded.js?v=a241c49c4741","./jdun.js":"./jdun.js?v=a241c49c4741","./quests.js":"./quests.js?v=a241c49c4741","./replay.js":"./replay.js?v=a241c49c4741","./diary.js":"./diary.js?v=a241c49c4741","./videos.js":"./videos.js?v=a241c49c4741","./system.js":"./system.js?v=a241c49c4741","./dashboard.js":"./dashboard.js?v=a241c49c4741"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -2777,6 +2875,7 @@ import * as W from "./whatif.js";
 import * as FS from "./folder.js";
 import * as FUND from "./funded.js";
 import * as JD from "./jdun.js";
+import * as Q from "./quests.js";
 
 const $ = id => document.getElementById(id);
 // Names within a journal. The journal itself decides where they land, so
@@ -2990,6 +3089,7 @@ function renderPanels() {
   }).join("");
 
   renderStanding();
+  renderQuests();
   renderOrphans();
   renderDays();
   renderGroups();
@@ -4258,6 +4358,55 @@ function renderAccounts() {
     const el = $(id);
     if (el) { el.innerHTML = ""; el.hidden = true; }
   }
+}
+
+/**
+ * The rewards panel: the level, the streak, and today's missions.
+ *
+ * Modelled on the Rewards Center in Tradeify's own dashboard, which is what
+ * Chris meant by wanting the app to feel like a game, and pointed at the one
+ * thing worth making rewarding: the waiting, the sizing down, the stopping
+ * after two losses, the note at the end.
+ */
+function renderQuests() {
+  const sec = $("questsec");
+  if (!sec) return;
+  const live = window.ofAccount(window.TRADES)
+    .filter(t => (t.source || "live") === "live");
+  if (!live.length) { sec.hidden = true; return; }
+  sec.hidden = false;
+
+  const b = Q.board(live, jdunPlan());
+  $("rwbadge").textContent = b.level;
+  $("rwname").textContent = "Level " + b.level;
+  $("rwnext").textContent = b.max
+    ? `${b.xp.toLocaleString("en-US")} XP, the top of the ladder`
+    : `${b.into.toLocaleString("en-US")} / ${b.need.toLocaleString("en-US")} XP`
+      + `  ·  ${b.toNext.toLocaleString("en-US")} to level ${b.level + 1}`;
+  $("rwgems").textContent = b.gems.toLocaleString("en-US");
+  $("rwstreak").textContent = b.streak;
+  $("rwdone").textContent = `${b.done} of ${b.possible}`;
+  const fill = $("rwfill");
+  fill.dataset.w = Math.round(b.pct * 100);
+  fill.style.width = "0%";
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    fill.style.width = fill.dataset.w + "%";
+  }));
+
+  const list = (box, missions) => {
+    box.innerHTML = missions.map(m =>
+      `<li class="rwm ${m.done ? "got" : ""}">`
+      + '<span class="rwtick" aria-hidden="true"></span>'
+      + `<span class="rwmt">${esc(m.title)}</span>`
+      + `<span class="rwmw">${esc(m.done ? m.what : (m.note || m.what))}</span>`
+      + `<span class="rwmx">+${m.xp}<small>XP</small></span></li>`).join("");
+  };
+  const order = ms => [...ms].sort((a, c) => (a.done === c.done ? 0 : a.done ? 1 : -1));
+  list($("rwday"), order(b.today));
+  list($("rwweek"), order(b.thisWeek));
+  $("rwdayon").textContent = b.day ? C.day(C.msOf(b.day + " 12:00:00")) : "";
+  $("rwweekon").textContent = b.week
+    ? "week of " + C.day(C.msOf(b.week + " 12:00:00")) : "";
 }
 
 /* Trades the journal cannot attribute, said on the page where they are doing
