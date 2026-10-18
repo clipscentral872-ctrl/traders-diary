@@ -112,6 +112,9 @@ const tzOffset = () => {
 // Browsers cannot fetch a market feed directly, so a daily job publishes the
 // recent minute bars beside this page and they are loaded from here.
 const BARS = {};
+/* The five minute series, kept beside the minute one. The minute history has
+   holes and a trade inside one can still be drawn at five. */
+const SLOW = {};
 const pending = new Map();
 
 /** Load the published bars for these contracts only.
@@ -122,21 +125,29 @@ const pending = new Map();
 async function loadBars(symbols) {
   const want = [...new Set(symbols.filter(Boolean))];
   await Promise.all(want.map(sym => {
-    if (BARS[sym]) return null;
+    if (BARS[sym] || SLOW[sym]) return null;
     if (pending.has(sym)) return pending.get(sym);
     const p = (async () => {
-      try {
-        const r = await fetch(`bars/${sym}_1m.json`, {cache: "no-cache"});
-        if (!r.ok) return;
+      /* A flat array on a fixed grid: a bar's time is where it sits, and a
+         minute the market did not trade is a null that is dropped here. */
+      const read = async tf => {
+        const r = await fetch(`bars/${sym}_${tf}.json`, {cache: "no-cache"});
+        if (!r.ok) return null;
         const j = await r.json();
-        // A flat array on a fixed one-minute grid: a bar's time is where it
-        // sits, and a closed minute is a null that is dropped on the way in.
         const out = [];
         j.bars.forEach((b, i) => {
           if (b) out.push({ms: (j.t0 + i * j.step) * 1000,
                            o: b[0], h: b[1], l: b[2], c: b[3]});
         });
-        BARS[sym] = out;
+        return out;
+      };
+      try {
+        // Both, because the minute history has holes and a trade inside one
+        // of them can still be drawn at five minutes.
+        const [m1, m5] = await Promise.all([
+          read("1m").catch(() => null), read("5m").catch(() => null)]);
+        if (m1) BARS[sym] = m1;
+        if (m5) SLOW[sym] = m5;
       } catch { /* offline, or never published: the diary still works */ }
       finally { pending.delete(sym); }
     })();
@@ -404,7 +415,7 @@ async function handle(fileHandles) {
     const before = window.TRADES.length;
     const peek = E.pairTrades(E.fillsFrom(files)).trades;
     await loadBars(feedsFor([...window.TRADES, ...peek]));
-    const out = E.ingest(files, window.TRADES, BARS, offset);
+    const out = E.ingest(files, window.TRADES, BARS, offset, SLOW);
 
     window.TRADES = out.trades;
     // The broker's own daily balances, which is what the firm's drawdown is
@@ -1894,7 +1905,8 @@ window.sessionCount = () => balancesNow().filter(b => window.ACCOUNT === "all"
 function fillCandles() {
   let filled = 0;
   for (const t of window.TRADES)
-    if (E.attachBars(t, BARS[E.FEED[t.symbol]], tzOffset())) {
+    if (E.attachBars(t, BARS[E.FEED[t.symbol]], tzOffset(),
+                     SLOW[E.FEED[t.symbol]])) {
       E.analyseExcursion(t);
       filled++;
     }

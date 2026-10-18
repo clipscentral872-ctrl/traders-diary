@@ -535,12 +535,32 @@ export const setLocalOffset = h => { LOCAL_OFFSET_H = h; };
 /** Attach the minute bars a trade happened on, from bars published beside
  *  this page. Browsers cannot fetch a market feed directly, so a daily job
  *  publishes them here instead. */
-export function attachBars(t, feed, offsetHours = LOCAL_OFFSET_H) {
-  if (!feed || !feed.length || t.bars) return false;
+/**
+ * Give a trade its candles.
+ *
+ * Minute bars first, because they show the trade at the resolution it
+ * happened. Where the minute history has a hole, and it does have holes, the
+ * five minute series is tried instead rather than leaving the trade with no
+ * chart at all. Five minutes is the timeframe the method is read on anyway,
+ * so a trade drawn that way is still worth looking at; it is only the wick
+ * by wick detail that is missing.
+ *
+ * @param feed   minute bars for this contract
+ * @param slower a coarser series to fall back on, optional
+ */
+export function attachBars(t, feed, offsetHours = LOCAL_OFFSET_H, slower = null) {
+  if (t.bars) return false;
   const at = s => Date.parse(s.replace(" ", "T") + "Z") - offsetHours * 3600e3;
   const lo = at(t.open_t) - PAD_BEFORE * 60e3;
   const hi = at(t.close_t) + PAD_AFTER * 60e3;
-  const w = feed.filter(b => b.ms >= lo && b.ms <= hi);
+  const pick = list => (list || []).filter(b => b.ms >= lo && b.ms <= hi);
+  let w = pick(feed);
+  /* Two bars is a line, not a chart. Below that the slower series will
+     almost always do better. */
+  if (w.length < 3 && slower) {
+    const alt = pick(slower);
+    if (alt.length > w.length) { w = alt; t.bars_tf = "5m"; }
+  }
   if (!w.length) return false;
   const hhmm = ms => {
     const d = new Date(ms + offsetHours * 3600e3);
@@ -602,7 +622,8 @@ export function fillsFrom(files) {
   return broker.fills.length ? broker.fills : readExports(files);
 }
 
-export function ingest(files, existing, barsBySymbol, offsetHours) {
+export function ingest(files, existing, barsBySymbol, offsetHours,
+                      slowBySymbol = {}) {
   const broker = IMP.readAny(files, parseCSV);
   const fills = broker.fills.length ? broker.fills : readExports(files);
   // Stops from both: the broker keeps every stop order it was given, and the
@@ -681,7 +702,8 @@ export function ingest(files, existing, barsBySymbol, offsetHours) {
    * session, so that false alarm was the normal case. */
   let withBars = 0;
   for (const t of all) {
-    attachBars(t, barsBySymbol[FEED[t.symbol]], offsetHours);
+    attachBars(t, barsBySymbol[FEED[t.symbol]], offsetHours,
+               slowBySymbol[FEED[t.symbol]]);
     analyseExcursion(t);
     if (t.bars && t.bars.length) withBars++;
   }
