@@ -114,8 +114,11 @@ const hhmm = m => String(Math.floor(m / 60)).padStart(2, "0") + ":"
 /** How many contracts that stop allows, written so one of them reads as one. */
 const allows = (cap, t) => {
   const n = Math.floor(cap / (t.risk_pts * (POINT[t.symbol] || 1)));
+  if (n === 0)
+    return `At ${t.risk_pts} points on ${t.symbol}, $${cap} does not reach `
+         + "one contract";
   return `At ${t.risk_pts} points the stop allows `
-       + (n === 0 ? "nothing at all" : n === 1 ? "one contract" : `${n} contracts`);
+       + (n === 1 ? "one contract" : `${n} contracts`);
 };
 
 /* ------------------------------------------------------------- the read */
@@ -193,7 +196,10 @@ export function readTrade(t, p = PLAN, ctx = {}) {
     if (risk && risk > cap * 1.05)
       out.push(F("size", "broke", "Size to the stop, never past half the cap",
         `$${risk} at risk against a $${cap} full size loss.`,
-        allows(cap, t) + `, not ${t.qty}. The stop decides the size.`));
+        allows(cap, t)
+        + (Math.floor(cap / (t.risk_pts * (POINT[t.symbol] || 1))) === 0
+            ? `, and you traded ${t.qty}. The stop decides the size.`
+            : `, not ${t.qty}. The stop decides the size.`)));
     else if (risk)
       out.push(F("size", "kept", "Size to the stop, never past half the cap",
         `$${risk} at risk, inside the $${cap} full size loss.`));
