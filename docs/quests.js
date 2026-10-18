@@ -351,10 +351,21 @@ export const TRADEIFY = [
     id: "tf-green", scope: "day", gems: 40, xp: 500,
     title: "Green Print",
     what: "The session finished with a positive net.",
-    test(day) {
-      const pnl = day.reduce((n, t) => n + (t.pnl || 0), 0);
-      return {done: pnl > 0, note: pnl > 0 ? ""
-        : `finished ${pnl < 0 ? "-" : ""}$${Math.abs(Math.round(pnl))}`};
+    test(day, p, ctx) {
+      /* Tradeify credits this for a day that finished green on an account,
+         not for the two of them added together. With both accounts on
+         screen a green day on one and a redder day on the other summed to
+         a loss and said you had not earned something you had. */
+      const on = dayOf(day[0] || {});
+      const by = new Map();
+      for (const t of (ctx.every || day)) {
+        if (dayOf(t) !== on) continue;
+        const k = t.account || "";
+        by.set(k, (by.get(k) || 0) + (t.pnl || 0));
+      }
+      const best = by.size ? Math.max(...by.values()) : 0;
+      return {done: best > 0, note: best > 0 ? ""
+        : `finished ${best < 0 ? "-" : ""}$${Math.abs(Math.round(best))}`};
     },
   },
 
