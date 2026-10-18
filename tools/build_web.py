@@ -836,6 +836,10 @@ body{overflow:hidden}
      inside a horizontal rail, which took most of the screen and pushed the
      chart off the bottom. */
   .drawrail{display:contents}
+  /* The timeframe pair joins the row rather than staying a column inside
+     it. Left as a column it put 5m on one line and 1m on the next, which
+     cost a whole row of a phone screen and read as a mistake. */
+  .railtf{display:contents}
   .raildiv{height:24px; width:1px; margin:0 4px; flex:none}
   .railgap{display:none}
   .wsmain{flex:none}
