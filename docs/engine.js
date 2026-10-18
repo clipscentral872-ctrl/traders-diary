@@ -618,8 +618,14 @@ export function ingest(files, existing, barsBySymbol, offsetHours) {
      not match on the full key is looked up on the old one and stamped with
      the account it turned out to belong to. Without that, the first import
      after the change would have doubled every trade already in the journal. */
-  const key = t => (t.account || "") + "|" + t.symbol + "|" + t.open_t;
-  const legacy = t => t.symbol + "|" + t.open_t;
+  /* The exit time is part of the key, not just the entry. A position closed
+     in two pieces is two round trips off one entry, which is what trimming
+     at 1R and letting the rest run looks like in the fills. Keyed on the
+     entry alone they collapsed into one and the rest were dropped without a
+     word: four of Chris's thirty nine went missing that way. */
+  const key = t => (t.account || "") + "|" + t.symbol + "|" + t.open_t
+                 + "|" + t.close_t;
+  const legacy = t => t.symbol + "|" + t.open_t + "|" + t.close_t;
   const byKey = new Map(existing.map(t => [key(t), t]));
   const byOld = new Map(existing.map(t => [legacy(t), t]));
   let added = 0, repaired = 0;

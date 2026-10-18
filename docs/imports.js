@@ -149,6 +149,8 @@ export const SOURCES = [
         if (!qty || price === null || !when || !raw) continue;
         out.push({
           "Symbol": rootSymbol(raw),
+          /* Kept so the pieces of one order can be put back together. */
+          "Order id": String(pick(r, ["orderid"]) || ""),
           /* Which account this fill belongs to. The Fills report carries it,
              the orders panel export does not, and two evaluation accounts
              trading the same contract have to be kept apart or one will pair
@@ -281,6 +283,41 @@ export function readAny(files, parseCSV) {
     const times = got.map(g => g["Closing time"]).filter(Boolean).sort();
     if (times.length) spans.push([times[0], times[times.length - 1]]);
   }
+  /* One execution, filled in pieces, is one execution.
+   *
+   * An exchange can fill a single order in several prints, and two orders on
+   * the same position can fill in the same second. Both arrive as separate
+   * rows, and paired one by one they become two round trips off one entry:
+   * on Chris's own export, four trades that were really two, each with half
+   * the size and a price that was never the price he got.
+   *
+   * So fills are rolled up by account, contract, side and time, with the
+   * quantities added and the price weighted by size. Nothing is discarded,
+   * which is the difference between this and dropping the duplicates: the
+   * money is all still there, in one row instead of three. */
+  const rollUp = (list, keyOf) => {
+    const by = new Map();
+    for (const f of list) {
+      const k = keyOf(f);
+      const got = by.get(k);
+      if (!got) { by.set(k, {...f}); continue; }
+      const q1 = parseFloat(got["Quantity"]) || 0;
+      const q2 = parseFloat(f["Quantity"]) || 0;
+      const p1 = parseFloat(got["Fill price"]) || 0;
+      const p2 = parseFloat(f["Fill price"]) || 0;
+      const q = q1 + q2;
+      got["Quantity"] = String(q);
+      got["Fill price"] = String(q ? Math.round((p1 * q1 + p2 * q2) / q * 1e6) / 1e6
+                                   : p1);
+      // Keep the stop or target that came with either piece.
+      got["Stop price"] = got["Stop price"] || f["Stop price"];
+      got["Limit price"] = got["Limit price"] || f["Limit price"];
+      if (f["Closing time"] < got["Closing time"])
+        got["Closing time"] = f["Closing time"];
+    }
+    return [...by.values()];
+  };
+
   /* The Fills report is the record of what was executed, down to each
      partial fill of one order. The Orders report shows the same executions
      rolled up per order, so where both are present the Fills report wins and
@@ -291,6 +328,15 @@ export function readAny(files, parseCSV) {
     kept = fills.filter(f => f.__from !== "tradovate-orders");
   for (const f of kept) delete f.__from;
 
+  /* Twice, because there are two ways one execution arrives in pieces.
+     First by the order, since an order is the decision and its prints are
+     only how the exchange filled it: his export has one order printing a
+     second apart. Then by the instant, since two orders can close the same
+     position in the same second, which his export also does. The time kept
+     is the first print's. */
+  const side = f => [f["Account"] || "", f["Symbol"], f["Side"]].join("|");
+  kept = rollUp(kept, f => side(f) + "|" + (f["Order id"] || f["Closing time"]));
+  kept = rollUp(kept, f => side(f) + "|" + f["Closing time"]);
   kept.sort((a, b) => (a["Closing time"] < b["Closing time"] ? -1 : 1));
   balances.sort((a, b) => (a.date < b.date ? -1 : 1));
   return {fills: kept, moves, spans, found, balances};

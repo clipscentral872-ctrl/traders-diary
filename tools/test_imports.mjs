@@ -180,6 +180,45 @@ console.log("\nthe Fills report and the Orders report, dropped together");
         String(alone.fills.length));
 }
 
+console.log("\none execution, filled in pieces");
+{
+  /* Straight out of Chris's own export. An order can print more than once,
+     a second apart, and two orders can close the same position in the same
+     second. Paired one by one, each of those became two round trips off one
+     entry, with half the size and a price he never got. */
+  const PIECES = `Fill ID,Order ID,Timestamp,Date,Account,B/S,Quantity,Price,Contract,Product
+1,100,10/07/2026 13:20:00,10/7/26,EVAL1, Sell,5,31264.25,MNQZ6,MNQ
+2,200,10/07/2026 13:29:47,10/7/26,EVAL1, Buy,3,31263.25,MNQZ6,MNQ
+3,200,10/07/2026 13:29:48,10/7/26,EVAL1, Buy,2,31264.00,MNQZ6,MNQ
+`;
+  const got = readAny([file("Fills.csv", PIECES)], parseCSV);
+  check("one order printing twice is one fill", got.fills.length === 2,
+        String(got.fills.length));
+  const exit = got.fills[1];
+  check("with the sizes added", exit["Quantity"] === "5", exit["Quantity"]);
+  check("and the price weighted by size, not averaged",
+        Math.abs(parseFloat(exit["Fill price"]) - 31263.55) < 0.001,
+        exit["Fill price"]);
+  check("stamped at the first print", exit["Closing time"].endsWith("13:29:47"),
+        exit["Closing time"]);
+
+  const {trades} = pairTrades(got.fills);
+  check("so it is one trade, not two", trades.length === 1, String(trades.length));
+  check("and the money is all of it", Math.abs(trades[0].pnl - 7) < 0.001,
+        String(trades[0].pnl));
+
+  // Two different orders closing the same position in the same second.
+  const SAME = `Fill ID,Order ID,Timestamp,Date,Account,B/S,Quantity,Price,Contract,Product
+1,100,10/08/2026 16:43:39,10/8/26,EVAL1, Buy,3,31283.00,MNQZ6,MNQ
+2,200,10/08/2026 16:54:32,10/8/26,EVAL1, Sell,2,31249.50,MNQZ6,MNQ
+3,300,10/08/2026 16:54:32,10/8/26,EVAL1, Sell,1,31249.50,MNQZ6,MNQ
+`;
+  const two = pairTrades(readAny([file("Fills.csv", SAME)], parseCSV).fills).trades;
+  check("two orders filling at the same instant are one exit too",
+        two.length === 1 && two[0].qty === 3,
+        JSON.stringify(two.map(t => t.qty)));
+}
+
 console.log("\ntwo accounts, one contract");
 {
   /* Both evaluation accounts long MNQ at the same minute, both out later.

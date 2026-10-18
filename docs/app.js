@@ -1207,10 +1207,13 @@ document.addEventListener("toggle", e => {
 const noteBox = $("mynotebox"), noteSaved = $("mynotesaved");
 let noteTimer = null;
 
-/* The account is part of the key: the same contract at the same minute on
-   two evaluation accounts is two trades, and typing a note against one of
-   them must not land on the other. */
-function keyOf(t) { return (t.account || "") + "|" + t.symbol + "|" + t.open_t; }
+/* The account and the exit are both part of the key: the same contract at
+   the same minute on two evaluation accounts is two trades, and so is one
+   entry closed in two pieces. A note typed against one of them must not land
+   on the other. */
+function keyOf(t) {
+  return (t.account || "") + "|" + t.symbol + "|" + t.open_t + "|" + t.close_t;
+}
 
 window.showMyNote = function (t) {
   if (!noteBox) return;
@@ -2148,8 +2151,7 @@ function busy() {
   if (el && /^(TEXTAREA|INPUT|SELECT)$/.test(el.tagName)) return "typing";
   const box = $("mynotebox");
   if (box && !box.disabled) {
-    const t = window.TRADES.find(x =>
-      x.symbol + "|" + x.open_t === box.dataset.key);
+    const t = window.TRADES.find(x => keyOf(x) === box.dataset.key);
     if (box.value.trim() !== ((t && t.mine) || "").trim()) return "an unsaved note";
   }
   if (RP.inTrade()) return "a replay position still open";

@@ -143,6 +143,11 @@ export function readTrade(t, p = PLAN, ctx = {}) {
   const inMin = nyMinutes(t.open_t);
   const day = (ctx.dayTrades || []).filter(x => x.open_t <= t.open_t);
   const before = day.slice(0, -1);
+  /* One entry closed in two pieces is one trade taken, not two. Trimming at
+     1R and letting the rest run is the method's own management, so counting
+     the pieces would have the rule punish him for following it. */
+  const entries = list => new Set(list.map(x => x.open_t + "|" + x.symbol));
+  const takenBefore = [...entries(before)].filter(k => k !== t.open_t + "|" + t.symbol).length;
 
   /* The danger zone. */
   if (inMin !== null) {
@@ -235,16 +240,17 @@ export function readTrade(t, p = PLAN, ctx = {}) {
   }
 
   /* The day's rules, judged at the moment this trade was opened. */
-  const losses = before.filter(x => (x.pnl || 0) < 0).length;
+  /* A loss is a losing ENTRY, for the same reason. */
+  const losses = entries(before.filter(x => (x.pnl || 0) < 0)).size;
   if (losses >= p.lossesPerDay)
     out.push(F("twoloss", "broke", `${p.lossesPerDay} losses and the day is done`,
       `This was opened after ${losses} losing trades on the same day.`,
       "The rule is a circuit breaker. It is there precisely for the setup "
       + "that looks too good to leave."));
 
-  if (before.length >= p.tradesPerDay)
+  if (takenBefore >= p.tradesPerDay)
     out.push(F("count", "broke", `At most ${p.tradesPerDay} trades a day`,
-      `Trade number ${before.length + 1} of the day.`,
+      `Trade number ${takenBefore + 1} of the day.`,
       "One good trade is the target. Past the second the edge is usually "
       + "boredom rather than a setup."));
 

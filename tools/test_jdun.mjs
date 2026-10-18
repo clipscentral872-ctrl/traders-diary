@@ -134,6 +134,34 @@ console.log("\nthe day's own rules");
         !has(J.review(later, P, {dayTrades: [l1, later]}).findings, "revenge", "watch"));
 }
 
+console.log("\none entry closed in two pieces is one trade");
+{
+  /* Trimming at 1R and letting the rest run is the method's own management.
+     In the fills it comes back as two round trips off one entry, and
+     counting the pieces would have the rules punish him for following
+     them. */
+  const a = good({open_t: "2026-10-13 09:50:00", close_t: "2026-10-13 10:00:00",
+                  qty: 1, pnl: 80, got_r: 1});
+  const b = good({open_t: "2026-10-13 09:50:00", close_t: "2026-10-13 10:40:00",
+                  qty: 1, pnl: 160, got_r: 2});
+  const later = good({open_t: "2026-10-13 11:00:00", close_t: "2026-10-13 11:30:00"});
+  const day = [a, b, later];
+
+  check("the second piece is not a second trade",
+        !has(J.review(b, P, {dayTrades: day}).findings, "count", "broke"));
+  check("and the next real trade is only the second of the day",
+        !has(J.review(later, P, {dayTrades: day}).findings, "count", "broke"));
+
+  const l1 = good({open_t: "2026-10-14 09:50:00", close_t: "2026-10-14 10:00:00",
+                   qty: 1, pnl: -40, got_r: -1});
+  const l2 = good({open_t: "2026-10-14 09:50:00", close_t: "2026-10-14 10:10:00",
+                   qty: 1, pnl: -40, got_r: -1});
+  const after = good({open_t: "2026-10-14 11:00:00", close_t: "2026-10-14 11:30:00"});
+  check("one losing entry in two pieces is one loss, not two",
+        !has(J.review(after, P, {dayTrades: [l1, l2, after]}).findings,
+             "twoloss", "broke"));
+}
+
 console.log("\nthe questions only he can answer");
 {
   const blank = good({jdun: undefined});

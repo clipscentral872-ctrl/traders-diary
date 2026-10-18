@@ -2752,7 +2752,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=e70e541fde05","./chart.js":"./chart.js?v=e70e541fde05","./levels.js":"./levels.js?v=e70e541fde05","./revisit.js":"./revisit.js?v=e70e541fde05","./series.js":"./series.js?v=e70e541fde05","./clock.js":"./clock.js?v=e70e541fde05","./vault.js":"./vault.js?v=e70e541fde05","./draw.js":"./draw.js?v=e70e541fde05","./profile.js":"./profile.js?v=e70e541fde05","./whatif.js":"./whatif.js?v=e70e541fde05","./precheck.js":"./precheck.js?v=e70e541fde05","./shelf.js":"./shelf.js?v=e70e541fde05","./watchlist.js":"./watchlist.js?v=e70e541fde05","./lock.js":"./lock.js?v=e70e541fde05","./inds.js":"./inds.js?v=e70e541fde05","./imports.js":"./imports.js?v=e70e541fde05","./folder.js":"./folder.js?v=e70e541fde05","./funded.js":"./funded.js?v=e70e541fde05","./jdun.js":"./jdun.js?v=e70e541fde05","./replay.js":"./replay.js?v=e70e541fde05","./diary.js":"./diary.js?v=e70e541fde05","./videos.js":"./videos.js?v=e70e541fde05","./system.js":"./system.js?v=e70e541fde05","./dashboard.js":"./dashboard.js?v=e70e541fde05"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=02e557046ecc","./chart.js":"./chart.js?v=02e557046ecc","./levels.js":"./levels.js?v=02e557046ecc","./revisit.js":"./revisit.js?v=02e557046ecc","./series.js":"./series.js?v=02e557046ecc","./clock.js":"./clock.js?v=02e557046ecc","./vault.js":"./vault.js?v=02e557046ecc","./draw.js":"./draw.js?v=02e557046ecc","./profile.js":"./profile.js?v=02e557046ecc","./whatif.js":"./whatif.js?v=02e557046ecc","./precheck.js":"./precheck.js?v=02e557046ecc","./shelf.js":"./shelf.js?v=02e557046ecc","./watchlist.js":"./watchlist.js?v=02e557046ecc","./lock.js":"./lock.js?v=02e557046ecc","./inds.js":"./inds.js?v=02e557046ecc","./imports.js":"./imports.js?v=02e557046ecc","./folder.js":"./folder.js?v=02e557046ecc","./funded.js":"./funded.js?v=02e557046ecc","./jdun.js":"./jdun.js?v=02e557046ecc","./replay.js":"./replay.js?v=02e557046ecc","./diary.js":"./diary.js?v=02e557046ecc","./videos.js":"./videos.js?v=02e557046ecc","./system.js":"./system.js?v=02e557046ecc","./dashboard.js":"./dashboard.js?v=02e557046ecc"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -3963,10 +3963,13 @@ document.addEventListener("toggle", e => {
 const noteBox = $("mynotebox"), noteSaved = $("mynotesaved");
 let noteTimer = null;
 
-/* The account is part of the key: the same contract at the same minute on
-   two evaluation accounts is two trades, and typing a note against one of
-   them must not land on the other. */
-function keyOf(t) { return (t.account || "") + "|" + t.symbol + "|" + t.open_t; }
+/* The account and the exit are both part of the key: the same contract at
+   the same minute on two evaluation accounts is two trades, and so is one
+   entry closed in two pieces. A note typed against one of them must not land
+   on the other. */
+function keyOf(t) {
+  return (t.account || "") + "|" + t.symbol + "|" + t.open_t + "|" + t.close_t;
+}
 
 window.showMyNote = function (t) {
   if (!noteBox) return;
@@ -4904,8 +4907,7 @@ function busy() {
   if (el && /^(TEXTAREA|INPUT|SELECT)$/.test(el.tagName)) return "typing";
   const box = $("mynotebox");
   if (box && !box.disabled) {
-    const t = window.TRADES.find(x =>
-      x.symbol + "|" + x.open_t === box.dataset.key);
+    const t = window.TRADES.find(x => keyOf(x) === box.dataset.key);
     if (box.value.trim() !== ((t && t.mine) || "").trim()) return "an unsaved note";
   }
   if (RP.inTrade()) return "a replay position still open";
