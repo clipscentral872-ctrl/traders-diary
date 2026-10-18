@@ -1756,6 +1756,40 @@ function renderQuests() {
   $("rwdayon").textContent = b.day ? C.day(C.msOf(b.day + " 12:00:00")) : "";
   $("rwweekon").textContent = b.week
     ? "week of " + C.day(C.msOf(b.week + " 12:00:00")) : "";
+
+  renderTradeify(live, order);
+}
+
+/* Tradeify's own missions, on their own board.
+ *
+ * Clean Week counts a red session on ANY account against you, which is
+ * Tradeify's rule and not a slip, so the whole live record goes in as
+ * context even when the page is filtered to one account. */
+function renderTradeify(live, order) {
+  const box = $("tfboard");
+  if (!box) return;
+  const every = window.TRADES.filter(t => (t.source || "live") === "live");
+  const b = Q.tradeifyBoard(live, jdunPlan(), {every, notes: dayNotes()});
+  if (!b.day) { box.hidden = true; return; }
+  box.hidden = false;
+
+  $("tfgems").textContent = b.gems.toLocaleString("en-US");
+  $("tfxp").textContent = b.xp.toLocaleString("en-US");
+  $("tfdone").textContent = `${b.done} of ${b.possible}`;
+
+  const list = (el, missions) => {
+    el.innerHTML = missions.map(m =>
+      `<li class="rwm ${m.done ? "got" : ""}">`
+      + '<span class="rwtick" aria-hidden="true"></span>'
+      + `<span class="rwmt">${esc(m.title)}</span>`
+      + `<span class="rwmw">${esc(m.done ? m.what : (m.note || m.what))}</span>`
+      + `<span class="rwmx">${m.gems}<small>gems</small></span></li>`).join("");
+  };
+  list($("tfday"), order(b.today));
+  list($("tfweek"), order(b.thisWeek));
+  $("tfdayon").textContent = b.day ? C.day(C.msOf(b.day + " 12:00:00")) : "";
+  $("tfweekon").textContent = b.week
+    ? "week of " + C.day(C.msOf(b.week + " 12:00:00")) : "";
 }
 
 /* Trades the journal cannot attribute, said on the page where they are doing

@@ -1459,6 +1459,26 @@ body{overflow:hidden}
   box-shadow:0 0 22px color-mix(in srgb, var(--accent) 45%, transparent);
   clip-path:polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
 }
+/* Tradeify's board is the same card in a different voice: theirs, not ours,
+   so it takes their green rather than the blue the rest of the page runs on
+   and says so at the bottom. */
+.tfboard{
+  background:linear-gradient(160deg,
+    color-mix(in srgb, var(--win) 6%, var(--raised)) 0%, var(--raised) 46%);
+  border-color:color-mix(in srgb, var(--win) 22%, var(--line));
+}
+.tfboard .rwm.got .rwtick{background:var(--win); border-color:var(--win)}
+.tfmark{
+  width:46px; height:46px; flex:none; display:grid; place-items:center;
+  border-radius:var(--r-md); background:color-mix(in srgb, var(--win) 16%, transparent);
+  border:1px solid color-mix(in srgb, var(--win) 34%, transparent);
+  position:relative;
+}
+.tfmark::before{
+  content:""; width:17px; height:17px; border-radius:var(--r-xs);
+  background:var(--win);
+  clip-path:polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
 .rwmeta{display:flex; flex-direction:column; gap:2px}
 .rwname{font-size:15px; font-weight:600; color:var(--text)}
 .rwnext{font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums}
@@ -2332,6 +2352,41 @@ body{overflow:hidden}
     same as a green one, because points for profit would pay you to take the
     trade that takes the account.</p>
   </div>
+
+  <div class="rewards tfboard" id="tfboard" hidden>
+    <div class="rwtop">
+      <div class="rwlevel">
+        <span class="tfmark" aria-hidden="true"></span>
+        <div class="rwmeta">
+          <span class="rwname">Tradeify missions</span>
+          <span class="rwnext">Cleared here means cleared there</span>
+        </div>
+      </div>
+      <div class="rwcounts">
+        <span class="rwcount"><b id="tfgems">0</b><small>their gems</small></span>
+        <span class="rwcount"><b id="tfxp">0</b><small>their XP</small></span>
+        <span class="rwcount"><b id="tfdone">0</b><small>cleared</small></span>
+      </div>
+    </div>
+    <div class="rwcols">
+      <div class="rwcol">
+        <h3 class="rwhead">Daily <span id="tfdayon"></span></h3>
+        <ul class="rwlist" id="tfday"></ul>
+      </div>
+      <div class="rwcol">
+        <h3 class="rwhead">Weekly <span id="tfweekon"></span></h3>
+        <ul class="rwlist" id="tfweek"></ul>
+      </div>
+    </div>
+    <p class="rwwhy">Tradeify's own Rewards Center missions, the ones your
+    trading record can answer, checked against the same trades as everything
+    else on this page. The ones that want a post on X or a video of your face
+    are left out, and so are the monthly ones, which are decided by a
+    leaderboard of everybody else's XP rather than by anything you do on a
+    given Tuesday. Their gems and XP are counted on their own and never touch
+    the level above, because two of these pay for a green day and this
+    journal does not.</p>
+  </div>
 </section>
 
 <section id="orphansec" hidden>
@@ -3093,7 +3148,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=d656f46f6ba7","./chart.js":"./chart.js?v=d656f46f6ba7","./levels.js":"./levels.js?v=d656f46f6ba7","./revisit.js":"./revisit.js?v=d656f46f6ba7","./series.js":"./series.js?v=d656f46f6ba7","./clock.js":"./clock.js?v=d656f46f6ba7","./vault.js":"./vault.js?v=d656f46f6ba7","./draw.js":"./draw.js?v=d656f46f6ba7","./profile.js":"./profile.js?v=d656f46f6ba7","./whatif.js":"./whatif.js?v=d656f46f6ba7","./precheck.js":"./precheck.js?v=d656f46f6ba7","./shelf.js":"./shelf.js?v=d656f46f6ba7","./watchlist.js":"./watchlist.js?v=d656f46f6ba7","./lock.js":"./lock.js?v=d656f46f6ba7","./inds.js":"./inds.js?v=d656f46f6ba7","./imports.js":"./imports.js?v=d656f46f6ba7","./folder.js":"./folder.js?v=d656f46f6ba7","./funded.js":"./funded.js?v=d656f46f6ba7","./jdun.js":"./jdun.js?v=d656f46f6ba7","./quests.js":"./quests.js?v=d656f46f6ba7","./coach.js":"./coach.js?v=d656f46f6ba7","./replay.js":"./replay.js?v=d656f46f6ba7","./diary.js":"./diary.js?v=d656f46f6ba7","./videos.js":"./videos.js?v=d656f46f6ba7","./system.js":"./system.js?v=d656f46f6ba7","./dashboard.js":"./dashboard.js?v=d656f46f6ba7"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=0277c2fbfe28","./chart.js":"./chart.js?v=0277c2fbfe28","./levels.js":"./levels.js?v=0277c2fbfe28","./revisit.js":"./revisit.js?v=0277c2fbfe28","./series.js":"./series.js?v=0277c2fbfe28","./clock.js":"./clock.js?v=0277c2fbfe28","./vault.js":"./vault.js?v=0277c2fbfe28","./draw.js":"./draw.js?v=0277c2fbfe28","./profile.js":"./profile.js?v=0277c2fbfe28","./whatif.js":"./whatif.js?v=0277c2fbfe28","./precheck.js":"./precheck.js?v=0277c2fbfe28","./shelf.js":"./shelf.js?v=0277c2fbfe28","./watchlist.js":"./watchlist.js?v=0277c2fbfe28","./lock.js":"./lock.js?v=0277c2fbfe28","./inds.js":"./inds.js?v=0277c2fbfe28","./imports.js":"./imports.js?v=0277c2fbfe28","./folder.js":"./folder.js?v=0277c2fbfe28","./funded.js":"./funded.js?v=0277c2fbfe28","./jdun.js":"./jdun.js?v=0277c2fbfe28","./quests.js":"./quests.js?v=0277c2fbfe28","./coach.js":"./coach.js?v=0277c2fbfe28","./replay.js":"./replay.js?v=0277c2fbfe28","./diary.js":"./diary.js?v=0277c2fbfe28","./videos.js":"./videos.js?v=0277c2fbfe28","./system.js":"./system.js?v=0277c2fbfe28","./dashboard.js":"./dashboard.js?v=0277c2fbfe28"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -4852,6 +4907,40 @@ function renderQuests() {
   list($("rwweek"), order(b.thisWeek));
   $("rwdayon").textContent = b.day ? C.day(C.msOf(b.day + " 12:00:00")) : "";
   $("rwweekon").textContent = b.week
+    ? "week of " + C.day(C.msOf(b.week + " 12:00:00")) : "";
+
+  renderTradeify(live, order);
+}
+
+/* Tradeify's own missions, on their own board.
+ *
+ * Clean Week counts a red session on ANY account against you, which is
+ * Tradeify's rule and not a slip, so the whole live record goes in as
+ * context even when the page is filtered to one account. */
+function renderTradeify(live, order) {
+  const box = $("tfboard");
+  if (!box) return;
+  const every = window.TRADES.filter(t => (t.source || "live") === "live");
+  const b = Q.tradeifyBoard(live, jdunPlan(), {every, notes: dayNotes()});
+  if (!b.day) { box.hidden = true; return; }
+  box.hidden = false;
+
+  $("tfgems").textContent = b.gems.toLocaleString("en-US");
+  $("tfxp").textContent = b.xp.toLocaleString("en-US");
+  $("tfdone").textContent = `${b.done} of ${b.possible}`;
+
+  const list = (el, missions) => {
+    el.innerHTML = missions.map(m =>
+      `<li class="rwm ${m.done ? "got" : ""}">`
+      + '<span class="rwtick" aria-hidden="true"></span>'
+      + `<span class="rwmt">${esc(m.title)}</span>`
+      + `<span class="rwmw">${esc(m.done ? m.what : (m.note || m.what))}</span>`
+      + `<span class="rwmx">${m.gems}<small>gems</small></span></li>`).join("");
+  };
+  list($("tfday"), order(b.today));
+  list($("tfweek"), order(b.thisWeek));
+  $("tfdayon").textContent = b.day ? C.day(C.msOf(b.day + " 12:00:00")) : "";
+  $("tfweekon").textContent = b.week
     ? "week of " + C.day(C.msOf(b.week + " 12:00:00")) : "";
 }
 

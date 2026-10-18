@@ -1358,6 +1358,26 @@ body{overflow:hidden}
   box-shadow:0 0 22px color-mix(in srgb, var(--accent) 45%, transparent);
   clip-path:polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
 }
+/* Tradeify's board is the same card in a different voice: theirs, not ours,
+   so it takes their green rather than the blue the rest of the page runs on
+   and says so at the bottom. */
+.tfboard{
+  background:linear-gradient(160deg,
+    color-mix(in srgb, var(--win) 6%, var(--raised)) 0%, var(--raised) 46%);
+  border-color:color-mix(in srgb, var(--win) 22%, var(--line));
+}
+.tfboard .rwm.got .rwtick{background:var(--win); border-color:var(--win)}
+.tfmark{
+  width:46px; height:46px; flex:none; display:grid; place-items:center;
+  border-radius:var(--r-md); background:color-mix(in srgb, var(--win) 16%, transparent);
+  border:1px solid color-mix(in srgb, var(--win) 34%, transparent);
+  position:relative;
+}
+.tfmark::before{
+  content:""; width:17px; height:17px; border-radius:var(--r-xs);
+  background:var(--win);
+  clip-path:polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
 .rwmeta{display:flex; flex-direction:column; gap:2px}
 .rwname{font-size:15px; font-weight:600; color:var(--text)}
 .rwnext{font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums}

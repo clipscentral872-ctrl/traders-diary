@@ -301,3 +301,158 @@ function streak(days, p) {
   }
   return n;
 }
+
+/* ------------------------------------------------------- Tradeify's board */
+
+/**
+ * Tradeify's own missions, the ones a trading record can answer.
+ *
+ * Their Rewards Center hands out gems and XP for things it can see in your
+ * account data. Clearing one of these here means it is cleared over there,
+ * so the diary stops being a separate scoreboard you have to reconcile by
+ * hand with theirs.
+ *
+ * Three of theirs are left out on purpose and none of them for a technical
+ * reason. Retweet the League and Brand Boost want a post on X, Rip & React
+ * wants a video of your face, and Audition for The Audit wants another one.
+ * Chris does not want missions that involve filming himself or posting, so
+ * they are not here. The monthly ones are left out because they are decided
+ * by a leaderboard of everybody else's XP, which is nothing this record can
+ * see or you can do anything about on a given Tuesday.
+ *
+ * These deliberately do NOT feed the level bar above them. That ladder pays
+ * for process and nothing else: waiting out the range, sizing to the stop,
+ * stopping after two losses. Two of Tradeify's pay for a green day and a
+ * green week, which is paying for the outcome, and a scoreboard that pays
+ * for the outcome quietly pays you to take the trade you should not. So
+ * they are shown, tracked and totalled on their own, in Tradeify's own
+ * currency, beside the ladder rather than inside it.
+ */
+export const TRADEIFY = [
+  {
+    id: "tf-game", scope: "day", gems: 20, xp: 500,
+    title: "In the Game",
+    what: "At least one trade closed today.",
+    test(day) {
+      const n = entries(day);
+      return {done: n > 0, note: n ? "" : "no trade closed yet"};
+    },
+  },
+  {
+    id: "tf-scribe", scope: "day", gems: 20, xp: 500,
+    title: "Session Scribe",
+    what: "A note written for the session.",
+    test(day, p, ctx) {
+      const ok = wroteOn(dayOf(day[0] || {}), ctx);
+      return {done: ok, note: ok ? "" : "nothing written yet"};
+    },
+  },
+  {
+    id: "tf-green", scope: "day", gems: 40, xp: 500,
+    title: "Green Print",
+    what: "The session finished with a positive net.",
+    test(day) {
+      const pnl = day.reduce((n, t) => n + (t.pnl || 0), 0);
+      return {done: pnl > 0, note: pnl > 0 ? ""
+        : `finished ${pnl < 0 ? "-" : ""}$${Math.abs(Math.round(pnl))}`};
+    },
+  },
+
+  {
+    id: "tf-week-five", scope: "week", gems: 200, xp: 3000,
+    title: "Full Traded Week",
+    what: "A trade closed on five different days this week.",
+    test(week) {
+      const n = new Set(week.map(dayOf)).size;
+      return {done: n >= 5,
+              note: n >= 5 ? "" : `${5 - n} more day${5 - n === 1 ? "" : "s"}`};
+    },
+  },
+  {
+    id: "tf-rhythm", scope: "week", gems: 100, xp: 500,
+    title: "Journal Rhythm",
+    what: "A note written on three different days this week.",
+    test(week, p, ctx) {
+      const n = [...new Set(week.map(dayOf))].filter(d => wroteOn(d, ctx)).length;
+      return {done: n >= 3,
+              note: n >= 3 ? "" : `${n} of 3 days written up`};
+    },
+  },
+  {
+    id: "tf-clean-week", scope: "week", gems: 100, xp: 1500,
+    title: "Clean Week",
+    what: "Three days traded and not one of them finished red.",
+    test(week, p, ctx) {
+      /* Tradeify checks this across every account you hold, not the one you
+         happen to be looking at, so this reads the whole record for the same
+         week rather than the filtered list it was handed. */
+      const on = dayOf(week[0] || {});
+      if (!on) return {done: false, note: "nothing traded this week"};
+      const mon = weekOf(on);
+      const all = (ctx.every || week)
+        .filter(t => dayOf(t) && weekOf(dayOf(t)) === mon);
+      const sessions = new Map();
+      for (const t of all) {
+        const k = (t.account || "") + "|" + dayOf(t);
+        sessions.set(k, (sessions.get(k) || 0) + (t.pnl || 0));
+      }
+      const traded = new Set([...sessions.keys()].map(k => k.split("|")[1])).size;
+      const red = [...sessions.values()].filter(v => v < 0).length;
+      if (red) {
+        return {done: false, note: `${red} session${red === 1 ? "" : "s"} in the red`};
+      }
+      return {done: traded >= 3,
+              note: traded >= 3 ? "" : `${3 - traded} more day${3 - traded === 1 ? "" : "s"}`};
+    },
+  },
+];
+
+/** Whether anything was written about a date, on a day card or on a trade. */
+function wroteOn(date, ctx) {
+  if (!date) return false;
+  const notes = (ctx && ctx.notes) || {};
+  for (const k of Object.keys(notes)) {
+    if (k.slice(-10) === date && String(notes[k]).trim()) return true;
+  }
+  const every = (ctx && ctx.every) || [];
+  return every.some(t => dayOf(t) === date && String(t.mine || "").trim());
+}
+
+/**
+ * The same shape `board` returns, for Tradeify's missions.
+ *
+ * No level, no XP total of ours: these are counted in their currency and
+ * kept out of ours on purpose. See the note on TRADEIFY above.
+ */
+export function tradeifyBoard(trades, p = JD.PLAN, ctx = {}) {
+  const live = trades.filter(t => (t.source || "live") === "live");
+  const days = byDay(live);
+  const weeks = byWeek(live);
+  const dates = [...days.keys()].sort();
+  const want = ctx.today && days.has(ctx.today) ? ctx.today
+    : dates[dates.length - 1] || null;
+  const week = want ? weekOf(want) : null;
+
+  let gems = 0, xp = 0, done = 0, possible = 0;
+  const run = (list, scope) => TRADEIFY.filter(m => m.scope === scope)
+    .map(m => ({...m, ...m.test(list, p, ctx)}));
+
+  for (const [, list] of days) {
+    for (const m of run(list, "day")) {
+      possible++;
+      if (m.done) { gems += m.gems; xp += m.xp; done++; }
+    }
+  }
+  for (const [, list] of weeks) {
+    for (const m of run(list, "week")) {
+      possible++;
+      if (m.done) { gems += m.gems; xp += m.xp; done++; }
+    }
+  }
+
+  return {
+    day: want, week, gems, xp, done, possible,
+    today: want ? run(days.get(want), "day") : [],
+    thisWeek: week ? run(weeks.get(week) || [], "week") : [],
+  };
+}
