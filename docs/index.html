@@ -1596,6 +1596,19 @@ body{overflow:hidden}
   padding:13px 15px; border-left:3px solid var(--line)}
 .dcard.up{border-left-color:var(--win)}
 .dcard.down{border-left-color:var(--loss)}
+/* A day with no trade in it: one line, quieter than the rest, carrying the
+   two numbers that move whether you traded or not. */
+.dcard.quiet{
+  display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
+  padding:9px 15px; background:none; border-color:var(--line-soft);
+  border-left-color:var(--line-soft);
+}
+.dcard.quiet .dcdate{color:var(--muted); font-weight:500}
+.dcquiet{font-size:12px; color:var(--faint); flex:1}
+.dcbal, .dcroom{
+  font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums;
+}
+.dcroom.loss{color:var(--loss)}
 .dchead{display:flex; align-items:center; gap:14px; flex-wrap:wrap;
   margin-bottom:11px}
 .dcdate{font-size:13.5px; color:var(--text); font-weight:600}
@@ -3155,7 +3168,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=d14ab3c944a9","./chart.js":"./chart.js?v=d14ab3c944a9","./levels.js":"./levels.js?v=d14ab3c944a9","./revisit.js":"./revisit.js?v=d14ab3c944a9","./series.js":"./series.js?v=d14ab3c944a9","./clock.js":"./clock.js?v=d14ab3c944a9","./vault.js":"./vault.js?v=d14ab3c944a9","./draw.js":"./draw.js?v=d14ab3c944a9","./profile.js":"./profile.js?v=d14ab3c944a9","./whatif.js":"./whatif.js?v=d14ab3c944a9","./precheck.js":"./precheck.js?v=d14ab3c944a9","./shelf.js":"./shelf.js?v=d14ab3c944a9","./watchlist.js":"./watchlist.js?v=d14ab3c944a9","./lock.js":"./lock.js?v=d14ab3c944a9","./inds.js":"./inds.js?v=d14ab3c944a9","./imports.js":"./imports.js?v=d14ab3c944a9","./folder.js":"./folder.js?v=d14ab3c944a9","./funded.js":"./funded.js?v=d14ab3c944a9","./jdun.js":"./jdun.js?v=d14ab3c944a9","./quests.js":"./quests.js?v=d14ab3c944a9","./coach.js":"./coach.js?v=d14ab3c944a9","./replay.js":"./replay.js?v=d14ab3c944a9","./diary.js":"./diary.js?v=d14ab3c944a9","./videos.js":"./videos.js?v=d14ab3c944a9","./system.js":"./system.js?v=d14ab3c944a9","./dashboard.js":"./dashboard.js?v=d14ab3c944a9"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=b4b2ce678123","./chart.js":"./chart.js?v=b4b2ce678123","./levels.js":"./levels.js?v=b4b2ce678123","./revisit.js":"./revisit.js?v=b4b2ce678123","./series.js":"./series.js?v=b4b2ce678123","./clock.js":"./clock.js?v=b4b2ce678123","./vault.js":"./vault.js?v=b4b2ce678123","./draw.js":"./draw.js?v=b4b2ce678123","./profile.js":"./profile.js?v=b4b2ce678123","./whatif.js":"./whatif.js?v=b4b2ce678123","./precheck.js":"./precheck.js?v=b4b2ce678123","./shelf.js":"./shelf.js?v=b4b2ce678123","./watchlist.js":"./watchlist.js?v=b4b2ce678123","./lock.js":"./lock.js?v=b4b2ce678123","./inds.js":"./inds.js?v=b4b2ce678123","./imports.js":"./imports.js?v=b4b2ce678123","./folder.js":"./folder.js?v=b4b2ce678123","./funded.js":"./funded.js?v=b4b2ce678123","./jdun.js":"./jdun.js?v=b4b2ce678123","./quests.js":"./quests.js?v=b4b2ce678123","./coach.js":"./coach.js?v=b4b2ce678123","./replay.js":"./replay.js?v=b4b2ce678123","./diary.js":"./diary.js?v=b4b2ce678123","./videos.js":"./videos.js?v=b4b2ce678123","./system.js":"./system.js?v=b4b2ce678123","./dashboard.js":"./dashboard.js?v=b4b2ce678123"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -4654,6 +4667,24 @@ function renderDays() {
       const fig = (k, v, cls) =>
         '<div class="dfig"><span class="dfk">' + k + "</span>"
         + '<span class="dfv ' + (cls || "") + '">' + v + "</span></div>";
+
+      /* A day you did not trade is a line, not a card.
+         Five of his twelve sessions had no trade in them, and each one was
+         getting a full card: eleven figures reading zero or a dash, and an
+         empty box asking what happened today. The balance and the room left
+         still matter on a quiet day, because the drawdown moves with the
+         account and not with you, so those two stay and the rest goes. */
+      if (!day.length) {
+        return '<article class="dcard quiet">'
+          + '<span class="dcdate">'
+          + C.day(C.msOf(d.date + " 12:00:00")) + "</span>"
+          + '<span class="dcquiet">no trades</span>'
+          + '<span class="dcbal">$'
+          + Math.round(d.balance).toLocaleString("en-US") + "</span>"
+          + '<span class="dcroom' + (d.room < cap ? " loss" : "") + '">'
+          + dollars(d.room).replace("+", "") + " room</span>"
+          + "</article>";
+      }
 
       return '<article class="dcard' + (d.pnl < 0 ? " down" : d.pnl > 0 ? " up" : "")
         + '">'

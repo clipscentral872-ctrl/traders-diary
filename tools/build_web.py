@@ -1495,6 +1495,19 @@ body{overflow:hidden}
   padding:13px 15px; border-left:3px solid var(--line)}
 .dcard.up{border-left-color:var(--win)}
 .dcard.down{border-left-color:var(--loss)}
+/* A day with no trade in it: one line, quieter than the rest, carrying the
+   two numbers that move whether you traded or not. */
+.dcard.quiet{
+  display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
+  padding:9px 15px; background:none; border-color:var(--line-soft);
+  border-left-color:var(--line-soft);
+}
+.dcard.quiet .dcdate{color:var(--muted); font-weight:500}
+.dcquiet{font-size:12px; color:var(--faint); flex:1}
+.dcbal, .dcroom{
+  font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums;
+}
+.dcroom.loss{color:var(--loss)}
 .dchead{display:flex; align-items:center; gap:14px; flex-wrap:wrap;
   margin-bottom:11px}
 .dcdate{font-size:13.5px; color:var(--text); font-weight:600}

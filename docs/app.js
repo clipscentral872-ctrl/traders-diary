@@ -1496,6 +1496,24 @@ function renderDays() {
         '<div class="dfig"><span class="dfk">' + k + "</span>"
         + '<span class="dfv ' + (cls || "") + '">' + v + "</span></div>";
 
+      /* A day you did not trade is a line, not a card.
+         Five of his twelve sessions had no trade in them, and each one was
+         getting a full card: eleven figures reading zero or a dash, and an
+         empty box asking what happened today. The balance and the room left
+         still matter on a quiet day, because the drawdown moves with the
+         account and not with you, so those two stay and the rest goes. */
+      if (!day.length) {
+        return '<article class="dcard quiet">'
+          + '<span class="dcdate">'
+          + C.day(C.msOf(d.date + " 12:00:00")) + "</span>"
+          + '<span class="dcquiet">no trades</span>'
+          + '<span class="dcbal">$'
+          + Math.round(d.balance).toLocaleString("en-US") + "</span>"
+          + '<span class="dcroom' + (d.room < cap ? " loss" : "") + '">'
+          + dollars(d.room).replace("+", "") + " room</span>"
+          + "</article>";
+      }
+
       return '<article class="dcard' + (d.pnl < 0 ? " down" : d.pnl > 0 ? " up" : "")
         + '">'
         + '<header class="dchead">'
