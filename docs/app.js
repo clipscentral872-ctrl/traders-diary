@@ -516,11 +516,21 @@ const balancesNow = () => {
 };
 
 /** Keep the broker's days, newest reading of a day winning. */
+/* Keyed on the account AND the date.
+ *
+ * Keyed on the date alone, two accounts that both traded on 8 October kept
+ * one row between them: whichever file was read last won, and the other
+ * account quietly lost that session out of its drawdown, its day list and
+ * its figures. On Chris's own import it cost account 4439 three sessions,
+ * including the day it lost $455. */
 function keepBalances(days) {
   if (!days || !days.length) return;
-  const by = new Map(balancesNow().map(d => [d.date, d]));
-  for (const d of days) by.set(d.date, d);
-  const all = [...by.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
+  const key = d => (d.account || "") + "|" + d.date;
+  const by = new Map(balancesNow().map(d => [key(d), d]));
+  for (const d of days) by.set(key(d), d);
+  const all = [...by.values()].sort((a, b) =>
+    (a.date < b.date ? -1 : a.date > b.date ? 1
+      : (a.account || "") < (b.account || "") ? -1 : 1));
   PROF.set(BAL_KEY, JSON.stringify(all));
 }
 
@@ -1218,6 +1228,8 @@ let noteTimer = null;
 function keyOf(t) {
   return (t.account || "") + "|" + t.symbol + "|" + t.open_t + "|" + t.close_t;
 }
+// The Diary needs the same key to find a trade the day cards asked for.
+window.keyOfTrade = keyOf;
 
 window.showMyNote = function (t) {
   if (!noteBox) return;
@@ -1344,56 +1356,195 @@ document.addEventListener("click", e => {
   renderHabits();
 });
 
+/* ------------------------------------------------------ the day by day */
+
+/* A note against a whole session, not a trade. Tradeify's own journal has
+   one and it is the right unit: most of what is worth saying at the end of
+   a day is about the day. */
+const DAYNOTE_KEY = "day.notes";
+const dayNotes = () => {
+  try { return JSON.parse(PROF.get(DAYNOTE_KEY)) || {}; } catch { return {}; }
+};
+
+window.saveDayNote = function (key, text) {
+  const all = dayNotes();
+  const v = String(text || "").trim();
+  if (v) all[key] = v; else delete all[key];
+  PROF.set(DAYNOTE_KEY, JSON.stringify(all));
+};
+
+window.toggleDay = function (id) {
+  const el = $(id);
+  if (!el) return;
+  el.hidden = !el.hidden;
+  const btn = document.querySelector('[data-expand="' + id + '"]');
+  if (btn) btn.textContent = el.hidden ? "Expand" : "Collapse";
+};
+
+/* One handler for the day cards. Inline onclick attributes cannot survive
+   the build, which decodes escaped quotes, and delegation is the better
+   answer anyway: the markup carries data, not code. */
+document.addEventListener("click", e => {
+  const ex = e.target.closest("[data-expand]");
+  if (ex) { window.toggleDay(ex.dataset.expand); return; }
+  const op = e.target.closest("[data-open]");
+  if (op) { window.openTrade(op.dataset.open); return; }
+  const rn = e.target.closest("[data-rename]");
+  if (rn) window.renameAccount(rn.dataset.rename);
+});
+
+document.addEventListener("input", e => {
+  const n = e.target.closest("[data-daynote]");
+  if (n) window.saveDayNote(n.dataset.daynote, n.value);
+});
+
+/** Jump to a trade in the Diary from anywhere. */
+window.openTrade = function (key) {
+  const t = window.TRADES.find(x => keyOf(x) === key);
+  if (!t) return;
+  if (window.ACCOUNT !== "all" && (t.account || "") !== window.ACCOUNT)
+    window.pickAccount(t.account || "all");
+  goTab("diary", true);
+  DIARY.showKey(key);
+};
+
+/** A day's running total, drawn small, the way the dashboards do it. */
+function daySpark(list) {
+  if (list.length < 2) return "";
+  let run = 0;
+  const pts = [0, ...list.map(t => (run += t.pnl || 0))];
+  const lo = Math.min(...pts), hi = Math.max(...pts);
+  const span = hi - lo || 1;
+  const w = 78, h = 22;
+  const d = pts.map((v, i) =>
+    (i / (pts.length - 1) * w).toFixed(1) + ","
+    + (h - (v - lo) / span * h).toFixed(1)).join(" ");
+  const up = pts[pts.length - 1] >= 0;
+  return '<svg class="dspark" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true">'
+    + '<polyline points="' + d + '" fill="none" stroke="'
+    + (up ? "var(--win)" : "var(--loss)") + '"'
+    + ' stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>';
+}
+
 /**
- * The account day by day, from the broker's own balances.
+ * The account day by day, as a card a session at a time.
  *
- * A journal with no fills in it is not an empty journal. Tradovate hands out
- * the balance history as its own export, and that alone says what every
- * session made or lost, where the drawdown floor sat, and which days went
- * past the plan's cap. So it is shown rather than waiting for fills that may
- * be an export away.
+ * Laid out the way Tradeify's own journal lays it out, because that is what
+ * Chris reads his account in: the date, what the session made, the shape of
+ * it, and a row of figures underneath. Expanding a card lists the trades,
+ * and a trade opens in the Diary with its chart and its video.
+ *
+ * The balance history is still the spine. It knows about sessions where
+ * nothing was traded and it is net of every fee, which a pile of fills can
+ * only estimate.
  */
 function renderDays() {
   const sec = $("dayssec"), box = $("daysbox");
   if (!sec || !box) return;
   const all = balancesNow();
   const plan = planNow();
-  const names = [...new Set(all.map(b => (b.account || "").trim()).filter(Boolean))].sort();
+  const live = window.TRADES.filter(t => (t.source || "live") === "live");
+  const names = [...new Set([...all.map(b => (b.account || "").trim()),
+    ...live.map(t => (t.account || "").trim())].filter(Boolean))].sort();
   const show = window.ACCOUNT === "all" ? names
     : names.filter(n => n === window.ACCOUNT);
-  if (!all.length || !show.length) { sec.hidden = true; return; }
+  if ((!all.length && !live.length) || !show.length) { sec.hidden = true; return; }
   sec.hidden = false;
 
   const cap = JD.dailyCap(jdunPlan());
+  const notes = dayNotes();
+
   box.innerHTML = show.map(name => {
-    const st = FUND.state(plan, {balances: all.filter(b => (b.account || "") === name)});
-    const rows = [...st.days].reverse().map(d => {
+    const mine = live.filter(t => (t.account || "") === name);
+    const bal = all.filter(b => (b.account || "") === name);
+    const st = FUND.state(plan, bal.length ? {balances: bal} : {trades: mine});
+
+    const cards = [...st.days].reverse().map(d => {
+      const day = mine.filter(t => t.open_t.slice(0, 10) === d.date)
+        .sort((a, b) => (a.open_t < b.open_t ? -1 : 1));
+      const wins = day.filter(t => (t.pnl || 0) > 0).length;
+      const gross = day.reduce((n, t) => n + (t.pnl || 0), 0);
+      const vol = day.reduce((n, t) => n + (t.qty || 0), 0);
+      const won = day.filter(t => (t.pnl || 0) > 0).reduce((n, t) => n + t.pnl, 0);
+      const lost = Math.abs(day.filter(t => (t.pnl || 0) < 0)
+        .reduce((n, t) => n + t.pnl, 0));
+      const pf = lost > 0 ? won / lost : (won > 0 ? Infinity : 0);
+      /* The broker's own figure is net of every fee and the trades are
+         gross, so the gap between them is what the day cost to trade. */
+      const fees = day.length && bal.length
+        ? Math.round((gross - d.pnl) * 100) / 100 : null;
       const over = cap > 0 && d.pnl < -cap;
-      return `<li class="dayrow${d.pnl < 0 ? " down" : d.pnl > 0 ? " up" : ""}">`
-        + `<span class="dayd">${esc(d.date)}</span>`
-        + `<span class="dayp">${d.pnl === 0 ? "flat" : dollars(d.pnl)}</span>`
-        + `<span class="dayb">$${Math.round(d.balance).toLocaleString("en-US")}</span>`
-        + `<span class="dayr">${dollars(d.room).replace("+", "")} room</span>`
-        + (over ? `<span class="dayover">${(d.pnl / -cap).toFixed(1)}&times; the `
-            + `$${cap} cap</span>` : "")
-        + "</li>";
+      const id = "day-" + name.slice(-4) + "-" + d.date;
+      const key = name + "|" + d.date;
+
+      const fig = (k, v, cls) =>
+        '<div class="dfig"><span class="dfk">' + k + "</span>"
+        + '<span class="dfv ' + (cls || "") + '">' + v + "</span></div>";
+
+      return '<article class="dcard' + (d.pnl < 0 ? " down" : d.pnl > 0 ? " up" : "")
+        + '">'
+        + '<header class="dchead">'
+        + '<span class="dcdate">' + C.day(C.msOf(d.date + " 12:00:00")) + "</span>"
+        + '<span class="dcpnl">' + (d.pnl === 0 ? "flat" : dollars(d.pnl)) + "</span>"
+        + daySpark(day)
+        + (day.length
+            ? '<button class="dcbtn" data-expand="' + id + '">Expand</button>' : "")
+        + "</header>"
+        + '<div class="dfigs">'
+        + fig("trades", String(day.length))
+        + fig("win rate", day.length
+            ? Math.round(wins / day.length * 100) + "%" : "&mdash;")
+        + fig("gross", day.length ? dollars(gross) : "&mdash;",
+              gross >= 0 ? "win" : "loss")
+        + fig("volume", String(vol))
+        + fig("fees", fees == null ? "&mdash;" : "$" + Math.abs(fees).toFixed(2))
+        + fig("winners", String(wins))
+        + fig("losers", String(day.length - wins))
+        + fig("profit factor", !day.length ? "&mdash;"
+              : pf === Infinity ? "all winners" : pf.toFixed(2))
+        + fig("balance", "$" + Math.round(d.balance).toLocaleString("en-US"))
+        + fig("room left", dollars(d.room).replace("+", ""),
+              d.room < cap ? "loss" : "")
+        + "</div>"
+        + (over ? '<p class="dcover">' + (d.pnl / -cap).toFixed(1)
+            + " times the $" + cap + " cap</p>" : "")
+        + '<div class="dcnote"><textarea placeholder="What happened today, and '
+        + 'what you would do differently" data-daynote="' + esc(key) + '">'
+        + esc(notes[key] || "") + "</textarea></div>"
+        + (day.length ? '<ul class="dctrades" id="' + id + '" hidden>'
+            + day.map(t => {
+              const r = t.got_r == null ? "no R"
+                : (t.got_r >= 0 ? "+" : "") + t.got_r.toFixed(2) + "R";
+              return '<li><button class="dctrade" data-open="'
+                + esc(keyOf(t)) + '">'
+                + '<span class="dtt">' + C.hhmm(C.msOf(t.open_t)) + "</span>"
+                + '<span class="dts2">' + esc(t.symbol) + " " + esc(t.side)
+                + " &times;" + t.qty + "</span>"
+                + '<span class="dtr2 ' + ((t.pnl || 0) >= 0 ? "win" : "loss")
+                + '">' + r + "</span>"
+                + '<span class="dtm">' + dollars(t.pnl || 0) + "</span>"
+                + "</button></li>";
+            }).join("") + "</ul>" : "")
+        + "</article>";
     }).join("");
+
     const red = st.days.filter(d => d.pnl < 0).length;
     const green = st.days.filter(d => d.pnl > 0).length;
     const flat = st.days.length - red - green;
     const worst = st.days.length ? Math.min(...st.days.map(d => d.pnl)) : 0;
     return (names.length > 1
-      ? `<h3 class="dayacc">${esc(window.accountName(name))}`
-        + `<button class="renamebtn" onclick="renameAccount('${esc(name)}')">`
-        + "rename</button></h3>" : "")
-      + `<p class="srcnote">${st.days.length} session`
-      + `${st.days.length === 1 ? "" : "s"}, ${green} green and ${red} red`
-      + (flat ? `, ${flat} with no trade` : "") + `, `
-      + `worst day ${dollars(worst)}. `
+      ? '<h3 class="dayacc">' + esc(window.accountName(name))
+        + '<button class="renamebtn" data-rename="' + esc(name) + '">rename'
+        + "</button></h3>" : "")
+      + '<p class="srcnote">' + st.days.length + " session"
+      + (st.days.length === 1 ? "" : "s") + ", " + green + " green and "
+      + red + " red" + (flat ? ", " + flat + " with no trade" : "") + ", "
+      + "worst day " + dollars(worst) + ". "
       + (cap > 0 && worst < -cap
-          ? `The plan's cap is $${cap}.` : "Every day inside the plan's cap.")
+          ? "The plan's cap is $" + cap + "."
+          : "Every day inside the plan's cap.")
       + "</p>"
-      + `<ul class="days">${rows}</ul>`;
+      + '<div class="dcards">' + cards + "</div>";
   }).join("");
 }
 

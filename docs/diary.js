@@ -160,6 +160,14 @@ function emptyStage() {
       + '<button class="bigbtn" data-import="1">Import a session</button>';
 }
 
+/** Show one trade by its key, from anywhere in the app. */
+export function showKey(key) {
+  if (!window.keyOfTrade) return;
+  S.list = matching();
+  const i = S.list.findIndex(t => window.keyOfTrade(t) === key);
+  if (i >= 0) pick(i);
+}
+
 export function pick(i) {
   S.list = matching();
   S.i = Math.max(0, Math.min(i, S.list.length - 1));

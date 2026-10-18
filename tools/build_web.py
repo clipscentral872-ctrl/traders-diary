@@ -1319,6 +1319,51 @@ body{overflow:hidden}
   line-height:1.6}
 .dempty .bigbtn{margin-top:6px}
 
+/* The day by day, a card a session, laid out the way Tradeify's own journal
+   lays it out: the date, what the session made, the shape of it, and a row
+   of figures under it. */
+.dcards{display:flex; flex-direction:column; gap:12px}
+.dcard{border:1px solid var(--line); border-radius:10px; background:var(--raised);
+  padding:13px 15px; border-left:3px solid var(--line)}
+.dcard.up{border-left-color:var(--win)}
+.dcard.down{border-left-color:var(--loss)}
+.dchead{display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  margin-bottom:11px}
+.dcdate{font-size:13.5px; color:var(--text); font-weight:600}
+.dcpnl{font-size:19px; font-variant-numeric:tabular-nums; color:var(--muted)}
+.dcard.up .dcpnl{color:var(--win)}
+.dcard.down .dcpnl{color:var(--loss)}
+.dspark{width:78px; height:22px; flex:none; opacity:.9}
+.dcbtn{margin-left:auto; background:var(--lift); border:1px solid var(--line);
+  color:var(--muted); border-radius:6px; padding:6px 12px; font-size:12px;
+  min-height:32px; cursor:pointer}
+.dcbtn:hover{color:var(--text); border-color:var(--accent)}
+.dfigs{display:grid; grid-template-columns:repeat(auto-fit,minmax(86px,1fr));
+  gap:10px 14px; padding:11px 0; border-top:1px solid var(--line-soft);
+  border-bottom:1px solid var(--line-soft)}
+.dfig{display:flex; flex-direction:column; gap:2px}
+.dfk{font-size:9.5px; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--faint)}
+.dfv{font-size:13px; color:var(--text); font-variant-numeric:tabular-nums}
+.dcover{margin:9px 0 0; color:var(--loss); font-size:11.5px}
+.dcnote{margin-top:10px}
+.dcnote textarea{width:100%; min-height:38px; resize:vertical;
+  background:var(--ground); border:1px solid var(--line); border-radius:6px;
+  color:var(--text); padding:8px 10px; font-size:12px; font-family:inherit;
+  line-height:1.5}
+.dcnote textarea:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+.dctrades{list-style:none; margin:10px 0 0; padding:0; display:flex;
+  flex-direction:column; gap:5px}
+.dctrade{width:100%; display:grid; grid-template-columns:auto 1fr auto auto;
+  gap:12px; align-items:baseline; text-align:left; cursor:pointer;
+  background:var(--ground); border:1px solid var(--line-soft);
+  border-radius:6px; padding:9px 11px; min-height:40px}
+.dctrade:hover{border-color:var(--accent)}
+.dtt{font-size:11.5px; color:var(--faint); font-variant-numeric:tabular-nums}
+.dts2{font-size:12.5px; color:var(--text)}
+.dtr2{font-size:12px; font-variant-numeric:tabular-nums}
+.dtm{font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums}
+
 /* The account day by day, from the broker's own balances. Reads as a
    statement: date, what it made, where it closed, what was left. */
 .dayacc{font-size:12px; color:var(--muted); margin:14px 0 4px;
@@ -1858,7 +1903,36 @@ body{overflow:hidden}
 """
 
 
+ESCAPE = chr(92) + "u00"
+
+
+def check_escapes():
+    """An escaped character written as backslash-u does not survive this build.
+
+    Somewhere between reading a module and writing the page it is decoded, so
+    a quote written that way reaches the browser as a real quote, the string
+    it was inside ends early, and the whole app fails to parse with one
+    unhelpful line number. It cost an hour once.
+
+    Write the character itself, or better, put the value in a data attribute
+    and handle the event by delegation, which is better markup anyway.
+    """
+    bad = []
+    for name in MODULES + ["app.js"]:
+        path = os.path.join(DOCS, name)
+        if not os.path.exists(path):
+            continue
+        text = io.open(path, encoding="utf-8").read()
+        for i, line in enumerate(text.splitlines(), 1):
+            if ESCAPE in line:
+                bad.append("%s:%d: %s" % (name, i, line.strip()[:70]))
+    if bad:
+        raise SystemExit("an escape this build decodes, which would break the "
+                         "page:" + chr(10) + "  " + (chr(10) + "  ").join(bad))
+
+
 def main():
+    check_escapes()
     src = io.open(TEMPLATE, encoding="utf-8").read()
 
     src = src.replace("const TRADES = __DATA__;",
