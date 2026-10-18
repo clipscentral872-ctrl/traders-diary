@@ -202,7 +202,7 @@ function renderStanding(d, when, stale) {
   const old = when ? ago(when) : null;
   if (when)
     rows.push(row(stale ? "warn" : "ok",
-      "Last reported " + when + (old ? ` (${old})` : ""),
+      "Last reported " + when_(when) + (old ? `, ${old}` : ""),
       stale
         ? `This is ${stale}, because the system's own host could not be `
           + `reached just now. The date above is the system's, not this `
@@ -324,6 +324,15 @@ const remember = d => {
 const recall = () => {
   try { return JSON.parse(localStorage.getItem(KEEP)); } catch { return null; }
 };
+
+/** A machine stamp as a date a person reads. */
+function when_(iso) {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return iso;
+  return new Date(t).toLocaleString("en-GB", {
+    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+  });
+}
 
 /** How long ago, said the way a person would say it. */
 function ago(iso) {

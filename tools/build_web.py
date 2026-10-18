@@ -716,8 +716,15 @@ body{overflow:hidden}
 .tabpane[hidden]{display:none !important}
 /* Reading tabs scroll their own column; working tabs never scroll the page. */
 .tabpane.reading{overflow-y:auto; overflow-x:hidden}
+/* The width is set, not inherited from whatever happens to be inside.
+ *
+ * The pane is a column flex box and an auto side margin turns off the
+ * stretch that would otherwise give a child the full width, so the column
+ * was as wide as its widest card and no wider. On a page of cards that
+ * looked deliberate. On a page of two paragraphs it was a 578 pixel ribbon
+ * floating in the middle of a 1142 pixel pane. */
 .reading .col{
-  max-width:1000px; margin:0 auto;
+  width:100%; max-width:1000px; margin:0 auto;
   padding:30px 22px calc(80px + env(safe-area-inset-bottom, 0px));
 }
 

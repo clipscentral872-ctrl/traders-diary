@@ -817,8 +817,15 @@ body{overflow:hidden}
 .tabpane[hidden]{display:none !important}
 /* Reading tabs scroll their own column; working tabs never scroll the page. */
 .tabpane.reading{overflow-y:auto; overflow-x:hidden}
+/* The width is set, not inherited from whatever happens to be inside.
+ *
+ * The pane is a column flex box and an auto side margin turns off the
+ * stretch that would otherwise give a child the full width, so the column
+ * was as wide as its widest card and no wider. On a page of cards that
+ * looked deliberate. On a page of two paragraphs it was a 578 pixel ribbon
+ * floating in the middle of a 1142 pixel pane. */
 .reading .col{
-  max-width:1000px; margin:0 auto;
+  width:100%; max-width:1000px; margin:0 auto;
   padding:30px 22px calc(80px + env(safe-area-inset-bottom, 0px));
 }
 
@@ -3148,7 +3155,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=0277c2fbfe28","./chart.js":"./chart.js?v=0277c2fbfe28","./levels.js":"./levels.js?v=0277c2fbfe28","./revisit.js":"./revisit.js?v=0277c2fbfe28","./series.js":"./series.js?v=0277c2fbfe28","./clock.js":"./clock.js?v=0277c2fbfe28","./vault.js":"./vault.js?v=0277c2fbfe28","./draw.js":"./draw.js?v=0277c2fbfe28","./profile.js":"./profile.js?v=0277c2fbfe28","./whatif.js":"./whatif.js?v=0277c2fbfe28","./precheck.js":"./precheck.js?v=0277c2fbfe28","./shelf.js":"./shelf.js?v=0277c2fbfe28","./watchlist.js":"./watchlist.js?v=0277c2fbfe28","./lock.js":"./lock.js?v=0277c2fbfe28","./inds.js":"./inds.js?v=0277c2fbfe28","./imports.js":"./imports.js?v=0277c2fbfe28","./folder.js":"./folder.js?v=0277c2fbfe28","./funded.js":"./funded.js?v=0277c2fbfe28","./jdun.js":"./jdun.js?v=0277c2fbfe28","./quests.js":"./quests.js?v=0277c2fbfe28","./coach.js":"./coach.js?v=0277c2fbfe28","./replay.js":"./replay.js?v=0277c2fbfe28","./diary.js":"./diary.js?v=0277c2fbfe28","./videos.js":"./videos.js?v=0277c2fbfe28","./system.js":"./system.js?v=0277c2fbfe28","./dashboard.js":"./dashboard.js?v=0277c2fbfe28"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=d14ab3c944a9","./chart.js":"./chart.js?v=d14ab3c944a9","./levels.js":"./levels.js?v=d14ab3c944a9","./revisit.js":"./revisit.js?v=d14ab3c944a9","./series.js":"./series.js?v=d14ab3c944a9","./clock.js":"./clock.js?v=d14ab3c944a9","./vault.js":"./vault.js?v=d14ab3c944a9","./draw.js":"./draw.js?v=d14ab3c944a9","./profile.js":"./profile.js?v=d14ab3c944a9","./whatif.js":"./whatif.js?v=d14ab3c944a9","./precheck.js":"./precheck.js?v=d14ab3c944a9","./shelf.js":"./shelf.js?v=d14ab3c944a9","./watchlist.js":"./watchlist.js?v=d14ab3c944a9","./lock.js":"./lock.js?v=d14ab3c944a9","./inds.js":"./inds.js?v=d14ab3c944a9","./imports.js":"./imports.js?v=d14ab3c944a9","./folder.js":"./folder.js?v=d14ab3c944a9","./funded.js":"./funded.js?v=d14ab3c944a9","./jdun.js":"./jdun.js?v=d14ab3c944a9","./quests.js":"./quests.js?v=d14ab3c944a9","./coach.js":"./coach.js?v=d14ab3c944a9","./replay.js":"./replay.js?v=d14ab3c944a9","./diary.js":"./diary.js?v=d14ab3c944a9","./videos.js":"./videos.js?v=d14ab3c944a9","./system.js":"./system.js?v=d14ab3c944a9","./dashboard.js":"./dashboard.js?v=d14ab3c944a9"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
