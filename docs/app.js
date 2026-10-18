@@ -1177,6 +1177,10 @@ function goTab(name, push) {
   document.querySelectorAll(".tb").forEach(b => {
     b.setAttribute("aria-selected", String(b.dataset.go === name));
   });
+  // The header says where you are. Read off the nav button rather than kept
+  // in a second list here, because a second list is a list that drifts.
+  const on = document.querySelector('.tb[data-go="' + name + '"] span');
+  if (on) $("pagetitle").textContent = on.textContent;
   if (push && location.hash.slice(1) !== name) location.hash = name;
   scrollTo({top: 0, behavior: "instant"});
 
@@ -1192,7 +1196,7 @@ function goTab(name, push) {
   if (name === "home") DASH.show();
 }
 
-document.querySelector(".tabs2").addEventListener("click", e => {
+document.querySelector(".sidenav").addEventListener("click", e => {
   const b = e.target.closest(".tb");
   if (b) goTab(b.dataset.go, true);
 });

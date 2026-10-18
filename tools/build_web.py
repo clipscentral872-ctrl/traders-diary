@@ -72,16 +72,57 @@ try {
 REPLAY_SECTION = re.compile(
     r'<section>\s*<h2>Bar Replay</h2>.*?</section>', re.S)
 
-# One app, four tabs. The diary is the reason to open it, so it comes first
-# and it is what a fresh install lands on.
-TABS = [("home", "Home"), ("diary", "Diary"),
-        ("replay", "Replay"), ("videos", "Videos"), ("system", "System"),
-        ("learn", "Learn")]
+# One app, six sections, grouped the way a platform groups them: what the
+# accounts are doing, the record of the trades, what to learn from them, and
+# the robot last because it runs itself. The first one is where a fresh
+# install lands.
+#
+# Each is an icon and a name. A row of words is fine across the top of a
+# document; down the side of something worked in every day, the icon is what
+# the eye finds before it reads anything.
+ICONS = {
+    "home": '<rect x="3" y="5" width="18" height="14" rx="2"/>'
+            '<path d="M3 10h18M7 15h4"/>',
+    "diary": '<path d="M8 4v16M16 4v16"/>'
+             '<rect x="5" y="8" width="6" height="7" rx="1"/>'
+             '<rect x="13" y="6" width="6" height="8" rx="1"/>',
+    "videos": '<rect x="3" y="5" width="18" height="14" rx="2"/>'
+              '<path d="M11 10l4 2-4 2z"/>',
+    "learn": '<path d="M5 4h13v16H7a2 2 0 0 1-2-2z"/><path d="M9 4v16"/>',
+    "replay": '<circle cx="12" cy="12" r="8"/><path d="M12 8.5V12l2.5 1.5"/>',
+    "system": '<rect x="6" y="6" width="12" height="12" rx="2"/>'
+              '<path d="M10 3v3M14 3v3M10 18v3M14 18v3M3 10h3M3 14h3'
+              'M18 10h3M18 14h3"/>',
+}
 
-NAV = ('<nav class="tabs2" role="tablist" aria-label="Sections">'
-       + "".join(f'<button class="tb" role="tab" data-go="{k}" '
-                 f'aria-selected="{"true" if k == "home" else "false"}">'
-                 f'{label}</button>' for k, label in TABS)
+# Each section carries two names: the one in the sidebar, and a one word one
+# for the bottom bar on a phone, where six labels share the width of a thumb
+# and anything longer wraps onto three lines.
+NAV_GROUPS = [
+    ("Accounts", [("home", "Accounts", "Accounts")]),
+    ("Journal", [("diary", "Trade by trade", "Trades"),
+                 ("videos", "Videos", "Videos")]),
+    ("Learn", [("learn", "The method", "Method"),
+               ("replay", "Practice", "Practice")]),
+    ("Robot", [("system", "The system", "Robot")]),
+]
+
+TABS = [(k, label) for _, items in NAV_GROUPS for k, label, _s in items]
+
+
+def _navbtn(key, label, short, first):
+    return (f'<button class="tb" role="tab" data-go="{key}" '
+            f'aria-selected="{"true" if first else "false"}">'
+            f'<svg viewBox="0 0 24 24" aria-hidden="true">{ICONS[key]}</svg>'
+            f'<span>{label}</span><i>{short}</i></button>')
+
+
+NAV = ('<nav class="sidenav" role="tablist" aria-label="Sections">'
+       + "".join(
+           f'<span class="navgroup">{group}</span>'
+           + "".join(_navbtn(k, label, short, k == TABS[0][0])
+                     for k, label, short in items)
+           for group, items in NAV_GROUPS)
        + "</nav>\n")
 
 # The install step is the whole difference between a bookmark and an app, and
@@ -112,13 +153,26 @@ INSTALL = """<section id="installbar" hidden>
 # edge to edge and never scroll the page, the way a platform does. The
 # reading tabs keep a measured column, because 1600 pixels of prose is
 # unreadable and calling it "full bleed" does not fix that.
-APPBAR = """<div class="appbar">
-  <span class="brand">Traders&nbsp;Diary</span>
+#
+# The frame is laid out the way the platforms are: the sections run down the
+# left and stay put, and the content gets a header of its own saying what you
+# are looking at and which account you are looking at it through. A row of
+# tabs across the top is how a document is organised. Somewhere worked in all
+# day puts its sections where they do not move when the page does.
+SIDE = """<aside class="side">
+  <div class="sidetop"><span class="brand">Traders&nbsp;Diary</span></div>
   __NAV__
+  <div class="sidefoot">
+    <button class="themebtn" id="themebtn" type="button"
+            aria-label="Switch between dark and light"></button>
+    <span class="appmeta" id="appmeta">no trades</span>
+  </div>
+</aside>
+"""
+
+PAGEHEAD = """<div class="pagehead">
+  <h1 class="pagetitle" id="pagetitle">Accounts</h1>
   <div class="accrow bar" id="accbar" hidden></div>
-  <span class="appmeta" id="appmeta">no trades</span>
-  <button class="themebtn" id="themebtn" type="button"
-          aria-label="Switch between dark and light"></button>
 </div>
 """
 
@@ -323,23 +377,39 @@ SETTINGS = """<section>
 # rather than in the shared template because the desktop project has neither
 # these controls nor a phone to run on.
 EXTRA_CSS = """
-/* tab navigation */
-.tabs2{
-  display:flex; gap:6px; margin:0 0 30px; overflow-x:auto;
-  border-bottom:1px solid var(--line); padding-bottom:0;
-  scrollbar-width:none;
+/* the sidebar: the sections, down the left, in groups */
+.sidenav{
+  flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column;
+  padding:10px 8px 14px; gap:1px; scrollbar-width:none;
 }
-.tabs2::-webkit-scrollbar{display:none}
+.sidenav::-webkit-scrollbar{display:none}
+.navgroup{
+  flex:none; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
+  font-size:9.5px; font-weight:700; letter-spacing:.09em;
+  text-transform:uppercase; color:var(--faint); padding:14px 10px 6px;
+}
+.navgroup:first-child{padding-top:4px}
+/* A row, not a tab: the icon, the name, and a bar down the left edge of the
+   one you are on. */
 .tb{
-  flex:none; background:none; border:none; border-bottom:2px solid transparent;
-  color:var(--muted); cursor:pointer; padding:12px 16px; min-height:46px;
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:700; font-size:12px;
-  letter-spacing:.04em; text-transform:uppercase;
-  transition:color .14s, border-color .14s;
+  flex:none; display:flex; align-items:center; gap:10px; width:100%;
+  background:none; border:none; border-left:2px solid transparent;
+  border-radius:0 7px 7px 0; color:var(--muted); cursor:pointer;
+  padding:9px 10px; min-height:38px; text-align:left;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
+  font-weight:600; font-size:12.5px; letter-spacing:.01em;
+  transition:color .14s, background .14s, border-color .14s;
 }
-.tb:hover{color:var(--text)}
+.tb svg{
+  width:16px; height:16px; flex:none; fill:none; stroke:currentColor;
+  stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round;
+}
+.tb span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.tb i{display:none}
+.tb:hover{color:var(--text); background:var(--lift)}
 .tb[aria-selected="true"]{
-  color:var(--accent); border-bottom-color:var(--accent);
+  color:var(--accent); background:var(--accent-dim);
+  border-left-color:var(--accent);
 }
 .tb:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
 
@@ -550,7 +620,7 @@ body{overflow:hidden}
  * and the tab strip was against the very top edge, too high to hit.
  */
 .app{
-  display:flex; flex-direction:column; min-height:0;
+  display:flex; flex-direction:row; min-height:0;
   height:100dvh;
   padding-top:env(safe-area-inset-top, 0px);
   padding-left:env(safe-area-inset-left, 0px);
@@ -558,10 +628,34 @@ body{overflow:hidden}
   box-sizing:border-box;
 }
 
-.appbar{
-  flex:none; display:flex; align-items:center; gap:18px;
+.side{
+  flex:none; width:198px; display:flex; flex-direction:column; min-height:0;
+  background:var(--raised); border-right:1px solid var(--line);
+}
+.sidetop{
+  flex:none; display:flex; align-items:center; height:52px; padding:0 16px;
+  border-bottom:1px solid var(--line-soft);
+}
+.sidefoot{
+  flex:none; display:flex; align-items:center; gap:9px;
+  border-top:1px solid var(--line-soft); padding:10px 12px 12px;
+}
+.appmain{flex:1; min-width:0; display:flex; flex-direction:column; min-height:0}
+/* What you are looking at on the left, which account you are looking at it
+   through on the right. */
+.pagehead{
+  flex:none; display:flex; align-items:center; gap:14px;
+  height:52px; padding:0 18px; overflow:hidden;
   background:var(--raised); border-bottom:1px solid var(--line);
-  padding:0 14px; height:46px; overflow:hidden;
+}
+/* The page name is a label, not the hero heading the template styles h1 as,
+   so the gradient fill, the glow and the capitals are all turned off here. */
+.pagetitle{
+  margin:0; flex:none; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
+  font-size:16px; font-weight:700; letter-spacing:-.005em; line-height:1.2;
+  text-transform:none; white-space:nowrap;
+  background:none; -webkit-background-clip:border-box;
+  background-clip:border-box; color:var(--text); filter:none;
 }
 .brand{
   font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:900; font-size:13px;
@@ -569,14 +663,14 @@ body{overflow:hidden}
   white-space:nowrap; flex:none;
 }
 .appmeta{
-  margin-left:auto; flex:none; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
-  font-size:11.5px; color:var(--muted); white-space:nowrap;
+  flex:1; min-width:0; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
+  font-size:11px; line-height:1.35; color:var(--muted);
 }
 .appmeta b{color:var(--text)}
 /* Dark or light, one tap, next to the count. A sun or a moon drawn in CSS
    rather than another file to fetch. */
 .themebtn{
-  flex:none; width:34px; height:34px; margin-left:10px; border-radius:8px;
+  flex:none; width:32px; height:32px; border-radius:8px;
   border:1px solid var(--line); background:var(--raised); cursor:pointer;
   position:relative; padding:0;
 }
@@ -724,30 +818,46 @@ body{overflow:hidden}
   /* The status line is information, so it wraps instead of being clipped. */
   .wsfoot{height:auto; padding:8px 12px; white-space:normal; line-height:1.5}
 
-  /* Two rows in the bar: identity and count, then the tabs, scrolling. */
-  .appbar{
-    height:auto; flex-wrap:wrap; padding:10px 14px 0; gap:0 12px;
+  /* The same nav, moved to where the thumb is. A column of sections down the
+     left is right on a desktop and wrong on a phone, where it would eat half
+     the screen; across the bottom it costs one row and is the easiest thing
+     on the screen to reach. */
+  .app{flex-direction:column}
+  .side{
+    order:3; width:auto; flex-direction:row; align-items:stretch;
+    border-right:none; border-top:1px solid var(--line);
+    padding-bottom:env(safe-area-inset-bottom, 0px);
+  }
+  /* The name and the count live in the page header on a phone, so the two
+     ends of the sidebar have nothing left to hold. */
+  .sidetop, .sidefoot{display:none}
+  .sidenav{
+    flex-direction:row; padding:4px 6px; gap:2px; width:100%;
+    overflow-x:auto; justify-content:space-between;
+  }
+  .navgroup{display:none}
+  .tb{
+    flex:1 1 0; min-width:52px; flex-direction:column; gap:3px;
+    justify-content:center; text-align:center; border-left:none;
+    border-top:2px solid transparent; border-radius:6px;
+    padding:7px 3px 6px; min-height:52px; font-size:9.5px; font-weight:600;
+    letter-spacing:0; line-height:1.2;
+  }
+  .tb svg{width:19px; height:19px}
+  .tb span{display:none}
+  .tb i{display:block; font-style:normal; white-space:nowrap}
+  .tb[aria-selected="true"]{
+    border-left-color:transparent; border-top-color:var(--accent);
+  }
+  /* The header carries what the sidebar used to: the name of the page, then
+     the account picker on its own line so the names are not cut in half. */
+  .pagehead{
+    height:auto; flex-wrap:wrap; gap:0; padding:10px 14px;
     overflow:visible;
   }
-  /* Readable rather than merely present. At 12px in a bar squeezed under a
-     status bar the name was neither. */
-  .brand{font-size:14px; letter-spacing:.02em; order:1}
-  /* The bar wraps on a phone, so every child is given its place rather than
-     landing wherever the markup put it. The name leads, the count and the
-     theme sit beside it, the account picker takes its own line, and the tabs
-     take the one under that. */
-  .brand{order:0}
-  .appmeta{order:1; margin-left:auto; font-size:12px}
-  .themebtn{order:2; margin-left:8px}
-  .accrow.bar{order:3; flex:1 0 100%; margin:8px 0 0}
+  .pagetitle{flex:1 0 auto; font-size:15px}
+  .accrow.bar{flex:1 0 100%; margin:9px 0 0; flex-wrap:wrap}
   .accrow.bar .acc{flex:1 1 0; justify-content:center}
-  .appbar .tabs2{
-    order:4; flex:1 0 100%; margin:8px -14px 0; padding:0 14px;
-    border-bottom:none;
-  }
-  /* 46px of target, and the text sitting in the middle of it rather than at
-     the top where a thumb has to stretch for it. */
-  .tb{padding:13px 14px; font-size:12px; min-height:46px}
 }
 
 
@@ -1058,7 +1168,7 @@ body{overflow:hidden}
 .accrow.mini{margin:0}
 /* The same picker in the bar, on every tab, because "which account am I
    looking at" is a question every screen in here answers differently. */
-.accrow.bar{margin:0 0 0 14px; flex:none; gap:4px}
+.accrow.bar{margin:0 0 0 auto; flex:none; gap:4px; flex-wrap:nowrap}
 .accrow.bar .acc{padding:4px 10px; min-height:28px; font-size:11.5px}
 .accrow.bar .acc .sn{display:none}
 
@@ -2045,11 +2155,12 @@ def main():
         raise SystemExit("the reading marker moved; check sections.html")
     extra = extra.replace("<!--READING-->", source_block + reading, 1)
 
-    shell = (APPBAR.replace("__NAV__", NAV)
+    shell = (SIDE.replace("__NAV__", NAV)
+             + '<div class="appmain">\n' + PAGEHEAD
              + '<div class="appbody">\n'
              + '<div class="tabpane" data-tab="diary" hidden>'
              + TRADEVIEW + "</div>\n"
-             + extra + "</div>\n")
+             + extra + "</div>\n</div>\n")
     src = src.replace(body.group(0), '<div class="app">\n' + shell, 1)
 
     # The footer is reading material and the shell is a fixed frame, so left
