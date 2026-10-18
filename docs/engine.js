@@ -37,6 +37,19 @@ export const FEED = {NQ: "NQ", MNQ: "NQ", ES: "ES", MES: "ES",
 // them (the New York clock, the candle lookup) needs to know which one.
 export const BREAKEVEN_AT_R = 2.0;
 export const PAD_BEFORE = 10, PAD_AFTER = 30;
+/* The Diary's own window: four hours of five minute candles each side.
+ *
+ * An hour either side is what the chart opens on, and it is not what it
+ * stores. A chart that holds exactly what it shows has nowhere to go when
+ * you drag it, and dragging it is the whole question: what was price doing
+ * before I pressed the button. Four hours each side is most of a session
+ * behind and most of one in front, which is as far back as the reason for a
+ * trade ever is. */
+export const CTX_BEFORE = 240, CTX_AFTER = 240;
+/* Bumped whenever what a trade stores about its candles changes, so trades
+   already in the journal are redrawn on the next open instead of keeping
+   whatever window they were imported under. */
+export const BARS_VERSION = 3;
 
 const contract = raw => TICKER[raw] || String(raw).split(":").pop().replace("1!", "");
 
@@ -536,43 +549,82 @@ export const setLocalOffset = h => { LOCAL_OFFSET_H = h; };
  *  this page. Browsers cannot fetch a market feed directly, so a daily job
  *  publishes them here instead. */
 /**
- * Give a trade its candles.
+ * Give a trade its candles, twice.
  *
- * Minute bars first, because they show the trade at the resolution it
- * happened. Where the minute history has a hole, and it does have holes, the
- * five minute series is tried instead rather than leaving the trade with no
- * chart at all. Five minutes is the timeframe the method is read on anyway,
- * so a trade drawn that way is still worth looking at; it is only the wick
- * by wick detail that is missing.
+ * Two windows, because two things are being asked for.
+ *
+ * `bars` is the trade itself at the finest resolution there is: minute bars
+ * where the history has them, the five minute series where it has a hole,
+ * ten minutes before the entry and thirty after the exit. That is the one
+ * the video films, and it is deliberately tight, because a film of an hour
+ * of nothing either side of a two minute trade is a film of nothing.
+ *
+ * `ctx` is the same trade with an hour of five minute candles in front and
+ * an hour behind. That is what the Diary opens on, because a chart with
+ * eight candles in it has nowhere to pan to: zooming out just spreads the
+ * same eight candles further apart, and the question you are actually
+ * asking when you zoom out is what the price was doing before you pressed
+ * the button.
  *
  * @param feed   minute bars for this contract
- * @param slower a coarser series to fall back on, optional
+ * @param slower the five minute series, optional
  */
 export function attachBars(t, feed, offsetHours = LOCAL_OFFSET_H, slower = null) {
-  if (t.bars) return false;
+  if (t.bars_v === BARS_VERSION) return false;
   const at = s => Date.parse(s.replace(" ", "T") + "Z") - offsetHours * 3600e3;
-  const lo = at(t.open_t) - PAD_BEFORE * 60e3;
-  const hi = at(t.close_t) + PAD_AFTER * 60e3;
-  const pick = list => (list || []).filter(b => b.ms >= lo && b.ms <= hi);
-  let w = pick(feed);
-  /* Two bars is a line, not a chart. Below that the slower series will
-     almost always do better. */
-  if (w.length < 3 && slower) {
-    const alt = pick(slower);
-    if (alt.length > w.length) { w = alt; t.bars_tf = "5m"; }
-  }
-  if (!w.length) return false;
+  const open = at(t.open_t), close = at(t.close_t);
+  const cut = (list, before, after) => (list || []).filter(
+    b => b.ms >= open - before * 60e3 && b.ms <= close + after * 60e3);
   const hhmm = ms => {
     const d = new Date(ms + offsetHours * 3600e3);
     return String(d.getUTCHours()).padStart(2, "0") + ":"
          + String(d.getUTCMinutes()).padStart(2, "0");
   };
-  t.bars = w.map(b => ({t: hhmm(b.ms), o: b.o, h: b.h, l: b.l, c: b.c}));
-  const oi = t.bars.findIndex(b => b.t === t.open_t.slice(11, 16));
-  const xi = t.bars.findIndex(b => b.t === t.close_t.slice(11, 16));
-  t.entry_i = oi < 0 ? 0 : oi;
-  t.exit_i = xi < 0 ? t.bars.length - 1 : xi;
-  return true;
+  const pack = w => w.map(b => ({t: hhmm(b.ms), o: b.o, h: b.h, l: b.l, c: b.c}));
+
+  /* The bar an instant falls inside, which on a five minute series is not
+     the bar whose label matches the minute: an entry at 09:51 belongs to the
+     09:50 candle. Matching the label was close enough on minute bars and
+     silently put the entry marker on the first candle on a five minute
+     chart, which is the left edge of the screen. */
+  const holding = (w, ms) => {
+    let k = 0;
+    for (let i = 0; i < w.length && w[i].ms <= ms; i++) k = i;
+    return k;
+  };
+
+  let got = false;
+
+  if (!t.bars) {
+    let w = cut(feed, PAD_BEFORE, PAD_AFTER);
+    /* Two bars is a line, not a chart. Below that the slower series will
+       almost always do better. */
+    if (w.length < 3 && slower) {
+      const alt = cut(slower, PAD_BEFORE, PAD_AFTER);
+      if (alt.length > w.length) { w = alt; t.bars_tf = "5m"; }
+    }
+    if (w.length) {
+      t.bars = pack(w);
+      t.entry_i = holding(w, open);
+      t.exit_i = w.length ? holding(w, close) : 0;
+      got = true;
+    }
+  }
+
+  const wide = cut(slower, CTX_BEFORE, CTX_AFTER);
+  if (wide.length >= 3) {
+    t.ctx = pack(wide);
+    t.ctx_entry_i = holding(wide, open);
+    t.ctx_exit_i = holding(wide, close);
+    got = true;
+  }
+
+  if (!t.bars && !t.ctx) return false;
+  /* Only counted as done once the wide view exists. A trade whose five
+     minute series had not been published yet would otherwise be stamped as
+     finished and never get its context, even after the bars arrived. */
+  if (t.ctx) t.bars_v = BARS_VERSION;
+  return got;
 }
 
 /* ------------------------------------------------------------- summary */

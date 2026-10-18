@@ -194,6 +194,13 @@ TRADEVIEW = """<div class="ws">
     <button class="rbtn2" data-f="all" aria-pressed="true" title="All trades">All</button>
     <button class="rbtn2" data-f="won" aria-pressed="false" title="Winners only">W</button>
     <button class="rbtn2" data-f="lost" aria-pressed="false" title="Losers only">L</button>
+    <span class="railtf" id="dtf" role="group" aria-label="Timeframe" hidden>
+      <span class="raildiv"></span>
+      <button class="rbtn2" data-tf="5m" aria-pressed="true"
+              title="Five minute candles, the hours either side">5m</button>
+      <button class="rbtn2" data-tf="1m" aria-pressed="false"
+              title="Minute candles, close in on the trade">1m</button>
+    </span>
     <span class="railgap"></span>
     <button class="rbtn2" id="dzin2" title="Zoom in">+</button>
     <button class="rbtn2" id="dzout2" title="Zoom out">&minus;</button>
@@ -745,6 +752,15 @@ body{overflow:hidden}
 .rbtn2[aria-pressed="true"]{color:var(--accent); background:var(--accent-dim)}
 .rbtn2:focus-visible{outline:2px solid var(--accent); outline-offset:-1px}
 .railgap{flex:1}
+/* The timeframe pair sits under the filters, where a platform keeps the
+   timeframe, with a hairline above it so it reads as its own group. */
+.railtf{display:flex; flex-direction:column; gap:2px}
+.railtf[hidden]{display:none}
+/* The rail is a column of controls and a short window is a real window, so
+   it scrolls rather than pushing Fit off the bottom where nothing says it
+   is there. */
+.wsrail{overflow-y:auto; scrollbar-width:none}
+.wsrail::-webkit-scrollbar{display:none}
 /* The drawing rail, the way TradingView has it: a column of icon buttons down
    the left edge, the armed one lit, a hairline between the groups. */
 .drawrail{display:flex; flex-direction:column; gap:2px}

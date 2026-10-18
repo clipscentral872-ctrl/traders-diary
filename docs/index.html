@@ -846,6 +846,15 @@ body{overflow:hidden}
 .rbtn2[aria-pressed="true"]{color:var(--accent); background:var(--accent-dim)}
 .rbtn2:focus-visible{outline:2px solid var(--accent); outline-offset:-1px}
 .railgap{flex:1}
+/* The timeframe pair sits under the filters, where a platform keeps the
+   timeframe, with a hairline above it so it reads as its own group. */
+.railtf{display:flex; flex-direction:column; gap:2px}
+.railtf[hidden]{display:none}
+/* The rail is a column of controls and a short window is a real window, so
+   it scrolls rather than pushing Fit off the bottom where nothing says it
+   is there. */
+.wsrail{overflow-y:auto; scrollbar-width:none}
+.wsrail::-webkit-scrollbar{display:none}
 /* The drawing rail, the way TradingView has it: a column of icon buttons down
    the left edge, the armed one lit, a hairline between the groups. */
 .drawrail{display:flex; flex-direction:column; gap:2px}
@@ -2218,6 +2227,13 @@ body{overflow:hidden}
     <button class="rbtn2" data-f="all" aria-pressed="true" title="All trades">All</button>
     <button class="rbtn2" data-f="won" aria-pressed="false" title="Winners only">W</button>
     <button class="rbtn2" data-f="lost" aria-pressed="false" title="Losers only">L</button>
+    <span class="railtf" id="dtf" role="group" aria-label="Timeframe" hidden>
+      <span class="raildiv"></span>
+      <button class="rbtn2" data-tf="5m" aria-pressed="true"
+              title="Five minute candles, the hours either side">5m</button>
+      <button class="rbtn2" data-tf="1m" aria-pressed="false"
+              title="Minute candles, close in on the trade">1m</button>
+    </span>
     <span class="railgap"></span>
     <button class="rbtn2" id="dzin2" title="Zoom in">+</button>
     <button class="rbtn2" id="dzout2" title="Zoom out">&minus;</button>
@@ -3168,7 +3184,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=b4b2ce678123","./chart.js":"./chart.js?v=b4b2ce678123","./levels.js":"./levels.js?v=b4b2ce678123","./revisit.js":"./revisit.js?v=b4b2ce678123","./series.js":"./series.js?v=b4b2ce678123","./clock.js":"./clock.js?v=b4b2ce678123","./vault.js":"./vault.js?v=b4b2ce678123","./draw.js":"./draw.js?v=b4b2ce678123","./profile.js":"./profile.js?v=b4b2ce678123","./whatif.js":"./whatif.js?v=b4b2ce678123","./precheck.js":"./precheck.js?v=b4b2ce678123","./shelf.js":"./shelf.js?v=b4b2ce678123","./watchlist.js":"./watchlist.js?v=b4b2ce678123","./lock.js":"./lock.js?v=b4b2ce678123","./inds.js":"./inds.js?v=b4b2ce678123","./imports.js":"./imports.js?v=b4b2ce678123","./folder.js":"./folder.js?v=b4b2ce678123","./funded.js":"./funded.js?v=b4b2ce678123","./jdun.js":"./jdun.js?v=b4b2ce678123","./quests.js":"./quests.js?v=b4b2ce678123","./coach.js":"./coach.js?v=b4b2ce678123","./replay.js":"./replay.js?v=b4b2ce678123","./diary.js":"./diary.js?v=b4b2ce678123","./videos.js":"./videos.js?v=b4b2ce678123","./system.js":"./system.js?v=b4b2ce678123","./dashboard.js":"./dashboard.js?v=b4b2ce678123"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=a976ddc8e6e9","./chart.js":"./chart.js?v=a976ddc8e6e9","./levels.js":"./levels.js?v=a976ddc8e6e9","./revisit.js":"./revisit.js?v=a976ddc8e6e9","./series.js":"./series.js?v=a976ddc8e6e9","./clock.js":"./clock.js?v=a976ddc8e6e9","./vault.js":"./vault.js?v=a976ddc8e6e9","./draw.js":"./draw.js?v=a976ddc8e6e9","./profile.js":"./profile.js?v=a976ddc8e6e9","./whatif.js":"./whatif.js?v=a976ddc8e6e9","./precheck.js":"./precheck.js?v=a976ddc8e6e9","./shelf.js":"./shelf.js?v=a976ddc8e6e9","./watchlist.js":"./watchlist.js?v=a976ddc8e6e9","./lock.js":"./lock.js?v=a976ddc8e6e9","./inds.js":"./inds.js?v=a976ddc8e6e9","./imports.js":"./imports.js?v=a976ddc8e6e9","./folder.js":"./folder.js?v=a976ddc8e6e9","./funded.js":"./funded.js?v=a976ddc8e6e9","./jdun.js":"./jdun.js?v=a976ddc8e6e9","./quests.js":"./quests.js?v=a976ddc8e6e9","./coach.js":"./coach.js?v=a976ddc8e6e9","./replay.js":"./replay.js?v=a976ddc8e6e9","./diary.js":"./diary.js?v=a976ddc8e6e9","./videos.js":"./videos.js?v=a976ddc8e6e9","./system.js":"./system.js?v=a976ddc8e6e9","./dashboard.js":"./dashboard.js?v=a976ddc8e6e9"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.

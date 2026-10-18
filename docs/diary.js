@@ -15,7 +15,7 @@ import * as C from "./clock.js";
 
 const $ = id => document.getElementById(id);
 
-const S = {list: [], i: 0, filter: "all", source: "live"};
+const S = {list: [], i: 0, filter: "all", source: "live", tf: "5m"};
 let chart = null;
 let tzHours = () => 2;
 export const setClock = fn => { tzHours = fn; };
@@ -36,15 +36,39 @@ const won = t => t.got_r == null ? t.pnl >= 0 : t.got_r >= 0;
 const esc = s => String(s).replace(/[&<>"]/g,
   c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
 
+/* Which of a trade's two series to draw.
+ *
+ * Five minutes with an hour either side is what opens, because that is the
+ * timeframe the method is read on and because a chart you cannot pan is not
+ * a chart. The minute series is the same trade close up, for the question
+ * the wide view cannot answer: where exactly the wick went. */
+export function series(t) {
+  const wide = t.ctx && t.ctx.length >= 3
+    ? {bars: t.ctx, entry: t.ctx_entry_i ?? 0,
+       exit: t.ctx_exit_i ?? t.ctx.length - 1, tf: "5m"}
+    : null;
+  const close = t.bars && t.bars.length
+    ? {bars: t.bars, entry: t.entry_i ?? 0,
+       exit: t.exit_i ?? t.bars.length - 1, tf: t.bars_tf || "1m"}
+    : null;
+  if (S.tf === "1m") return close || wide;
+  return wide || close;
+}
+
+/** Whether a trade has both, so the switch is only offered when it does. */
+export const hasBoth = t => !!(t.ctx && t.ctx.length >= 3
+  && t.bars && t.bars.length && (t.bars_tf || "1m") === "1m");
+
 /* The bars stored with a trade carry "HH:MM" rather than a timestamp, because
    that is what the renderer needed. The chart wants real times, so the day of
    the trade is put back onto them here. */
-function barsOf(t) {
-  if (!t.bars || !t.bars.length) return [];
+function barsOf(t, list) {
+  const src = list || t.bars;
+  if (!src || !src.length) return [];
   const day = t.open_t.slice(0, 10);
   let prev = -Infinity;
   let dayShift = 0;
-  return t.bars.map(b => {
+  return src.map(b => {
     let ms = Date.parse(`${day}T${b.t}:00Z`) - tzHours() * 3600e3
            + dayShift * 86400000;
     // A session that runs past midnight comes back as 23:58, 23:59, 00:00.
@@ -208,9 +232,11 @@ export function pick(i) {
   if (window.showMyNote) window.showMyNote(t);
   if (onShow) onShow(t);
 
-  const bars = barsOf(t);
+  const view = series(t);
+  const bars = view ? barsOf(t, view.bars) : [];
   $("dprev").disabled = S.i === 0;
   $("dnext").disabled = S.i >= S.list.length - 1;
+  tfButtons(t, view);
 
   if (!chart) return;
   if (!bars.length) {
@@ -221,11 +247,42 @@ export function pick(i) {
   $("dnobars").hidden = true;
   chart.setTrade({
     entry: t.entry, stop: t.stop, target: t.target, exit: t.exit,
-    pnl: t.pnl, entryIndex: t.entry_i ?? 0,
-    exitIndex: t.exit_i ?? bars.length - 1,
+    pnl: t.pnl, entryIndex: view.entry,
+    exitIndex: view.exit,
   });
   chart.setData(bars);
-  chart.fit(bars.length + 4);
+  /* Open on the trade with room around it rather than on everything there
+     is. Fitting the whole series put a two minute trade in the middle of two
+     hours of candles, which is the shape of a chart with nothing on it. The
+     rest is still there; it is behind you and in front of you, which is the
+     point of storing it. */
+  const span = Math.max(1, view.exit - view.entry);
+  /* About an hour either side of the trade on the five minute view, which
+     is roughly fifty candles: close enough to read the entry, wide enough
+     that the candles are candles rather than posts. The minute view opens
+     tighter, because a hundred and twenty minute candles is an hour of
+     noise around a two minute trade. */
+  const room = view.tf === "5m" ? 24 : 14;
+  const count = Math.min(bars.length + 4, Math.max(room * 2, span + room * 2));
+  chart.focus(Math.round((view.entry + view.exit) / 2), count);
+}
+
+/* The timeframe switch, offered only on trades that have both series. */
+function tfButtons(t, view) {
+  const row = $("dtf");
+  if (!row) return;
+  const both = hasBoth(t);
+  row.hidden = !both;
+  if (!both) return;
+  const on = view ? view.tf : S.tf;
+  for (const b of row.querySelectorAll("[data-tf]"))
+    b.setAttribute("aria-pressed", String(b.dataset.tf === on));
+}
+
+/** Switch the chart between the close view and the wide one. */
+export function setTimeframe(tf) {
+  S.tf = tf === "1m" ? "1m" : "5m";
+  pick(S.i);
 }
 
 /** Called by the shared page script when the source picker changes. */
@@ -269,6 +326,11 @@ export function init() {
   });
   $("dprev").addEventListener("click", () => pick(S.i - 1));
   $("dnext").addEventListener("click", () => pick(S.i + 1));
+  const tf = $("dtf");
+  if (tf) tf.addEventListener("click", e => {
+    const b = e.target.closest("[data-tf]");
+    if (b) setTimeframe(b.dataset.tf);
+  });
   $("dzin2").addEventListener("click", () => chart.zoomIn());
   $("dzout2").addEventListener("click", () => chart.zoomOut());
   $("dfit2").addEventListener("click", () => pick(S.i));
