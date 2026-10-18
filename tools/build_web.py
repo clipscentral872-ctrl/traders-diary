@@ -160,7 +160,19 @@ INSTALL = """<section id="installbar" hidden>
 # tabs across the top is how a document is organised. Somewhere worked in all
 # day puts its sections where they do not move when the page does.
 SIDE = """<aside class="side">
-  <div class="sidetop"><span class="brand">Traders&nbsp;Diary</span></div>
+  <div class="sidetop">
+    <span class="mark" aria-hidden="true">
+      <svg viewBox="0 0 512 512">
+        <rect x="111" y="241" width="20" height="185"/>
+        <rect x="76" y="286" width="90" height="100" rx="7.5"/>
+        <rect class="up" x="246" y="166" width="20" height="210"/>
+        <rect class="up" x="211" y="208.5" width="90" height="135" rx="7.5"/>
+        <rect class="up" x="381" y="86" width="20" height="237.5"/>
+        <rect class="up" x="346" y="123.5" width="90" height="157.5" rx="7.5"/>
+      </svg>
+    </span>
+    <span class="brand">Traders&nbsp;Diary</span>
+  </div>
   __NAV__
   <div class="sidefoot">
     <button class="themebtn" id="themebtn" type="button"
@@ -384,7 +396,7 @@ EXTRA_CSS = """
 }
 .sidenav::-webkit-scrollbar{display:none}
 .navgroup{
-  flex:none; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
+  flex:none; font-family:var(--ui);
   font-size:9.5px; font-weight:700; letter-spacing:.09em;
   text-transform:uppercase; color:var(--faint); padding:14px 10px 6px;
 }
@@ -394,9 +406,9 @@ EXTRA_CSS = """
 .tb{
   flex:none; display:flex; align-items:center; gap:10px; width:100%;
   background:none; border:none; border-left:2px solid transparent;
-  border-radius:0 7px 7px 0; color:var(--muted); cursor:pointer;
+  border-radius:0 var(--r-sm) var(--r-sm) 0; color:var(--muted); cursor:pointer;
   padding:9px 10px; min-height:38px; text-align:left;
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
+  font-family:var(--ui);
   font-weight:600; font-size:12.5px; letter-spacing:.01em;
   transition:color .14s, background .14s, border-color .14s;
 }
@@ -423,7 +435,7 @@ EXTRA_CSS = """
 }
 .rpbar select, .rpbar input, .ticket input{
   background:var(--lift); color:var(--text); border:1px solid var(--line);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:14px; padding:10px 12px;
+  font-family:var(--ui); font-size:14px; padding:10px 12px;
   min-height:44px; width:100%;
 }
 .rpbar select:focus-visible, .rpbar input:focus-visible, .ticket input:focus-visible{
@@ -432,12 +444,12 @@ EXTRA_CSS = """
 .tfrow{display:flex; gap:4px}
 .tfb{
   background:var(--raised); border:1px solid var(--line); color:var(--muted);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:600; font-size:12px;
+  font-family:var(--ui); font-weight:600; font-size:12px;
   padding:0 13px; min-height:44px; cursor:pointer;
 }
 /* A quiet pill until it is the one you are on, which is how TradingView
    marks the live timeframe. */
-.tfb{border-color:transparent; border-radius:4px}
+.tfb{border-color:transparent; border-radius:var(--r-xs)}
 .tfb:hover{background:var(--lift); color:var(--text)}
 .tfb[aria-pressed="true"]{
   background:var(--accent-dim); border-color:transparent;
@@ -448,12 +460,12 @@ EXTRA_CSS = """
   border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft);
   margin-bottom:12px; font-size:12.5px; color:var(--muted);
 }
-.rv b{color:var(--text); font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif}
+.rv b{color:var(--text); font-family:var(--ui)}
 #rc{width:100%; display:block}
 .rpctl{display:flex; flex-wrap:wrap; gap:7px; align-items:center; margin-top:12px}
 .rbtn{
   background:var(--raised); border:1px solid var(--line); color:var(--text);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:13px; padding:0 15px;
+  font-family:var(--ui); font-size:13px; padding:0 15px;
   min-height:44px; cursor:pointer;
 }
 .rbtn:hover{border-color:var(--accent)}
@@ -461,13 +473,13 @@ EXTRA_CSS = """
 .rpsp{flex:1}
 .deck{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px}
 .deck h3{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:13px;
+  font-family:var(--ui); font-weight:800; font-size:13px;
   letter-spacing:.02em; text-transform:uppercase; margin:0 0 14px;
 }
 .sides{display:flex; gap:9px; margin-bottom:14px}
 .sbtn{
   flex:1; min-height:48px; cursor:pointer; border:1px solid;
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:700; font-size:13px;
+  font-family:var(--ui); font-weight:700; font-size:13px;
   letter-spacing:.11em; text-transform:uppercase; background:var(--raised);
 }
 .sbtn.buy{border-color:var(--win-faded); color:var(--win)}
@@ -487,7 +499,7 @@ EXTRA_CSS = """
   align-items:baseline; padding:9px 12px; background:var(--raised);
   border:1px solid var(--line); font-size:12.5px;
 }
-.rpr,.rpm{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif}
+.rpr,.rpm{font-family:var(--ui)}
 .rpt{color:var(--faint); font-size:11px; text-transform:uppercase}
 
 /* system */
@@ -502,11 +514,11 @@ EXTRA_CSS = """
 }
 .steps li::before{
   content:counter(st); position:absolute; left:20px; top:17px;
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:900; font-size:20px;
+  font-family:var(--ui); font-weight:900; font-size:20px;
   color:var(--accent);
 }
 .steps h3{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:13px;
+  font-family:var(--ui); font-weight:800; font-size:13px;
   letter-spacing:.02em; text-transform:uppercase; margin:0 0 7px;
 }
 .steps p{margin:0; color:var(--muted); font-size:14px; line-height:1.65}
@@ -517,7 +529,7 @@ EXTRA_CSS = """
   border-left:2px solid var(--loss-faded);
 }
 .lessons .ln{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:20px; color:var(--accent);
+  font-family:var(--ui); font-size:20px; color:var(--accent);
   font-variant-numeric:tabular-nums;
 }
 .lessons .lt{font-size:14px; line-height:1.65}
@@ -533,7 +545,7 @@ EXTRA_CSS = """
 .mynote textarea{
   width:100%; min-height:84px; resize:vertical; background:var(--lift);
   color:var(--text); border:1px solid var(--line); padding:11px 13px;
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:14px; line-height:1.6;
+  font-family:var(--ui); font-size:14px; line-height:1.6;
 }
 .mynote textarea:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .mysaved{color:var(--faint); font-size:11.5px; margin:7px 0 0; min-height:16px}
@@ -543,7 +555,7 @@ EXTRA_CSS = """
   bottom:calc(16px + env(safe-area-inset-bottom, 0px));
   display:flex; align-items:center; gap:14px; flex-wrap:wrap;
   background:var(--lift); border:1px solid var(--accent); padding:14px 18px;
-  box-shadow:var(--shadow); border-radius:6px;
+  box-shadow:var(--shadow); border-radius:var(--r-sm);
 }
 #updbar span{flex:1 1 160px; font-size:13.5px; line-height:1.45}
 #updbar .bigbtn{padding:10px 18px; flex:none}
@@ -563,7 +575,7 @@ EXTRA_CSS = """
 /* the video library */
 .vgroup{margin-top:24px}
 .vgroup h3{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:13px;
+  font-family:var(--ui); font-weight:800; font-size:13px;
   letter-spacing:.02em; text-transform:uppercase; color:var(--accent);
   margin:0 0 10px;
 }
@@ -571,7 +583,7 @@ EXTRA_CSS = """
 .vcut{
   display:flex; align-items:center; gap:11px; text-align:left; cursor:pointer;
   background:var(--raised); border:1px solid var(--line); color:var(--text);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; padding:12px 14px; min-height:52px;
+  font-family:var(--ui); padding:12px 14px; min-height:52px;
 }
 .vcut:hover{border-color:var(--accent); background:var(--lift)}
 .vcut:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
@@ -581,7 +593,7 @@ EXTRA_CSS = """
 }
 .vcut .vn{flex:1; font-size:13.5px; line-height:1.35}
 .vcut .vs{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:11px; color:var(--faint);
+  font-family:var(--ui); font-size:11px; color:var(--faint);
 }
 .vcut.win{border-left:2px solid var(--win)}
 .vcut.loss{border-left:2px solid var(--loss)}
@@ -598,7 +610,7 @@ EXTRA_CSS = """
 }
 .vhead{
   display:flex; align-items:center; justify-content:space-between; gap:14px;
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:13px;
+  font-family:var(--ui); font-weight:800; font-size:13px;
   letter-spacing:.02em; text-transform:uppercase;
 }
 .vplayer video{
@@ -633,9 +645,16 @@ body{overflow:hidden}
   background:var(--raised); border-right:1px solid var(--line);
 }
 .sidetop{
-  flex:none; display:flex; align-items:center; height:52px; padding:0 16px;
-  border-bottom:1px solid var(--line-soft);
+  flex:none; display:flex; align-items:center; gap:10px; height:52px;
+  padding:0 14px; border-bottom:1px solid var(--line-soft);
 }
+/* The app's own mark, the three candles from the icon, drawn in the app's
+   own colours so it reads in either theme rather than being a white tile
+   stuck to the corner of a dark screen. */
+.mark{flex:none; display:block; width:22px; height:22px}
+.mark svg{width:100%; height:100%; display:block}
+.mark rect{fill:var(--muted)}
+.mark rect.up{fill:var(--accent)}
 .sidefoot{
   flex:none; display:flex; align-items:center; gap:9px;
   border-top:1px solid var(--line-soft); padding:10px 12px 12px;
@@ -651,26 +670,30 @@ body{overflow:hidden}
 /* The page name is a label, not the hero heading the template styles h1 as,
    so the gradient fill, the glow and the capitals are all turned off here. */
 .pagetitle{
-  margin:0; flex:none; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
+  margin:0; flex:none; font-family:var(--ui);
   font-size:16px; font-weight:700; letter-spacing:-.005em; line-height:1.2;
   text-transform:none; white-space:nowrap;
   background:none; -webkit-background-clip:border-box;
   background-clip:border-box; color:var(--text); filter:none;
 }
+/* A name, set once, quietly. Nine hundred weight in capitals with letters
+   pushed apart was the loudest thing on a screen whose job is to show
+   numbers. */
 .brand{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:900; font-size:13px;
-  letter-spacing:.04em; text-transform:uppercase; color:var(--text);
-  white-space:nowrap; flex:none;
+  font-family:var(--ui); font-weight:800; font-size:14.5px;
+  letter-spacing:-.015em; color:var(--text);
+  white-space:nowrap; flex:none; min-width:0; overflow:hidden;
+  text-overflow:ellipsis;
 }
 .appmeta{
-  flex:1; min-width:0; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
+  flex:1; min-width:0; font-family:var(--ui);
   font-size:11px; line-height:1.35; color:var(--muted);
 }
 .appmeta b{color:var(--text)}
 /* Dark or light, one tap, next to the count. A sun or a moon drawn in CSS
    rather than another file to fetch. */
 .themebtn{
-  flex:none; width:32px; height:32px; border-radius:8px;
+  flex:none; width:32px; height:32px; border-radius:var(--r-sm);
   border:1px solid var(--line); background:var(--raised); cursor:pointer;
   position:relative; padding:0;
 }
@@ -707,10 +730,10 @@ body{overflow:hidden}
 .rbtn2{
   width:36px; height:36px; display:flex; align-items:center;
   justify-content:center; background:none; border:1px solid transparent;
-  color:var(--muted); cursor:pointer; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
-  font-size:12px; font-weight:600; border-radius:2px;
+  color:var(--muted); cursor:pointer; font-family:var(--ui);
+  font-size:12px; font-weight:600; border-radius:var(--r-xs);
 }
-.rbtn2{border-radius:4px}
+.rbtn2{border-radius:var(--r-xs)}
 .rbtn2:hover{color:var(--text); background:var(--lift)}
 .rbtn2[aria-pressed="true"]{color:var(--accent); background:var(--accent-dim)}
 .rbtn2:focus-visible{outline:2px solid var(--accent); outline-offset:-1px}
@@ -721,7 +744,7 @@ body{overflow:hidden}
 .raildiv{height:1px; background:var(--line); margin:5px 3px}
 .rtool{
   width:36px; height:36px; display:grid; place-items:center; cursor:pointer;
-  background:none; border:1px solid transparent; border-radius:4px;
+  background:none; border:1px solid transparent; border-radius:var(--r-xs);
   color:var(--muted);
 }
 .rtool svg{width:17px; height:17px; fill:none; stroke:currentColor;
@@ -754,7 +777,7 @@ body{overflow:hidden}
 .wsfoot{
   flex:none; display:flex; align-items:center; gap:14px; padding:0 12px;
   height:34px; border-top:1px solid var(--line); background:var(--raised);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:11px; color:var(--muted);
+  font-family:var(--ui); font-size:11px; color:var(--muted);
   overflow-x:auto; white-space:nowrap; scrollbar-width:none;
 }
 .wsfoot::-webkit-scrollbar{display:none}
@@ -765,7 +788,7 @@ body{overflow:hidden}
 }
 .pblock{border-bottom:1px solid var(--line); padding:13px 14px}
 .pblock h4{
-  margin:0 0 9px; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800;
+  margin:0 0 9px; font-family:var(--ui); font-weight:800;
   font-size:10.5px; letter-spacing:.04em; text-transform:uppercase;
   color:var(--muted);
 }
@@ -818,6 +841,9 @@ body{overflow:hidden}
   /* The status line is information, so it wraps instead of being clipped. */
   .wsfoot{height:auto; padding:8px 12px; white-space:normal; line-height:1.5}
 
+}
+
+@media (max-width:760px){
   /* The same nav, moved to where the thumb is. A column of sections down the
      left is right on a desktop and wrong on a phone, where it would eat half
      the screen; across the bottom it costs one row and is the easiest thing
@@ -839,7 +865,7 @@ body{overflow:hidden}
   .tb{
     flex:1 1 0; min-width:52px; flex-direction:column; gap:3px;
     justify-content:center; text-align:center; border-left:none;
-    border-top:2px solid transparent; border-radius:6px;
+    border-top:2px solid transparent; border-radius:var(--r-sm);
     padding:7px 3px 6px; min-height:52px; font-size:9.5px; font-weight:600;
     letter-spacing:0; line-height:1.2;
   }
@@ -858,6 +884,11 @@ body{overflow:hidden}
   .pagetitle{flex:1 0 auto; font-size:15px}
   .accrow.bar{flex:1 0 100%; margin:9px 0 0; flex-wrap:wrap}
   .accrow.bar .acc{flex:1 1 0; justify-content:center}
+  /* Anything that floats at the bottom of the screen clears the nav bar.
+     A notice that covers the way out of the screen it is covering is worse
+     than no notice. */
+  #updbar{bottom:calc(68px + env(safe-area-inset-bottom, 0px))}
+  .reading .col{padding-bottom:calc(80px + env(safe-area-inset-bottom, 0px))}
 }
 
 
@@ -867,9 +898,9 @@ body{overflow:hidden}
 .precheck{display:flex; flex-direction:column; gap:6px; margin-top:9px}
 .pcitem{
   display:flex; gap:7px; align-items:flex-start; font-size:11.5px;
-  line-height:1.45; padding:8px 10px; border-radius:4px;
+  line-height:1.45; padding:8px 10px; border-radius:var(--r-xs);
 }
-.pcitem::before{content:""; width:3px; align-self:stretch; border-radius:2px}
+.pcitem::before{content:""; width:3px; align-self:stretch; border-radius:var(--r-xs)}
 .pcitem.hold{background:rgba(242,54,69,.07); color:var(--text)}
 .pcitem.hold::before{background:var(--loss)}
 .pcitem.note{background:var(--lift); color:var(--muted)}
@@ -906,7 +937,7 @@ body{overflow:hidden}
 }
 .shtrail::-webkit-scrollbar{display:none}
 .crumb{
-  background:none; border:none; padding:3px 5px; border-radius:4px;
+  background:none; border:none; padding:3px 5px; border-radius:var(--r-xs);
   color:var(--accent); cursor:pointer; font-family:inherit; font-size:12.5px;
 }
 .crumb:hover{background:var(--lift)}
@@ -914,13 +945,13 @@ body{overflow:hidden}
 .crumbsep{color:var(--faint)}
 .shup{
   margin-left:auto; flex:0 0 auto; background:none; border:1px solid var(--line);
-  border-radius:4px; padding:5px 11px; color:var(--muted); cursor:pointer;
+  border-radius:var(--r-xs); padding:5px 11px; color:var(--muted); cursor:pointer;
   font-family:inherit; font-size:11.5px;
 }
 .shup:hover{color:var(--text); border-color:var(--accent)}
 .shlist{
   display:flex; flex-direction:column; gap:1px;
-  background:var(--line); border:1px solid var(--line); border-radius:6px;
+  background:var(--line); border:1px solid var(--line); border-radius:var(--r-sm);
   overflow:hidden;
 }
 .shrow{
@@ -953,7 +984,7 @@ body{overflow:hidden}
 /* Progress towards a sample worth reading. A bar rather than a number,
    because "47" means nothing on its own and "47 of 100" is a picture. */
 .bookbar{
-  height:6px; border-radius:3px; background:var(--lift); overflow:hidden;
+  height:6px; border-radius:var(--r-xs); background:var(--lift); overflow:hidden;
   margin:2px 0 9px;
 }
 .bookbar i{display:block; height:100%; background:var(--accent); width:0}
@@ -968,22 +999,22 @@ body{overflow:hidden}
   display:grid; grid-template-columns:auto 1fr auto; gap:2px 9px;
   align-items:baseline; text-align:left; cursor:pointer; padding:7px 8px;
   background:none; border:1px solid transparent; border-left:2px solid transparent;
-  color:var(--muted); font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
+  color:var(--muted); font-family:var(--ui);
 }
 .wl:hover{background:var(--lift); color:var(--text)}
 .wl.on{border-left-color:var(--accent); background:var(--lift); color:var(--text)}
 .wl:focus-visible{outline:2px solid var(--accent); outline-offset:-1px}
 .wls{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:11.5px;
+  font-family:var(--ui); font-weight:800; font-size:11.5px;
   letter-spacing:.02em; color:var(--text);
 }
 .wln{font-size:11px; color:var(--faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .wlp{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:12px; color:var(--text);
+  font-family:var(--ui); font-size:12px; color:var(--text);
   font-variant-numeric:tabular-nums;
 }
 .wlc{
-  grid-column:3; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:10.5px;
+  grid-column:3; font-family:var(--ui); font-size:10.5px;
   font-variant-numeric:tabular-nums; text-align:right;
 }
 
@@ -997,7 +1028,7 @@ body{overflow:hidden}
 .dtab{
   flex:none; display:flex; flex-direction:column; gap:1px; cursor:pointer;
   background:var(--lift); border:1px solid var(--line); padding:7px 11px;
-  color:var(--muted); font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; min-height:52px;
+  color:var(--muted); font-family:var(--ui); min-height:52px;
   border-left-width:2px; text-align:left;
 }
 .dtab.win{border-left-color:var(--win)}
@@ -1005,12 +1036,12 @@ body{overflow:hidden}
 .dtab.on{background:var(--raised); border-color:var(--accent); color:var(--text)}
 .dtab:hover{color:var(--text)}
 .dtab:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
-.dtn{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:10px; color:var(--faint)}
+.dtn{font-family:var(--ui); font-size:10px; color:var(--faint)}
 .dts{font-size:12px; white-space:nowrap}
-.dtr{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:11px}
+.dtr{font-family:var(--ui); font-size:11px}
 .dtab.win .dtr{color:var(--win)}
 .dtab.loss .dtr{color:var(--loss)}
-.dfn{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; color:var(--accent); margin-left:5px}
+.dfn{font-family:var(--ui); color:var(--accent); margin-left:5px}
 .nobars{
   position:absolute; left:10%; right:10%; top:42%; text-align:center;
   color:var(--muted); font-size:13px; line-height:1.6;
@@ -1027,7 +1058,7 @@ body{overflow:hidden}
   color:var(--muted); font-size:10px; text-transform:uppercase;
   letter-spacing:.02em;
 }
-.dvv{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:15px}
+.dvv{font-family:var(--ui); font-size:15px}
 .dvv small{display:block; color:var(--faint); font-size:10.5px; margin-top:1px}
 .dvv.win{color:var(--win)} .dvv.loss{color:var(--loss)}
 #tradeview .chead{
@@ -1037,8 +1068,8 @@ body{overflow:hidden}
   display:flex; gap:12px; align-items:baseline; padding:6px 0;
   border-bottom:1px solid var(--line-soft); font-size:12.5px;
 }
-.tstep .tt{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; color:var(--muted)}
-.tstep .tp{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; color:var(--text)}
+.tstep .tt{font-family:var(--ui); color:var(--muted)}
+.tstep .tp{font-family:var(--ui); color:var(--text)}
 .tstep .tk{color:var(--accent); font-size:11px; text-transform:uppercase}
 .tstep .tf{margin-left:auto; color:var(--faint); font-size:11px}
 
@@ -1055,19 +1086,19 @@ body{overflow:hidden}
 .pgrow{flex:1 1 auto; overflow:hidden}
 .psel{
   background:var(--lift); color:var(--text); border:1px solid var(--line);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:12.5px; padding:8px 10px;
+  font-family:var(--ui); font-size:12.5px; padding:8px 10px;
   min-height:38px;
 }
 .psel:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
 .pbtn{
   background:var(--lift); border:1px solid var(--line); color:var(--text);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:600; font-size:12px;
+  font-family:var(--ui); font-weight:600; font-size:12px;
   text-transform:uppercase; letter-spacing:.02em; padding:9px 14px;
   min-height:38px; cursor:pointer;
 }
 /* The one solid button on the screen, so it is obvious which control
    starts the thing you came here to do. */
-.pbtn{border-radius:4px}
+.pbtn{border-radius:var(--r-xs)}
 .pbtn.go{background:var(--accent); border-color:var(--accent); color:#FFF}
 .pbtn.go:hover{background:#1E53E5; border-color:#1E53E5}
 .pbtn:hover{background:var(--lift)}
@@ -1103,7 +1134,7 @@ body{overflow:hidden}
 .cuthint{
   position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:3;
   background:var(--accent); color:#04121A; padding:8px 15px; max-width:88%;
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:600; font-size:12px;
+  font-family:var(--ui); font-weight:600; font-size:12px;
   letter-spacing:.02em; text-transform:uppercase; text-align:center;
   pointer-events:none;
 }
@@ -1111,7 +1142,7 @@ body{overflow:hidden}
 /* The OHLC readout that follows the crosshair, the way a chart names what is
    under the cursor instead of making you guess. */
 .pohlc{
-  display:flex; gap:12px; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
+  display:flex; gap:12px; font-family:var(--ui);
   font-size:11.5px; color:var(--muted); white-space:nowrap;
   overflow:hidden; text-overflow:ellipsis;
 }
@@ -1126,7 +1157,7 @@ body{overflow:hidden}
    ground rather than a fixed white. On dark it was white text on a near
    white panel. */
 .plegend{position:absolute; left:8px; top:6px; z-index:3; pointer-events:none;
-  max-width:calc(100% - 96px); padding:2px 6px; border-radius:4px;
+  max-width:calc(100% - 96px); padding:2px 6px; border-radius:var(--r-xs);
   background:color-mix(in srgb, var(--ground) 82%, transparent)}
 .plegend:empty{display:none}
 .plegend .pohlc{flex-wrap:wrap; row-gap:2px; overflow:visible}
@@ -1135,7 +1166,7 @@ body{overflow:hidden}
    chart underneath have it. */
 /* The funded account guard. The room bar is the one number that matters, so
    it is the widest thing on the card. */
-.fundbar{height:10px; border-radius:5px; background:var(--lift); overflow:hidden;
+.fundbar{height:10px; border-radius:var(--r-xs); background:var(--lift); overflow:hidden;
   margin:4px 0 10px}
 .fundbar i{display:block; height:100%; background:var(--win); width:0}
 .fundbar.warn i{background:var(--loss)}
@@ -1149,10 +1180,10 @@ body{overflow:hidden}
   color:var(--muted); text-transform:uppercase; letter-spacing:.03em}
 .sizer{margin-top:12px; border-top:1px solid var(--line-soft); padding-top:12px}
 .planform select{background:var(--lift); border:1px solid var(--line);
-  border-radius:4px; color:var(--text); padding:7px 9px; font-size:13px;
+  border-radius:var(--r-xs); color:var(--text); padding:7px 9px; font-size:13px;
   min-height:38px}
 .planform input{background:var(--lift); border:1px solid var(--line);
-  border-radius:4px; color:var(--text); padding:7px 9px; font-size:13px;
+  border-radius:var(--r-xs); color:var(--text); padding:7px 9px; font-size:13px;
   font-variant-numeric:tabular-nums; min-height:38px}
 
 /* The account picker. Two evaluation accounts have to be told apart at a
@@ -1160,7 +1191,7 @@ body{overflow:hidden}
 .accrow{display:flex; gap:6px; flex-wrap:wrap; margin:0 0 6px}
 .accrow[hidden]{display:none}
 .acc{display:flex; align-items:center; gap:6px; background:var(--lift);
-  border:1px solid var(--line); border-radius:999px; color:var(--muted);
+  border:1px solid var(--line); border-radius:var(--r-pill); color:var(--muted);
   padding:5px 12px; font-size:12px; min-height:32px; cursor:pointer}
 .acc[aria-pressed="true"]{color:var(--text); border-color:var(--edge);
   background:var(--ground)}
@@ -1176,7 +1207,7 @@ body{overflow:hidden}
 .vfilter{display:flex; gap:6px; flex-wrap:wrap; margin:0 0 12px}
 .vfb{
   display:flex; align-items:center; gap:7px; background:var(--raised);
-  border:1px solid var(--line); border-radius:999px; color:var(--muted);
+  border:1px solid var(--line); border-radius:var(--r-pill); color:var(--muted);
   padding:6px 13px; font-size:12.5px; min-height:34px; cursor:pointer;
 }
 .vfb .sn{font-size:11px; color:var(--faint); font-variant-numeric:tabular-nums}
@@ -1200,7 +1231,7 @@ body{overflow:hidden}
   border-top:1px solid var(--line-soft)}
 .jq{flex:1; font-size:11.5px; color:var(--muted); line-height:1.4}
 .jyn{display:flex; gap:4px; flex:none}
-.jbtn{background:var(--lift); border:1px solid var(--line); border-radius:4px;
+.jbtn{background:var(--lift); border:1px solid var(--line); border-radius:var(--r-xs);
   color:var(--faint); font-size:11px; padding:4px 9px; min-height:28px;
   cursor:pointer}
 .jbtn.yes.on{color:var(--win); border-color:var(--win)}
@@ -1221,7 +1252,7 @@ body{overflow:hidden}
    goes up, and both move when the page draws so the change is felt rather
    than read. */
 .acct{
-  border:1px solid var(--line); border-radius:10px; padding:14px 15px 12px;
+  border:1px solid var(--line); border-radius:var(--r-md); padding:14px 15px 12px;
   margin:0 0 12px; background:var(--lift); position:relative; overflow:hidden;
 }
 .acct::after{
@@ -1242,11 +1273,11 @@ body{overflow:hidden}
   text-align:right}
 .mval small{color:var(--faint); font-size:11px; margin-left:5px}
 .track{
-  grid-column:1/-1; position:relative; height:12px; border-radius:7px;
+  grid-column:1/-1; position:relative; height:12px; border-radius:var(--r-sm);
   background:var(--ground); border:1px solid var(--line); overflow:hidden;
 }
 .track i{
-  display:block; height:100%; width:0; border-radius:6px;
+  display:block; height:100%; width:0; border-radius:var(--r-sm);
   background:linear-gradient(90deg,
     color-mix(in srgb, var(--win) 70%, transparent), var(--win));
   box-shadow:var(--glow-win);
@@ -1273,7 +1304,7 @@ body{overflow:hidden}
 .acctfoot{display:flex; flex-wrap:wrap; gap:6px; margin-top:2px}
 .pip{
   font-size:11px; color:var(--muted); background:var(--ground);
-  border:1px solid var(--line); border-radius:999px; padding:3px 9px;
+  border:1px solid var(--line); border-radius:var(--r-pill); padding:3px 9px;
 }
 .pip.on{color:var(--win); border-color:color-mix(in srgb, var(--win) 45%, transparent)}
 .pip.bad{color:var(--loss); border-color:color-mix(in srgb, var(--loss) 45%, transparent)}
@@ -1290,7 +1321,7 @@ body{overflow:hidden}
 .lessons2{list-style:none; margin:0; padding:0; display:flex;
   flex-direction:column; gap:12px}
 .lsn{border:1px solid var(--line); border-left:3px solid var(--accent);
-  border-radius:8px; padding:13px 15px; background:var(--raised)}
+  border-radius:var(--r-sm); padding:13px 15px; background:var(--raised)}
 .lsnt{margin:0 0 6px; font-size:14px; color:var(--text); display:flex;
   align-items:baseline; justify-content:space-between; gap:12px}
 .lsnn{font-size:11px; color:var(--faint); font-variant-numeric:tabular-nums;
@@ -1312,7 +1343,7 @@ body{overflow:hidden}
    that tick off. The colour is spent on what has been earned, so the eye
    goes to progress rather than to failure. */
 .rewards{
-  border:1px solid var(--line); border-radius:12px; padding:16px 18px 14px;
+  border:1px solid var(--line); border-radius:var(--r-md); padding:16px 18px 14px;
   background:linear-gradient(160deg,
     color-mix(in srgb, var(--accent) 7%, var(--raised)) 0%, var(--raised) 46%);
   margin-bottom:14px;
@@ -1336,11 +1367,11 @@ body{overflow:hidden}
 .rwcount small{font-size:10px; text-transform:uppercase; letter-spacing:.05em;
   color:var(--faint)}
 .rwtrack{
-  height:9px; border-radius:6px; background:var(--ground);
+  height:9px; border-radius:var(--r-sm); background:var(--ground);
   border:1px solid var(--line); overflow:hidden; margin:13px 0 16px;
 }
 .rwtrack i{
-  display:block; height:100%; width:0; border-radius:5px;
+  display:block; height:100%; width:0; border-radius:var(--r-xs);
   background:linear-gradient(90deg,
     color-mix(in srgb, var(--accent) 55%, transparent), #7FE8FF);
   box-shadow:0 0 16px color-mix(in srgb, var(--accent) 60%, transparent);
@@ -1356,7 +1387,7 @@ body{overflow:hidden}
   flex-direction:column; gap:7px}
 .rwm{
   display:grid; grid-template-columns:auto 1fr auto; gap:2px 10px;
-  align-items:center; padding:9px 11px; border-radius:8px;
+  align-items:center; padding:9px 11px; border-radius:var(--r-sm);
   background:var(--ground); border:1px solid var(--line-soft);
 }
 .rwm.got{border-color:color-mix(in srgb, var(--win) 40%, transparent);
@@ -1393,7 +1424,7 @@ body{overflow:hidden}
 /* Which method the Learn tab is showing. */
 .mswitch{display:flex; gap:6px; margin:0 0 16px}
 .msb{
-  background:var(--raised); border:1px solid var(--line); border-radius:999px;
+  background:var(--raised); border:1px solid var(--line); border-radius:var(--r-pill);
   color:var(--muted); padding:7px 16px; font-size:13px; min-height:36px;
   cursor:pointer;
 }
@@ -1412,7 +1443,7 @@ body{overflow:hidden}
   font-variant-numeric:tabular-nums}
 .grpbtn{
   grid-row:1/3; background:var(--raised); border:1px solid var(--line);
-  color:var(--loss); border-radius:6px; padding:8px 14px; font-size:12.5px;
+  color:var(--loss); border-radius:var(--r-sm); padding:8px 14px; font-size:12.5px;
   cursor:pointer; min-height:38px;
 }
 .grpbtn:hover{border-color:var(--loss)}
@@ -1433,7 +1464,7 @@ body{overflow:hidden}
    lays it out: the date, what the session made, the shape of it, and a row
    of figures under it. */
 .dcards{display:flex; flex-direction:column; gap:12px}
-.dcard{border:1px solid var(--line); border-radius:10px; background:var(--raised);
+.dcard{border:1px solid var(--line); border-radius:var(--r-md); background:var(--raised);
   padding:13px 15px; border-left:3px solid var(--line)}
 .dcard.up{border-left-color:var(--win)}
 .dcard.down{border-left-color:var(--loss)}
@@ -1445,7 +1476,7 @@ body{overflow:hidden}
 .dcard.down .dcpnl{color:var(--loss)}
 .dspark{width:78px; height:22px; flex:none; opacity:.9}
 .dcbtn{margin-left:auto; background:var(--lift); border:1px solid var(--line);
-  color:var(--muted); border-radius:6px; padding:6px 12px; font-size:12px;
+  color:var(--muted); border-radius:var(--r-sm); padding:6px 12px; font-size:12px;
   min-height:32px; cursor:pointer}
 .dcbtn:hover{color:var(--text); border-color:var(--accent)}
 .dfigs{display:grid; grid-template-columns:repeat(auto-fit,minmax(86px,1fr));
@@ -1458,7 +1489,7 @@ body{overflow:hidden}
 .dcover{margin:9px 0 0; color:var(--loss); font-size:11.5px}
 .dcnote{margin-top:10px}
 .dcnote textarea{width:100%; min-height:38px; resize:vertical;
-  background:var(--ground); border:1px solid var(--line); border-radius:6px;
+  background:var(--ground); border:1px solid var(--line); border-radius:var(--r-sm);
   color:var(--text); padding:8px 10px; font-size:12px; font-family:inherit;
   line-height:1.5}
 .dcnote textarea:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
@@ -1467,7 +1498,7 @@ body{overflow:hidden}
 .dctrade{width:100%; display:grid; grid-template-columns:auto 1fr auto auto;
   gap:12px; align-items:baseline; text-align:left; cursor:pointer;
   background:var(--ground); border:1px solid var(--line-soft);
-  border-radius:6px; padding:9px 11px; min-height:40px}
+  border-radius:var(--r-sm); padding:9px 11px; min-height:40px}
 .dctrade:hover{border-color:var(--accent)}
 .dtt{font-size:11.5px; color:var(--faint); font-variant-numeric:tabular-nums}
 .dts2{font-size:12.5px; color:var(--text)}
@@ -1520,7 +1551,7 @@ body{overflow:hidden}
 .pind.off .pn{color:var(--faint)}
 .peye{pointer-events:auto; display:inline-flex; align-items:center;
   justify-content:center; width:24px; height:20px; padding:0; border:0;
-  border-radius:3px; background:none; color:var(--muted); cursor:pointer}
+  border-radius:var(--r-xs); background:none; color:var(--muted); cursor:pointer}
 .peye:hover{background:var(--lift); color:var(--text)}
 .peye:focus-visible{outline:2px solid var(--accent); outline-offset:0}
 .peye svg{width:15px; height:15px; fill:none; stroke:currentColor;
@@ -1529,7 +1560,7 @@ body{overflow:hidden}
 @media (pointer:coarse){ .peye{width:38px; height:30px} .pind{min-height:30px} }
 .pohlc .up{color:var(--candle-up)} .pohlc .dn{color:var(--candle-dn)}
 .pstale{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:11.5px; color:var(--muted);
+  font-family:var(--ui); font-size:11.5px; color:var(--muted);
   white-space:nowrap;
 }
 /* The live New York clock beside the price's age on the Demo. Hidden on a
@@ -1563,7 +1594,7 @@ body{overflow:hidden}
   gap:2px; padding:3px 8px; border-top:1px solid var(--line);
   background:var(--raised);
 }
-.ppnl{margin-left:14px; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
+.ppnl{margin-left:14px; font-family:var(--ui);
   font-size:12.5px; font-weight:600; font-variant-numeric:tabular-nums; color:var(--muted)}
 .ppnl:empty{display:none}
 .ppnl.win{color:var(--win)}
@@ -1575,9 +1606,9 @@ body{overflow:hidden}
   stroke-width:1.7; stroke-linejoin:round; stroke-linecap:round}
 .pspeed{padding:0 6px; font-variant-numeric:tabular-nums; color:var(--text)}
 .ptool{
-  background:var(--raised); border:1px solid var(--line); border-radius:4px;
+  background:var(--raised); border:1px solid var(--line); border-radius:var(--r-xs);
   box-shadow:var(--shadow);
-  color:var(--muted); font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:600;
+  color:var(--muted); font-family:var(--ui); font-weight:600;
   font-size:11.5px; letter-spacing:.02em; padding:0 11px; min-width:38px;
   min-height:38px; cursor:pointer;
 }
@@ -1591,7 +1622,7 @@ body{overflow:hidden}
 .pticket{
   position:absolute; top:10px; right:10px; width:206px; z-index:2;
   background:var(--raised); border:1px solid var(--line); padding:11px;
-  border-radius:6px; box-shadow:var(--shadow);
+  border-radius:var(--r-sm); box-shadow:var(--shadow);
 }
 .tq{display:grid; grid-template-columns:auto 1fr; gap:6px 8px; align-items:center}
 .tq label{
@@ -1600,7 +1631,7 @@ body{overflow:hidden}
 }
 .tq input{
   background:var(--ground); border:1px solid var(--line); color:var(--text);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:12.5px; padding:6px 7px;
+  font-family:var(--ui); font-size:12.5px; padding:6px 7px;
   width:100%; min-height:34px;
 }
 .tq input:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
@@ -1608,17 +1639,17 @@ body{overflow:hidden}
 .tbuy,.tsell{
   border:none; cursor:pointer; padding:9px 4px; min-height:50px;
   display:flex; flex-direction:column; align-items:center; gap:1px;
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; color:#04120B;
+  font-family:var(--ui); color:#04120B;
 }
 .tbuy{background:var(--win)} .tsell{background:var(--loss); color:#1A0407}
 .tbuy b,.tsell b{font-size:12.5px; text-transform:uppercase; letter-spacing:.02em}
-.tbuy span,.tsell span{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:11px; opacity:.82}
+.tbuy span,.tsell span{font-family:var(--ui); font-size:11px; opacity:.82}
 .tbuy:hover{filter:brightness(1.12)} .tsell:hover{filter:brightness(1.12)}
 .tbuy:disabled,.tsell:disabled{opacity:.3; cursor:not-allowed; filter:none}
 .tbuy:focus-visible,.tsell:focus-visible{outline:2px solid var(--text); outline-offset:2px}
 .tflat{
   width:100%; margin-top:6px; background:var(--lift); border:1px solid var(--line);
-  color:var(--text); font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:11.5px;
+  color:var(--text); font-family:var(--ui); font-size:11.5px;
   text-transform:uppercase; letter-spacing:.02em; padding:9px; min-height:38px;
   cursor:pointer;
 }
@@ -1626,7 +1657,7 @@ body{overflow:hidden}
 .trisk{
   margin:9px 0 0; font-size:11px; line-height:1.5; color:var(--muted);
 }
-.trisk b{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif}
+.trisk b{font-family:var(--ui)}
 .rrwarn{display:block; margin-top:4px; color:var(--loss); font-weight:600}
 .okmove{display:block; margin-top:4px; color:var(--win); font-weight:600}
 .pstatus{
@@ -1650,46 +1681,41 @@ body{overflow:hidden}
    The old version had fourteen tiles all the same size, which is the same as
    having none: nothing led, so nothing was read. */
 .hero{margin-bottom:6px}
+/* Two bands, not one picture with words on top.
+ *
+ * The curve used to run the full width of the panel behind the number, with
+ * a soft patch painted under the text to keep it readable. On a short panel
+ * the patch was not enough and the equity line went straight through the
+ * sentence under the number, which reads as a mistake rather than a design.
+ * So the words get the top band and the curve gets the bottom one, and they
+ * cannot reach each other whatever height the panel ends up. */
 .hpanel{
-  border-radius:8px; position:relative; overflow:hidden; isolation:isolate;
-  min-height:clamp(178px, 24vh, 236px);
+  border-radius:var(--r-md); position:relative; overflow:hidden;
   background:var(--raised);
-  border:1px solid var(--line); padding:24px 26px;
-  display:flex; flex-direction:column; justify-content:flex-start;
+  border:1px solid var(--line); padding:22px 26px 0;
+  display:grid; grid-template-rows:auto auto; gap:18px;
 }
-/* The curve runs the full width behind the number rather than sitting in a box
-   beside it. isolation on the panel keeps z-index:-1 above the panel's own
-   background instead of dropping it behind the page. */
+/* The curve is a band, not a backdrop, so it gets a band's height. Given a
+   share of the panel it grew with the panel and turned a figure with a
+   shape under it into a chart with a caption. */
 .hpanel canvas{
-  position:absolute; inset:0; width:100%; height:100%; display:block; z-index:-1;
+  grid-row:2; display:block;
+  height:clamp(70px, 11vh, 104px);
+  margin:0 -26px; width:calc(100% + 52px);
 }
-.hpanel::before{
-  content:none;
-}
-.hpanel::after{
-  content:none;
-}
-.hface{display:flex; flex-direction:column; gap:7px; max-width:min(100%, 620px);
-  position:relative}
-/* The words sit on the panel's own colour rather than on the curve. Without
-   this the equity line ran straight through the number and the button, which
-   is exactly where the eye goes first. */
-.hface>*{position:relative}
-.hface::before{
-  content:""; position:absolute; inset:-10px -14px; z-index:-1;
-  background:radial-gradient(120% 90% at 0% 40%, var(--raised) 58%,
-    color-mix(in srgb, var(--raised) 72%, transparent) 78%, transparent 100%);
-}
+.hface{display:flex; flex-direction:column; gap:7px;
+  max-width:min(100%, 620px); grid-row:1}
 .hk{
   color:var(--muted); font-size:10px; text-transform:uppercase;
   letter-spacing:.04em; font-weight:600;
 }
 .hv{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-variant-numeric:tabular-nums;
-  font-size:clamp(34px, 5.4vw, 54px); line-height:1.02; letter-spacing:-.01em;
+  font-family:var(--ui); font-variant-numeric:tabular-nums;
+  font-size:clamp(34px, 5.4vw, 54px); line-height:1.02;
+  letter-spacing:-.025em; font-weight:800;
 }
-.hv.win{color:var(--win); text-shadow:0 0 34px rgba(43,224,138,.3)}
-.hv.loss{color:var(--loss); text-shadow:0 0 34px rgba(255,92,110,.28)}
+.hv.win{color:var(--win)}
+.hv.loss{color:var(--loss)}
 .hsub{color:var(--faint); font-size:12.5px; line-height:1.5}
 /* The one action an empty journal has, on the panel that is otherwise
    telling you it is empty. */
@@ -1704,18 +1730,23 @@ body{overflow:hidden}
   letter-spacing:.04em; font-weight:600;
 }
 .hfoot span:last-child{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; color:var(--faint);
+  font-family:var(--ui); color:var(--faint);
   text-transform:none; letter-spacing:0; font-size:11px;
 }
 
 /* Four figures, small on purpose. The big number above is the headline; these
    are the footnotes to it, and footnotes do not get headline type. */
+/* Four figures, so two by two or four across and never three and a lonely
+   fourth. auto-fit with a 158 pixel floor gave exactly that at the widths
+   between, and a row of three with one underneath reads as something that
+   did not fit rather than as a set. */
 .figs{
   display:grid; gap:10px; margin-top:10px;
-  grid-template-columns:repeat(auto-fit, minmax(158px, 1fr));
+  grid-template-columns:repeat(4, minmax(0, 1fr));
 }
+@media (max-width:1180px){ .figs{grid-template-columns:repeat(2, minmax(0,1fr))} }
 .fig{
-  border-radius:6px; background:var(--raised); border:1px solid var(--line);
+  border-radius:var(--r-sm); background:var(--raised); border:1px solid var(--line);
   border-left:2px solid var(--line); padding:12px 14px;
   display:flex; flex-direction:column; gap:3px;
 }
@@ -1724,7 +1755,7 @@ body{overflow:hidden}
   letter-spacing:.04em; font-weight:600;
 }
 .fv{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-variant-numeric:tabular-nums;
+  font-family:var(--ui); font-variant-numeric:tabular-nums;
   font-size:20px; line-height:1.2; letter-spacing:-.01em;
 }
 .fv.win{color:var(--win)}
@@ -1754,11 +1785,11 @@ body{overflow:hidden}
   grid-template-columns:repeat(auto-fit, minmax(172px, 1fr));
 }
 .jump{
-  border-radius:6px; position:relative; overflow:hidden; display:flex; flex-direction:column;
+  border-radius:var(--r-sm); position:relative; overflow:hidden; display:flex; flex-direction:column;
   gap:7px; text-align:left; cursor:pointer; min-height:126px;
   justify-content:flex-end; padding:16px 17px; color:var(--text);
   background:var(--raised); border:1px solid var(--line);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
+  font-family:var(--ui);
   transition:border-color .16s, background .16s;
 }
 .jump::after{
@@ -1772,7 +1803,7 @@ body{overflow:hidden}
   transition:transform .16s;
 }
 .jump b{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:12px;
+  font-family:var(--ui); font-weight:800; font-size:12px;
   letter-spacing:.02em; text-transform:uppercase;
 }
 .jump span{color:var(--muted); font-size:12px; line-height:1.4}
@@ -1801,7 +1832,7 @@ body{overflow:hidden}
   letter-spacing:.04em; font-weight:600;
 }
 .nv{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-variant-numeric:tabular-nums;
+  font-family:var(--ui); font-variant-numeric:tabular-nums;
   font-size:16px; line-height:1.3;
 }
 .nv.win{color:var(--win)}
@@ -1819,14 +1850,14 @@ body{overflow:hidden}
 .more>summary{
   cursor:pointer; list-style:none; padding:16px 2px;
   display:flex; align-items:center; gap:11px; color:var(--muted);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:11.5px;
+  font-family:var(--ui); font-weight:800; font-size:11.5px;
   letter-spacing:.03em; text-transform:uppercase;
 }
 .more>summary::-webkit-details-marker{display:none}
 .more>summary::before{
   content:"+"; display:grid; place-items:center; width:20px; height:20px;
   border:1px solid var(--line); color:var(--accent);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:14px; line-height:1;
+  font-family:var(--ui); font-size:14px; line-height:1;
 }
 .more[open]>summary::before{content:"-"}
 .more>summary:hover{color:var(--text)}
@@ -1839,7 +1870,7 @@ body{overflow:hidden}
 }
 .insticon{
   flex:none; width:26px; height:26px; border:2px solid var(--accent);
-  border-radius:7px; position:relative;
+  border-radius:var(--r-sm); position:relative;
 }
 .insticon::before{
   content:""; position:absolute; left:50%; top:5px; width:2px; height:11px;
@@ -1852,7 +1883,7 @@ body{overflow:hidden}
 }
 .insttext{flex:1 1 auto; min-width:0}
 .instbig{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:700; font-size:12.5px;
+  font-family:var(--ui); font-weight:700; font-size:12.5px;
   letter-spacing:.02em; text-transform:none; margin:0; text-align:left;
   background:none; border:none; color:var(--text); padding:6px 0;
   min-height:32px;
@@ -1866,7 +1897,7 @@ body{overflow:hidden}
 .instsub b{color:var(--text)}
 .instx{
   background:none; border:none; color:var(--faint); cursor:pointer;
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:12px; padding:12px;
+  font-family:var(--ui); font-size:12px; padding:12px;
   text-transform:uppercase; letter-spacing:.02em; min-height:44px;
 }
 .instx:hover{color:var(--muted)}
@@ -1883,7 +1914,7 @@ body{overflow:hidden}
    An auto margin centres when there is room and gives up when there is not. */
 .lockcard{
   background:var(--raised); border:1px solid var(--line); padding:30px 28px;
-  border-radius:8px; box-shadow:var(--shadow);
+  border-radius:var(--r-sm); box-shadow:var(--shadow);
   max-width:420px; width:100%; margin:auto; text-align:center;
 }
 .lockcard .lockhelp{font-size:12.5px; line-height:1.5; margin:10px 0 0}
@@ -1891,17 +1922,17 @@ body{overflow:hidden}
 .lockcard h2::before{display:none}
 .lockmark{
   width:34px; height:26px; margin:0 auto 18px; border:2px solid var(--accent);
-  border-radius:4px; position:relative; box-shadow:var(--shadow);
+  border-radius:var(--r-xs); position:relative; box-shadow:var(--shadow);
 }
 .lockmark::before{
   content:""; position:absolute; left:50%; top:-15px; width:18px; height:16px;
   border:2px solid var(--accent); border-bottom:none;
-  border-radius:9px 9px 0 0; transform:translateX(-50%);
+  border-radius:var(--r-sm) 9px 0 0; transform:translateX(-50%);
 }
 #lockform{display:flex; flex-direction:column; gap:10px; margin:20px 0 4px}
 #lockpin{
   background:var(--lift); border:1px solid var(--line); color:var(--text);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:17px; letter-spacing:.2em;
+  font-family:var(--ui); font-size:17px; letter-spacing:.2em;
   padding:14px; text-align:center; min-height:50px;
 }
 #lockpin:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
@@ -1915,7 +1946,7 @@ body{overflow:hidden}
 #setform{display:flex; flex-direction:column; gap:14px; margin-top:16px}
 #setform input[type=password]{
   background:var(--lift); border:1px solid var(--line); color:var(--text);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:16px; letter-spacing:.04em;
+  font-family:var(--ui); font-size:16px; letter-spacing:.04em;
   padding:13px; min-height:48px;
 }
 #setform input[type=password]:focus-visible{
@@ -1941,7 +1972,7 @@ body{overflow:hidden}
    next to a ghost button that read as normal. */
 .bigbtn{
   background:var(--accent); border-color:var(--accent); color:#FFF;
-  border-radius:4px;
+  border-radius:var(--r-xs);
 }
 .bigbtn:hover{background:#1E53E5; border-color:#1E53E5; color:#FFF}
 .bigbtn:disabled{opacity:.45; cursor:default}
@@ -1960,7 +1991,7 @@ body{overflow:hidden}
 .setrow label{color:var(--muted); font-size:13px}
 .setrow select{
   background:var(--lift); color:var(--text); border:1px solid var(--line);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:14px; padding:9px 12px;
+  font-family:var(--ui); font-size:14px; padding:9px 12px;
   min-height:44px;
 }
 .setrow select:focus-visible{outline:2px solid var(--accent); outline-offset:2px}

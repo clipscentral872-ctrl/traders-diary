@@ -15,6 +15,7 @@
  */
 
 import * as P from "./profile.js";
+import {FACE} from "./chart.js";
 
 /* The tools, in the order they sit on the rail. Each says how many points it
    needs and how it is drawn; nothing else in here knows about any of them. */
@@ -164,7 +165,7 @@ function stroke(x, c, w, dash) {
 }
 
 function label(x, s, px, py, text, colour) {
-  x.font = '10px Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",sans-serif';
+  x.font = "10px " + FACE;
   const w = x.measureText(text).width + 8;
   x.fillStyle = s.css("--ground");
   x.globalAlpha = 0.85;

@@ -1,8 +1,33 @@
 <title>Traders Diary</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="preload" href="fonts/nunito-latin.woff2" as="font" type="font/woff2"
+      crossorigin>
 <style>
+/* The typeface ships with the app.
+ *
+ * It used to be fetched from a font host on every open, which an app meant
+ * to work on a phone with no signal cannot rely on, and which told a third
+ * party every time this journal was opened. One variable file, forty
+ * kilobytes, carries every weight the app uses.
+ *
+ * Nunito, because the rounded terminals take the hard edge off a screen full
+ * of losses without making the numbers look like a toy, and because its
+ * digits are all one width, so a column of money lines up.
+ */
+@font-face{
+  font-family:"Nunito"; font-style:normal; font-weight:400 900;
+  font-display:swap; src:url(fonts/nunito-latin.woff2) format("woff2");
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+    U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face{
+  font-family:"Nunito"; font-style:normal; font-weight:400 900;
+  font-display:swap; src:url(fonts/nunito-latin-ext.woff2) format("woff2");
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+    U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
 /* One committed dark treatment. This is read beside a dark charting platform,
    so the ground is painted explicitly rather than following the host theme. */
 :root{
@@ -26,6 +51,24 @@
   --glow-win:0 0 26px rgba(43,224,138,.32);
   --glow-loss:0 0 26px rgba(255,92,110,.30);
   --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px rgba(0,0,0,.42);
+
+  /* One typeface, named once. It was written out in full in a hundred and
+     sixty places, which is a hundred and sixty places to miss when it
+     changes, and three of them had already drifted. */
+  --ui:"Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+       "Helvetica Neue", Arial, sans-serif;
+
+  /* Four corner radii, not ten.
+     There were ten in here, between two and twelve pixels, picked one
+     control at a time. Nobody notices a radius. Everybody notices a screen
+     where nothing quite agrees with anything else, and that is all ten
+     different radii ever amount to. Small for a chip, medium for a control,
+     large for a panel, round for a pill. */
+  --r-xs:5px; --r-sm:8px; --r-md:12px; --r-lg:16px; --r-pill:999px;
+
+  /* One duration for anything that moves, so the interface has a single
+     tempo rather than a dozen. */
+  --t:.16s; --ease:cubic-bezier(.2,.7,.3,1);
 }
 
 /* The old light theme, kept whole for anyone who wants the page to match a
@@ -46,16 +89,40 @@
 *{box-sizing:border-box}
 body{
   margin:0; color:var(--text); background:var(--ground);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
+  font-family:var(--ui);
   font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  /* Every digit the same width everywhere, so a column of money is a column
+     rather than a ragged edge, and a number does not jiggle while it counts
+     up. */
+  font-variant-numeric:tabular-nums;
 }
+
+/* One focus ring for the whole app.
+ *
+ * Each control used to bring its own, which meant several did not bring one
+ * at all, and the app was unusable from a keyboard in those places. This is
+ * the ring; a control only overrides it to move it inside its own edge. */
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* The scrollbars belong to the app, not to Windows. A pale system scrollbar
+   down the side of a dark panel is the one thing on the screen that was
+   never designed. */
+*{scrollbar-width:thin; scrollbar-color:var(--line) transparent}
+*::-webkit-scrollbar{width:10px; height:10px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{
+  background:var(--line); border-radius:var(--r-pill);
+  border:3px solid transparent; background-clip:content-box;
+}
+*::-webkit-scrollbar-thumb:hover{background:var(--faint); background-clip:content-box}
+*::-webkit-scrollbar-corner{background:transparent}
 .wrap{max-width:1120px; margin:0 auto; padding:44px 22px 96px}
-.num{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-variant-numeric:tabular-nums}
+.num{font-family:var(--ui); font-variant-numeric:tabular-nums}
 .win{color:var(--win)} .loss{color:var(--loss)}
 
 /* Cards, the way a light UI separates things: a hairline and a little
    shadow, not a glowing bracket. */
-.hud{position:relative; border-radius:6px}
+.hud{position:relative; border-radius:var(--r-sm)}
 .hud::before{top:-1px; left:-1px; border-top:2px solid var(--accent); border-left:2px solid var(--accent)}
 .hud::after{bottom:-1px; right:-1px; border-bottom:2px solid var(--accent); border-right:2px solid var(--accent)}
 
@@ -75,14 +142,14 @@ header{border-bottom:1px solid var(--line); padding-bottom:30px; margin-bottom:3
   transform:rotate(-45deg); box-shadow:var(--shadow);
 }
 .dropbig{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:17px;
+  font-family:var(--ui); font-weight:800; font-size:17px;
   letter-spacing:.02em; text-transform:uppercase; margin:0 0 7px;
 }
 .dropsub{color:var(--muted); font-size:13px; margin:0}
 .dropfiles{list-style:none; padding:0; margin:18px 0 0; display:grid; gap:5px}
 .dropfiles li{
   display:flex; align-items:center; gap:9px; justify-content:center;
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:11.5px; color:var(--muted);
+  font-family:var(--ui); font-size:11.5px; color:var(--muted);
 }
 .dropfiles li b{color:var(--text); font-weight:500}
 .dropfiles li.used::before{content:"+"; color:var(--win); font-weight:700}
@@ -112,11 +179,9 @@ header{border-bottom:1px solid var(--line); padding-bottom:30px; margin-bottom:3
 .howwhy{margin:10px 18px 16px; color:var(--muted); font-size:13px; line-height:1.7}
 .howwhy b{color:var(--text)}
 h1{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:900; font-size:50px;
-  line-height:1.08; margin:0 0 13px; letter-spacing:.012em; text-transform:uppercase;
-  background:linear-gradient(178deg,#FFFFFF 8%,#9DE9F6 92%);
-  -webkit-background-clip:text; background-clip:text; color:transparent;
-  filter:drop-shadow(0 0 22px rgba(53,224,240,.34));
+  font-family:var(--ui); font-weight:800; font-size:46px;
+  line-height:1.06; margin:0 0 14px; letter-spacing:-.018em;
+  color:var(--text); text-wrap:balance;
 }
 .sub{
   color:var(--muted); font-size:12.5px; margin:0; text-transform:uppercase;
@@ -135,13 +200,13 @@ h1{
 .srcrow.mini{margin:0 4px 0 6px; flex-wrap:nowrap; gap:4px}
 .srcrow.mini:empty{display:none}
 .srcrow.mini .src{
-  padding:5px 10px; font-size:10.5px; gap:6px; border-radius:4px;
+  padding:5px 10px; font-size:10.5px; gap:6px; border-radius:var(--r-xs);
   box-shadow:none;
 }
 .srcrow.mini .sn{font-size:10.5px}
 .src{
   background:var(--raised); border:1px solid var(--line); color:var(--muted);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:600; font-size:11.5px;
+  font-family:var(--ui); font-weight:600; font-size:11.5px;
   text-transform:uppercase; letter-spacing:.04em; padding:8px 14px; cursor:pointer;
   display:flex; align-items:baseline; gap:9px;
   transition:border-color .13s, color .13s, background .13s, box-shadow .13s;
@@ -152,7 +217,7 @@ h1{
   box-shadow:var(--shadow);
 }
 .src:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
-.sn{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:12px; color:var(--accent)}
+.sn{font-family:var(--ui); font-size:12px; color:var(--accent)}
 .srcnote{
   margin:12px 0 0; font-size:11.5px; color:var(--faint);
   text-transform:uppercase; letter-spacing:.11em;
@@ -175,14 +240,14 @@ h1{
   color:var(--faint); font-weight:600;
 }
 .sv{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-variant-numeric:tabular-nums;
+  font-family:var(--ui); font-variant-numeric:tabular-nums;
   font-size:20px; font-weight:700; letter-spacing:-.01em;
 }
-.sv.win{text-shadow:0 0 20px rgba(43,224,138,.4)}
-.sv.loss{text-shadow:0 0 20px rgba(255,92,110,.35)}
+.sv.win{color:var(--win)}
+.sv.loss{color:var(--loss)}
 
 h2{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:800; font-size:15px;
+  font-family:var(--ui); font-weight:800; font-size:15px;
   margin:0 0 16px; letter-spacing:.04em; text-transform:uppercase; color:var(--text);
   display:flex; align-items:center; gap:13px;
 }
@@ -204,7 +269,7 @@ section{margin-bottom:44px}
 }
 .pat.bad{border-left-color:var(--loss)} .pat.good{border-left-color:var(--win)}
 .pn{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:700; font-size:16px;
+  font-family:var(--ui); font-weight:700; font-size:16px;
   color:var(--accent);
 }
 .pl{font-size:13px; color:var(--muted)}
@@ -222,7 +287,7 @@ section{margin-bottom:44px}
   box-shadow:var(--shadow);
 }
 .tab .r{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-variant-numeric:tabular-nums;
+  font-family:var(--ui); font-variant-numeric:tabular-nums;
   font-weight:700; letter-spacing:0;
 }
 .tab:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
@@ -236,14 +301,14 @@ section{margin-bottom:44px}
   padding:16px 20px 14px; border-bottom:1px solid var(--line-soft);
 }
 .chead .who{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:14px; font-weight:800;
+  font-family:var(--ui); font-size:14px; font-weight:800;
   text-transform:uppercase; letter-spacing:.02em;
 }
 .chead .when{
-  font-size:12px; color:var(--muted); font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
+  font-size:12px; color:var(--muted); font-family:var(--ui);
 }
 .chead .res{
-  margin-left:auto; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
+  margin-left:auto; font-family:var(--ui);
   font-variant-numeric:tabular-nums; font-size:18px; font-weight:700;
 }
 canvas{display:block; width:100%; height:410px}
@@ -260,7 +325,7 @@ canvas{display:block; width:100%; height:410px}
   font-weight:600;
 }
 .vv{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-variant-numeric:tabular-nums;
+  font-family:var(--ui); font-variant-numeric:tabular-nums;
   font-size:15.5px; font-weight:700;
 }
 .vv small{
@@ -283,7 +348,7 @@ canvas{display:block; width:100%; height:410px}
 .pane + .pane{border-left:1px solid var(--line-soft)}
 @media(max-width:780px){ .pane + .pane{border-left:0; border-top:1px solid var(--line-soft)} }
 .pane h3{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:9.5px; text-transform:uppercase;
+  font-family:var(--ui); font-size:9.5px; text-transform:uppercase;
   letter-spacing:.04em; color:var(--accent); margin:0 0 13px; font-weight:700; opacity:.9;
 }
 
@@ -294,7 +359,7 @@ td:first-child{
   text-transform:uppercase; letter-spacing:.02em; font-size:11px; font-weight:500;
 }
 td:last-child{
-  text-align:right; font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif;
+  text-align:right; font-family:var(--ui);
   font-variant-numeric:tabular-nums; font-weight:500;
 }
 .dim{color:var(--faint)}
@@ -322,7 +387,7 @@ td:last-child{
 .stand.no{border-left-color:var(--loss)}
 .stand.warn{border-left-color:var(--accent)}
 .stand.ok{border-left-color:var(--win)}
-.sl2{font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:10px; font-weight:700;
+.sl2{font-family:var(--ui); font-size:10px; font-weight:700;
   text-transform:uppercase; letter-spacing:.04em; flex:0 0 230px}
 .stand.no .sl2{color:var(--loss)}
 .stand.warn .sl2{color:var(--accent)}
@@ -338,7 +403,7 @@ td:last-child{
   color:var(--faint); font-weight:600;
 }
 .eql b{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-variant-numeric:tabular-nums;
+  font-family:var(--ui); font-variant-numeric:tabular-nums;
   font-size:15px; font-weight:700; letter-spacing:0; margin-left:8px;
   text-transform:none;
 }
@@ -350,7 +415,7 @@ td:last-child{
 .bigbtn{
   display:inline-block; text-decoration:none; background:var(--lift);
   border:1px solid var(--accent); color:var(--text);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-weight:700; font-size:12px;
+  font-family:var(--ui); font-weight:700; font-size:12px;
   text-transform:uppercase; letter-spacing:.04em; padding:13px 26px;
   box-shadow:var(--shadow);
   transition:background .14s, box-shadow .14s;
@@ -358,7 +423,7 @@ td:last-child{
 .bigbtn:hover{background:var(--raised); box-shadow:0 0 34px rgba(53,224,240,.3)}
 .bigbtn:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
 .lead code{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:12.5px; color:var(--accent);
+  font-family:var(--ui); font-size:12.5px; color:var(--accent);
   background:var(--lift); padding:2px 7px; border:1px solid var(--line);
 }
 #player{
@@ -372,7 +437,7 @@ td:last-child{
 }
 .cuts{display:flex; flex-direction:column; gap:20px}
 .cutgroup h4{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:10px; font-weight:700;
+  font-family:var(--ui); font-size:10px; font-weight:700;
   letter-spacing:.19em; text-transform:uppercase; color:var(--accent);
   margin:0 0 10px; opacity:.9;
 }
@@ -391,7 +456,7 @@ td:last-child{
 .cut:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .cn{font-size:12.5px; font-weight:600}
 .cs{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif; font-size:10.5px; color:var(--faint);
+  font-family:var(--ui); font-size:10.5px; color:var(--faint);
 }
 footer{
   margin-top:52px; padding-top:20px; border-top:1px solid var(--line);
@@ -526,7 +591,7 @@ const TRADES = __DATA__;
 const FLAG_TEXT = __FLAGTEXT__;
 const GOOD = ["target hit"], BAD = ["stop wrong side","slipped","cut short","closed early"];
 const BE_AT_R = 2.0;
-const MONO = 'Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,Ubuntu,sans-serif';
+const MONO = 'var(--ui)';
 let cur = 0;
 
 // Which trades the whole page is describing. Live is the default because it is

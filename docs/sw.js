@@ -16,7 +16,7 @@
 // Stamped by tools/build_web.py from the content of the files below. A
 // fixed version meant a cache-first shell served the old page forever:
 // once installed, no update could reach anyone.
-const VERSION = "924aec866b47";
+const VERSION = "d656f46f6ba7";
 const SHELL = "diary-shell-" + VERSION;
 const DATA = "diary-bars-" + VERSION;
 
@@ -35,6 +35,11 @@ const FILES = [
   "./manifest.webmanifest", "./logo.svg",
   "./logo-32.png", "./logo-48.png",
   "./logo-180.png", "./logo-192.png", "./logo-512.png", "./logo-maskable-512.png",
+  // The typeface ships with the app rather than being fetched from a font
+  // host. Offline it has to be here, and a journal that calls out to a third
+  // party every time it opens is a journal telling that third party when you
+  // opened it.
+  "./fonts/nunito-latin.woff2", "./fonts/nunito-latin-ext.woff2",
 ];
 
 self.addEventListener("install", e => {

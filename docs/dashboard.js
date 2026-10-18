@@ -406,9 +406,9 @@ function spark() {
   const lo = Math.min(...eq), hi = Math.max(...eq);
   const pad = (hi - lo) * 0.12 || 1;
 
-  // The curve lives in the bottom half of the panel, so the number sitting
-  // over it stays readable whichever way the account went.
-  const top = H * 0.46;
+  // The canvas has a band of its own now, so the curve can use all of it
+  // rather than hiding in the bottom half away from the text.
+  const top = 3;
   const Y = v => H - 2 - (v - lo + pad) / (hi - lo + pad * 2) * (H - top - 2);
   const X = i => i / (eq.length - 1) * W;
 

@@ -23,9 +23,19 @@
 const DPR = () => Math.min(3, globalThis.devicePixelRatio || 1);
 
 const PAD = {left: 6, right: 78, top: 10, bottom: 26};
-// The page's own face, so the chart does not read as a picture pasted
-// into it. Numbers are tabular here by being a single width in Inter.
-const FONT = '11px Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,sans-serif';
+// The page's own face, so the chart does not read as a picture pasted into
+// it. Read from the stylesheet rather than written out again here, because
+// the last time it was written out again the page changed face and the chart
+// did not. The digits are a single width, so a price column lines up.
+export const FACE = (() => {
+  try {
+    const v = getComputedStyle(document.documentElement)
+      .getPropertyValue("--ui").trim().replace(/\s+/g, " ");
+    if (v) return v;
+  } catch { /* no document yet, which is only ever a test */ }
+  return 'system-ui, -apple-system, sans-serif';
+})();
+const FONT = "11px " + FACE;
 const MIN_BARS = 12;          // how far zooming in is allowed to go
 const MAX_BARS = 3000;        // and out
 // Empty slots left to the right of the newest bar, the way a chart leaves
@@ -288,7 +298,7 @@ export function createChart(canvas, opts = {}) {
     if (!state.water) return;
     const size = Math.round(Math.max(22, Math.min(52, plot.w / 10)));
     x.save();
-    x.font = `600 ${size}px Inter,-apple-system,BlinkMacSystemFont,"Trebuchet MS",Roboto,sans-serif`;
+    x.font = `600 ${size}px ${FACE}`;
     x.textBaseline = "middle";
     const w = x.measureText(state.water).width;
     const r = size * 0.42;
