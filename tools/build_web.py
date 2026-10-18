@@ -1174,6 +1174,29 @@ body{overflow:hidden}
   .track i{transition:none}
 }
 
+/* What the record is telling you: one lesson a card, the finding in the
+   app's own voice, the suggestion under it, and the numbers behind a fold
+   so the claim and its evidence are never more than one tap apart. */
+.lessons2{list-style:none; margin:0; padding:0; display:flex;
+  flex-direction:column; gap:12px}
+.lsn{border:1px solid var(--line); border-left:3px solid var(--accent);
+  border-radius:8px; padding:13px 15px; background:var(--raised)}
+.lsnt{margin:0 0 6px; font-size:14px; color:var(--text); display:flex;
+  align-items:baseline; justify-content:space-between; gap:12px}
+.lsnn{font-size:11px; color:var(--faint); font-variant-numeric:tabular-nums;
+  flex:none}
+.lsnf{margin:0; font-size:13px; color:var(--text); line-height:1.55}
+.lsns{margin:7px 0 0; font-size:12.5px; color:var(--muted); line-height:1.6;
+  padding-left:10px; border-left:2px solid var(--line)}
+.lsne{margin-top:8px}
+.lsne summary{font-size:11.5px; color:var(--accent); cursor:pointer;
+  padding:4px 0}
+.lsne ul{margin:4px 0 0; padding-left:18px; color:var(--muted);
+  font-size:11.5px; line-height:1.7; font-variant-numeric:tabular-nums}
+.waiting{margin:0 18px 10px; padding-left:18px; color:var(--muted);
+  font-size:12px; line-height:1.7}
+.waiting b{color:var(--text)}
+
 /* The rewards panel. Modelled on the one in Tradeify's own dashboard: a
    level with a badge, a progress bar, counters, and two columns of missions
    that tick off. The colour is spent on what has been earned, so the eye
@@ -2003,7 +2026,7 @@ MODULES = [
     "engine.js", "chart.js", "levels.js", "revisit.js", "series.js",
     "clock.js", "vault.js", "draw.js", "profile.js", "whatif.js", "precheck.js", "shelf.js",
     "watchlist.js", "lock.js", "inds.js", "imports.js", "folder.js",
-    "funded.js", "jdun.js", "quests.js",
+    "funded.js", "jdun.js", "quests.js", "coach.js",
     "replay.js", "diary.js", "videos.js", "system.js",
     "dashboard.js",
 ]

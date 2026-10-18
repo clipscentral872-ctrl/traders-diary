@@ -22,6 +22,7 @@ import * as FS from "./folder.js";
 import * as FUND from "./funded.js";
 import * as JD from "./jdun.js";
 import * as Q from "./quests.js";
+import * as COACH from "./coach.js";
 
 const $ = id => document.getElementById(id);
 // Names within a journal. The journal itself decides where they land, so
@@ -236,6 +237,7 @@ function renderPanels() {
 
   renderStanding();
   renderQuests();
+  renderCoach();
   renderOrphans();
   renderDays();
   renderGroups();
@@ -1393,6 +1395,41 @@ function renderDays() {
       + "</p>"
       + `<ul class="days">${rows}</ul>`;
   }).join("");
+}
+
+/**
+ * What to change, read off the whole record rather than one trade.
+ *
+ * Each lesson carries its evidence and the number of trades behind it, and
+ * the ones that cannot speak yet are kept behind a fold rather than hidden,
+ * because knowing what the journal is still waiting for is worth as much as
+ * a finding when the record is nine sessions old.
+ */
+function renderCoach() {
+  const sec = $("coachsec"), box = $("coachlist"), wait = $("coachwait");
+  if (!sec || !box) return;
+  const live = window.ofAccount(window.TRADES)
+    .filter(t => (t.source || "live") === "live");
+  if (!live.length) { sec.hidden = true; return; }
+  const r = COACH.lessons(live, jdunPlan());
+  sec.hidden = false;
+
+  box.innerHTML = r.ready.map(l =>
+    `<li class="lsn"><h3 class="lsnt">${esc(l.title)}`
+    + `<span class="lsnn">${l.n} trade${l.n === 1 ? "" : "s"}</span></h3>`
+    + `<p class="lsnf">${esc(l.finding)}</p>`
+    + (l.suggestion ? `<p class="lsns">${esc(l.suggestion)}</p>` : "")
+    + (l.evidence.length
+        ? `<details class="lsne"><summary>The numbers</summary><ul>`
+          + l.evidence.map(e => `<li>${esc(e)}</li>`).join("")
+          + "</ul></details>"
+        : "")
+    + "</li>").join("")
+    || '<li class="lsn"><p class="lsnf">Nothing to say yet. Import a few '
+       + 'more sessions.</p></li>';
+
+  if (wait) wait.innerHTML = r.waiting.map(l =>
+    `<li><b>${esc(l.title)}</b> ${esc(l.finding)}</li>`).join("");
 }
 
 /** The one habit worth fixing this week, with what it has cost. */
