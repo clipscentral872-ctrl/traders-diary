@@ -35,19 +35,20 @@ const at = p => S.listing(files, p);
 const folderNames = p => at(p).folders.map(f => f.name).join(", ");
 const fileNames = p => at(p).files.map(f => f.name).join(", ");
 
-console.log("\nthe top level is the five ways of looking at it");
+console.log("\nthe top level is the six ways of looking at it");
 {
   const top = folderNames([]);
   check("Everything", /Everything/.test(top), top);
   check("By week", /By week/.test(top), top);
   check("By weekday", /By weekday/.test(top), top);
   check("Day by day", /Day by day/.test(top), top);
-  check("Trade by trade", /Trade by trade/.test(top), top);
+  check("Winners", /Winners/.test(top), top);
+  check("Losers", /Losers/.test(top), top);
   check("and Start Here sits loose at the top",
         /Start Here/.test(fileNames([])), fileNames([]));
 }
 
-console.log("\ndays and trades get a folder each for their date");
+console.log("\ndays get a folder each for their date");
 {
   check("day by day is split by date",
         folderNames(["Day by day"]) === "2026-08-31, 2026-09-04",
@@ -55,18 +56,35 @@ console.log("\ndays and trades get a folder each for their date");
   check("and the files sit inside the right one",
         at(["Day by day", "2026-09-04"]).files.length === 2,
         String(at(["Day by day", "2026-09-04"]).files.length));
-  check("trade by trade too",
-        folderNames(["Trade by trade"]) === "2026-08-31, 2026-09-04",
-        folderNames(["Trade by trade"]));
-  check("with two trades on the 31st",
-        at(["Trade by trade", "2026-08-31"]).files.length === 2);
+}
+
+/* A trade goes with its outcome, not into a folder of its date.
+ *
+ * On a Saturday you sit down to watch your losers one after another, which
+ * is where the same mistake shows up repeating. That is one folder, and
+ * opening it is the whole of choosing. The names carry the date, so the
+ * list is in order anyway. */
+console.log("\na trade goes in with the winners or the losers");
+{
+  check("the losers are together",
+        fileNames(["Losers"]) ===
+        "Trade NQ 2026-08-31 155308 Short - Loser.mp4, "
+        + "Trade ES 2026-09-04 140552 Short - Loser.mp4",
+        fileNames(["Losers"]));
+  check("and so are the winners",
+        fileNames(["Winners"]) ===
+        "Trade NQ 2026-08-31 155920 Short - Winner.mp4",
+        fileNames(["Winners"]));
+  check("neither is split by date",
+        at(["Losers"]).folders.length === 0 && at(["Winners"]).folders.length === 0,
+        folderNames(["Losers"]) + " / " + folderNames(["Winners"]));
 }
 
 console.log("\na folder says how much is in it");
 {
-  const top = at([]).folders.find(f => f.name === "Trade by trade");
-  check("three videos", top.files === 3, String(top.files));
-  check("and their size", top.bytes === 3 * 1048576, String(top.bytes));
+  const top = at([]).folders.find(f => f.name === "Losers");
+  check("two videos", top.files === 2, String(top.files));
+  check("and their size", top.bytes === 2 * 1048576, String(top.bytes));
 }
 
 console.log("\nnothing leaks between folders");
@@ -96,7 +114,9 @@ console.log("\nboth ways of adding the library end at the same tree");
     ["Friday 2026-09-04 - Winners.mp4",
      "For Learning/Daily/Friday 2026-09-04 - Winners.mp4"],
     ["Trade NQ 2026-08-31 155308 Short - Loser.mp4",
-     "For Learning/Per Trade/Trade NQ 2026-08-31 155308 Short - Loser.mp4"],
+     "For Learning/Losers/Trade NQ 2026-08-31 155308 Short - Loser.mp4"],
+    ["Trade NQ 2026-08-31 155920 Short - Winner.mp4",
+     "For Learning/Winners/Trade NQ 2026-08-31 155920 Short - Winner.mp4"],
   ];
   for (const [n, rel] of pairs) {
     const byName = JSON.stringify(S.pathOf(n));

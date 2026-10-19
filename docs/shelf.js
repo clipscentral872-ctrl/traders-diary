@@ -24,6 +24,7 @@ const FRIENDLY = {
   "Weekly": "By week",
   "Daily": "Day by day",
   "By Weekday": "By weekday",
+  // Kept for a library rendered before the split, which still has one.
   "Per Trade": "Trade by trade",
 };
 
@@ -55,9 +56,14 @@ export function pathOf(name, relative) {
   if (/^(Mondays|Tuesdays|Wednesdays|Thursdays|Fridays)/i.test(n))
     return ["By weekday"];
 
-  // A day or a trade carries its own date, so it gets a folder for that date.
+  /* A single trade goes in with the winners or the losers, which is the
+     folder it is written to on disk. Both routes into this file have to end
+     at the same tree, so this follows the renderer rather than keeping its
+     own idea of where a trade video lives. */
   const date = (n.match(/\d{4}-\d{2}-\d{2}/) || [])[0];
-  if (/^Trade /i.test(n)) return date ? ["Trade by trade", date] : ["Trade by trade"];
+  if (/^Trade /i.test(n))
+    return [outcome(n) === "win" ? "Winners" : "Losers"];
+  // A day carries its own date, so it gets a folder for that date.
   return date ? ["Day by day", date] : ["Day by day"];
 }
 

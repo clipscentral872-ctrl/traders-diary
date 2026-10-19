@@ -68,7 +68,9 @@ function visible() {
       const keys = new Set(mine.map(t => tradeKey(t)));
       const days = new Set(mine.map(t => String(t.open_t || "").slice(0, 10)));
       list = list.filter(f => {
-        if (/^Trade /i.test(f.name) || (f.path || []).includes("Per Trade"))
+        const perTrade = ["Winners", "Losers", "Per Trade"];
+        if (/^Trade /i.test(f.name)
+            || (f.path || []).some(d => perTrade.includes(d)))
           return [...keys].some(k => f.name.includes(k));
         const d = (f.name.match(/\d{4}-\d{2}-\d{2}/) || [])[0];
         return d ? days.has(d) : true;
