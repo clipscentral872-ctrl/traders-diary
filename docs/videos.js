@@ -98,6 +98,34 @@ function filterBar() {
     + "</div>";
 }
 
+/* The week just gone, as two films, at the top.
+ *
+ * Every week already gets a winners film and a losers film, each holding
+ * that week's trades back to back. They were three folders down, which is
+ * three clicks and a decision between six near identical names at the end
+ * of it, on a Saturday, which is exactly when you want to press one thing
+ * and watch. So the newest pair sits above the shelf with the week it
+ * covers written on it. */
+function weekRow() {
+  const weeks = files.filter(f => /^Week of \d{4}-\d{2}-\d{2} - (Winners|Losers)/i
+    .test(f.name));
+  if (!weeks.length) return "";
+  const newest = weeks.map(f => f.name.slice(8, 18)).sort().pop();
+  const of = kind => weeks.find(f => f.name.startsWith("Week of " + newest)
+    && SH.outcome(f.name) === kind);
+  const win = of("win"), loss = of("loss");
+  if (!win && !loss) return "";
+  const btn = (f, label) => f
+    ? `<button class="wkbtn ${SH.outcome(f.name)}" data-name="${esc(f.name)}">`
+      + '<span class="shic vplay" aria-hidden="true"></span>'
+      + `<span class="wkn">${label}</span>`
+      + `<span class="wkm">${mb(f.size)}</span></button>`
+    : "";
+  return '<div class="weekrow"><span class="wkhead">The week of '
+    + esc(newest) + ", in one go</span>"
+    + btn(loss, "Every loser") + btn(win, "Every winner") + "</div>";
+}
+
 function render() {
   const box = $("vlib");
   if (!box) return;
@@ -131,6 +159,7 @@ function render() {
     + `<span class="shs">${mb(f.size)}</span></button>`).join("");
 
   box.innerHTML = staleNote()
+    + weekRow()
     + filterBar()
     + `<div class="shbar"><div class="shtrail">${trail}</div>`
     + (at.length ? '<button class="shup" data-up="1">Up one</button>' : "")
@@ -310,7 +339,9 @@ export async function init() {
     const crumb = e.target.closest("[data-go]");
     if (crumb) { at = at.slice(0, +crumb.dataset.go); render(); return; }
     if (e.target.closest("[data-up]")) { at = at.slice(0, -1); render(); return; }
-    const f = e.target.closest(".shrow.file");
+    /* Anything carrying a name plays, which is the shelf rows and the two
+       week buttons above them. */
+    const f = e.target.closest("[data-name]");
     if (f) play(f.dataset.name);
   });
   $("vclose").addEventListener("click", close);

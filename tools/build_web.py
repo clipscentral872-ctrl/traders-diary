@@ -579,6 +579,30 @@ EXTRA_CSS = """
   #updbar .instx{padding:9px 6px}
 }
 
+/* The week just gone, as two buttons, above everything else. On a Saturday
+   this is the whole of what you came for. */
+.weekrow{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  margin:0 0 16px; padding:14px 16px; border-radius:var(--r-md);
+  background:var(--raised); border:1px solid var(--line);
+}
+.wkhead{
+  flex:1 0 100%; font-size:11px; text-transform:uppercase;
+  letter-spacing:.08em; color:var(--faint); font-weight:700;
+}
+.wkbtn{
+  flex:1 1 180px; display:flex; align-items:center; gap:10px;
+  padding:12px 14px; border-radius:var(--r-sm); cursor:pointer;
+  background:var(--lift); border:1px solid var(--line);
+  color:var(--text); font-family:var(--ui); font-size:13.5px; font-weight:600;
+  text-align:left;
+}
+.wkbtn:hover{border-color:var(--accent)}
+.wkbtn.loss{border-left:3px solid var(--loss)}
+.wkbtn.win{border-left:3px solid var(--win)}
+.wkn{flex:1}
+.wkm{color:var(--faint); font-size:11.5px; font-variant-numeric:tabular-nums}
+
 /* Said above the shelf, quietly, because it is a nudge and not a problem. */
 .vstale{
   margin:0 0 12px; padding:9px 12px; border-radius:var(--r-sm);
