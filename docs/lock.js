@@ -25,7 +25,24 @@ const dec = new TextDecoder();
 // pays on every single guess.
 const ITERATIONS = 600000;
 
-const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+/* Base64, a block at a time.
+ *
+ * Spreading the bytes into String.fromCharCode passes one argument per byte,
+ * and every engine has a limit on how many arguments a call may take. It is
+ * around a hundred thousand, so this worked perfectly until the record grew
+ * past it and then threw RangeError instead of returning a string. The
+ * journal stopped saving and said so, which is better than the alternative,
+ * but it stopped saving. Thirty two thousand bytes a block is well inside
+ * every engine's limit and no slower in any way that can be measured. */
+const BLOCK = 0x8000;
+
+const b64 = buf => {
+  const bytes = new Uint8Array(buf);
+  let out = "";
+  for (let i = 0; i < bytes.length; i += BLOCK)
+    out += String.fromCharCode.apply(null, bytes.subarray(i, i + BLOCK));
+  return btoa(out);
+};
 const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 
 export const available = () =>

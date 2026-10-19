@@ -1577,8 +1577,34 @@ function renderDays() {
           ? "The plan's cap is $" + cap + "."
           : "Every day inside the plan's cap.")
       + "</p>"
+      + gapNote(name, mine, bal)
       + '<div class="dcards">' + cards + "</div>";
   }).join("");
+}
+
+/* Days this account traded that the broker's balance history does not
+ * cover.
+ *
+ * Two accounts that both traded on a day used to keep one balance row
+ * between them, because the row was filed under the date alone and the
+ * second file read overwrote the first. Those rows were dropped on the way
+ * in, so they are not somewhere to be recovered from: the file has to be
+ * read again. An account quietly short three sessions of its own drawdown
+ * is worth saying out loud, with what to do about it.
+ */
+function gapNote(name, mine, bal) {
+  if (!bal.length || !mine.length) return "";
+  const have = new Set(bal.map(b => b.date));
+  const traded = [...new Set(mine.map(t => t.open_t.slice(0, 10)))];
+  const missing = traded.filter(d => !have.has(d)).sort();
+  if (!missing.length) return "";
+  return '<p class="daygap">' + missing.length + " session"
+    + (missing.length === 1 ? "" : "s") + " this account traded "
+    + (missing.length === 1 ? "is" : "are") + " missing from its balance "
+    + "history (" + missing.map(esc).join(", ") + "), so the drawdown above "
+    + "does not count " + (missing.length === 1 ? "it" : "them") + ". Drop "
+    + "this account's Account Balance History export in again and it fills "
+    + "back in.</p>";
 }
 
 /**

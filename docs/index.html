@@ -1607,6 +1607,13 @@ body{overflow:hidden}
 .dcards{display:flex; flex-direction:column; gap:12px}
 .dcard{border:1px solid var(--line); border-radius:var(--r-md); background:var(--raised);
   padding:13px 15px; border-left:3px solid var(--line)}
+/* Said where the sessions are listed, because that is where the gap is. */
+.daygap{
+  margin:0 0 10px; padding:9px 12px; border-radius:var(--r-sm);
+  background:rgba(255,194,75,.08);
+  border-left:2px solid var(--warn);
+  color:var(--muted); font-size:12px; line-height:1.55;
+}
 .dcard.up{border-left-color:var(--win)}
 .dcard.down{border-left-color:var(--loss)}
 /* A day with no trade in it: one line, quieter than the rest, carrying the
@@ -3188,7 +3195,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=f06a05650666","./chart.js":"./chart.js?v=f06a05650666","./levels.js":"./levels.js?v=f06a05650666","./revisit.js":"./revisit.js?v=f06a05650666","./series.js":"./series.js?v=f06a05650666","./clock.js":"./clock.js?v=f06a05650666","./vault.js":"./vault.js?v=f06a05650666","./draw.js":"./draw.js?v=f06a05650666","./profile.js":"./profile.js?v=f06a05650666","./whatif.js":"./whatif.js?v=f06a05650666","./precheck.js":"./precheck.js?v=f06a05650666","./shelf.js":"./shelf.js?v=f06a05650666","./watchlist.js":"./watchlist.js?v=f06a05650666","./lock.js":"./lock.js?v=f06a05650666","./inds.js":"./inds.js?v=f06a05650666","./imports.js":"./imports.js?v=f06a05650666","./folder.js":"./folder.js?v=f06a05650666","./funded.js":"./funded.js?v=f06a05650666","./jdun.js":"./jdun.js?v=f06a05650666","./quests.js":"./quests.js?v=f06a05650666","./coach.js":"./coach.js?v=f06a05650666","./replay.js":"./replay.js?v=f06a05650666","./diary.js":"./diary.js?v=f06a05650666","./videos.js":"./videos.js?v=f06a05650666","./system.js":"./system.js?v=f06a05650666","./dashboard.js":"./dashboard.js?v=f06a05650666"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=b7ddedd50a56","./chart.js":"./chart.js?v=b7ddedd50a56","./levels.js":"./levels.js?v=b7ddedd50a56","./revisit.js":"./revisit.js?v=b7ddedd50a56","./series.js":"./series.js?v=b7ddedd50a56","./clock.js":"./clock.js?v=b7ddedd50a56","./vault.js":"./vault.js?v=b7ddedd50a56","./draw.js":"./draw.js?v=b7ddedd50a56","./profile.js":"./profile.js?v=b7ddedd50a56","./whatif.js":"./whatif.js?v=b7ddedd50a56","./precheck.js":"./precheck.js?v=b7ddedd50a56","./shelf.js":"./shelf.js?v=b7ddedd50a56","./watchlist.js":"./watchlist.js?v=b7ddedd50a56","./lock.js":"./lock.js?v=b7ddedd50a56","./inds.js":"./inds.js?v=b7ddedd50a56","./imports.js":"./imports.js?v=b7ddedd50a56","./folder.js":"./folder.js?v=b7ddedd50a56","./funded.js":"./funded.js?v=b7ddedd50a56","./jdun.js":"./jdun.js?v=b7ddedd50a56","./quests.js":"./quests.js?v=b7ddedd50a56","./coach.js":"./coach.js?v=b7ddedd50a56","./replay.js":"./replay.js?v=b7ddedd50a56","./diary.js":"./diary.js?v=b7ddedd50a56","./videos.js":"./videos.js?v=b7ddedd50a56","./system.js":"./system.js?v=b7ddedd50a56","./dashboard.js":"./dashboard.js?v=b7ddedd50a56"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -4769,8 +4776,34 @@ function renderDays() {
           ? "The plan's cap is $" + cap + "."
           : "Every day inside the plan's cap.")
       + "</p>"
+      + gapNote(name, mine, bal)
       + '<div class="dcards">' + cards + "</div>";
   }).join("");
+}
+
+/* Days this account traded that the broker's balance history does not
+ * cover.
+ *
+ * Two accounts that both traded on a day used to keep one balance row
+ * between them, because the row was filed under the date alone and the
+ * second file read overwrote the first. Those rows were dropped on the way
+ * in, so they are not somewhere to be recovered from: the file has to be
+ * read again. An account quietly short three sessions of its own drawdown
+ * is worth saying out loud, with what to do about it.
+ */
+function gapNote(name, mine, bal) {
+  if (!bal.length || !mine.length) return "";
+  const have = new Set(bal.map(b => b.date));
+  const traded = [...new Set(mine.map(t => t.open_t.slice(0, 10)))];
+  const missing = traded.filter(d => !have.has(d)).sort();
+  if (!missing.length) return "";
+  return '<p class="daygap">' + missing.length + " session"
+    + (missing.length === 1 ? "" : "s") + " this account traded "
+    + (missing.length === 1 ? "is" : "are") + " missing from its balance "
+    + "history (" + missing.map(esc).join(", ") + "), so the drawdown above "
+    + "does not count " + (missing.length === 1 ? "it" : "them") + ". Drop "
+    + "this account's Account Balance History export in again and it fills "
+    + "back in.</p>";
 }
 
 /**

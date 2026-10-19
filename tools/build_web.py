@@ -1513,6 +1513,13 @@ body{overflow:hidden}
 .dcards{display:flex; flex-direction:column; gap:12px}
 .dcard{border:1px solid var(--line); border-radius:var(--r-md); background:var(--raised);
   padding:13px 15px; border-left:3px solid var(--line)}
+/* Said where the sessions are listed, because that is where the gap is. */
+.daygap{
+  margin:0 0 10px; padding:9px 12px; border-radius:var(--r-sm);
+  background:rgba(255,194,75,.08);
+  border-left:2px solid var(--warn);
+  color:var(--muted); font-size:12px; line-height:1.55;
+}
 .dcard.up{border-left-color:var(--win)}
 .dcard.down{border-left-color:var(--loss)}
 /* A day with no trade in it: one line, quieter than the rest, carrying the
