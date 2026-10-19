@@ -203,14 +203,21 @@ async function tally(extra) {
   // "settles that., 2971.0 MB of room left".
   const room = u && u.quota
     ? ` ${mb(u.quota - u.used)} of room left.` : "";
-  say(`${files.length} video${files.length === 1 ? "" : "s"}, ${mb(total)}`
-    + (extra ? ". " + extra : "")
-    + (kept
-       ? ". Kept on this device until you remove them."
-       : ". This browser has not promised to keep them, so it may clear them "
-         + "if it needs the space. Adding the app to your home screen usually "
-         + "settles that.")
-    + room);
+  /* Joined rather than concatenated, because each piece was written with
+     its own full stop on the end and the one before it added another. This
+     has been reading "1 added.. This browser has not promised" since the
+     line was written. */
+  const parts = [
+    `${files.length} video${files.length === 1 ? "" : "s"}, ${mb(total)}`,
+    extra,
+    kept
+      ? "Kept on this device until you remove them"
+      : "This browser has not promised to keep them, so it may clear them if "
+        + "it needs the space. Adding the app to your home screen usually "
+        + "settles that",
+    room.trim(),
+  ].filter(Boolean).map(t => String(t).replace(/\.\s*$/, ""));
+  say(parts.join(". ") + ".");
 }
 
 async function take(list) {
@@ -227,17 +234,38 @@ async function take(list) {
   }
 
   await V.persist();
-  const have = new Set(files.map(f => f.name));
-  let added = 0, failed = 0;
-  say(`Storing ${vids.length} video${vids.length === 1 ? "" : "s"}...`);
+  /* Adding the folder again has to bring the new films in.
+   *
+   * A rebuilt library writes the same filenames, so skipping anything whose
+   * name is already here meant the shelf kept the first version of every
+   * film for ever. The only way to get the new ones was to empty the whole
+   * library and copy two hundred megabytes back. A file is taken again when
+   * it is a different size, or when it was written after the copy that is
+   * held, which is exactly what a rebuild does to it. */
+  const held = new Map(files.map(f => [f.name, f]));
+  let added = 0, fresh = 0, failed = 0;
+  say(`Reading ${vids.length} video${vids.length === 1 ? "" : "s"}...`);
   for (const file of vids) {
-    if (have.has(file.name)) continue;
+    const was = held.get(file.name);
+    const newer = was && (file.size !== was.size
+      || (file.lastModified || 0) > (was.added || 0));
+    if (was && !newer) continue;
     try {
       await V.put(file.name, file);
-      files.push({name: file.name, size: file.size,
-                  path: SH.pathOf(file.name, file.webkitRelativePath)});
-      have.add(file.name);
-      added++;
+      if (was) {
+        // The player may be holding the old blob open under this name.
+        const u = urls.get(file.name);
+        if (u) { URL.revokeObjectURL(u); urls.delete(file.name); }
+        was.size = file.size;
+        was.added = Date.now();
+        fresh++;
+      } else {
+        const row = {name: file.name, size: file.size, added: Date.now(),
+                     path: SH.pathOf(file.name, file.webkitRelativePath)};
+        files.push(row);
+        held.set(file.name, row);
+        added++;
+      }
     } catch {
       // Almost always the quota. Stop rather than half-fill the library and
       // say nothing about it.
@@ -248,9 +276,13 @@ async function take(list) {
   files.sort((a, b) => a.name.localeCompare(b.name));
   try { P.set(FILLED, String(Date.now())); } catch { /* nothing kept */ }
   render();
+  const said = [
+    added && `${added} added`,
+    fresh && `${fresh} replaced with a newer version`,
+  ].filter(Boolean).join(", ");
   await tally(failed
-    ? `Ran out of room after ${added}. Remove some and try the rest.`
-    : added ? `${added} added.` : "Those were already here.");
+    ? `Ran out of room after ${added + fresh}. Remove some and try the rest`
+    : said || "Those were already here, and none of them had changed");
 }
 
 /* When the shelf was last filled from the folder.
