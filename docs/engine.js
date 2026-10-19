@@ -154,9 +154,15 @@ export const covered = (spans, open_t, close_t) =>
 
 /** The balance before the first trade, so the curve shows the account. */
 export function readStartBalance(files) {
-  const rows = [];
+  let rows = [];
+  /* Concat rather than push with a spread. Spreading passes one argument
+     per row and every engine caps how many a call may take, so an export
+     big enough would throw RangeError instead of reading. The same spread
+     in the encryption is what stopped the journal saving once the record
+     grew, and an export is the one thing here whose size is up to the
+     person doing the exporting. */
   for (const f of files.filter(f => /balance-history/i.test(f.name)))
-    rows.push(...parseCSV(f.text));
+    rows = rows.concat(parseCSV(f.text));
   if (!rows.length) return null;
   rows.sort((a, b) => ((a["Time"] || "") < (b["Time"] || "") ? -1 : 1));
   return num(rows[0]["Balance before"]);

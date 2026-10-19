@@ -935,13 +935,15 @@ $("loadpick").addEventListener("change", async () => {
     renderPanels();
     storeLine();
     if (warn) { say(warn, true); return; }
-    /* And fetch the candles for what just arrived.
+    /* And fill in anything the backup could not carry.
      *
-     * A backup carries the trades, not the bars, because bars are published
-     * and would double the file for nothing. Without this the restored
-     * trades sat with no chart, saying no candles were stored, until the app
-     * was closed and opened again: the only other place that fills them is
-     * the unlock. Restoring and then looking is the obvious thing to do. */
+     * A backup does carry each trade's candles, because the published bars
+     * only reach back about two months and a backup has to still be worth
+     * restoring after that. What it cannot carry is a window that did not
+     * exist when it was written: an older file has the tight series and no
+     * wide one, and this is what gives it the wide one. Restoring and then
+     * looking is the obvious thing to do, and before this it showed no
+     * chart until the app was closed and opened again. */
     loadBars(feedsFor(window.TRADES)).then(fillCandles);
     say(`Restored ${o.trades.length} trades from the backup.`);
     location.hash = "";

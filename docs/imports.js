@@ -244,7 +244,8 @@ export function sniff(headers) {
  *          no stop on record rather than being given the wrong one.
  */
 export function readAny(files, parseCSV) {
-  const fills = [], moves = [], spans = [], found = [], balances = [];
+  let fills = [], moves = [], balances = [];
+  const spans = [], found = [];
   for (const f of files || []) {
     const rows = parseCSV(f.text || "");
     if (!rows.length) continue;
@@ -260,7 +261,7 @@ export function readAny(files, parseCSV) {
     if (source.balances) {
       const days = source.balances(lower);
       if (days.length) {
-        balances.push(...days);
+        balances = balances.concat(days);
         found.push({file: f.name, source: source.id, name: source.name,
                     days: days.length});
       }
@@ -273,8 +274,11 @@ export function readAny(files, parseCSV) {
        same drop: the Orders report lists the filled orders too, and counting
        them beside the Fills report's rows would double every trade. */
     for (const g of got) g.__from = source.id;
-    fills.push(...got);
-    moves.push(...stops);
+    /* Concat, not push with a spread: an export is the one thing here
+       whose size is up to the person doing the exporting, and spreading
+       passes one argument per row. */
+    fills = fills.concat(got);
+    moves = moves.concat(stops);
     found.push({file: f.name, source: source.id, name: source.name,
                 fills: got.length, stops: stops.length});
     /* A broker's own export is complete for the period it covers, so every

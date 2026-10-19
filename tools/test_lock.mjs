@@ -90,6 +90,37 @@ check("plain storage reads as unlocked",
 check("empty reads as unlocked", L.isLocked(""), false);
 check("junk reads as unlocked", L.isLocked("not json"), false);
 
+/* The one that shipped.
+ *
+ * Base64 used to spread every byte of the ciphertext into
+ * String.fromCharCode as its own argument, and every engine caps how many
+ * arguments a call may take. A record under about a hundred kilobytes
+ * locked fine and anything over it threw RangeError, so the journal stopped
+ * saving the day it grew past that and nothing in here noticed. Two
+ * megabytes is well past the old ceiling and well short of anything slow. */
+console.log("\na record far bigger than the size that used to break this");
+const big = {
+  trades: Array.from({length: 2200}, (_, i) => ({
+    id: i, symbol: "NQ", side: i % 2 ? "Long" : "Short",
+    open_t: "2026-01-05 15:30:00", pnl: (i % 7) - 3,
+    bars: Array.from({length: 48}, (_, j) => ({
+      t: "09:" + String(j).padStart(2, "0"),
+      o: 20000 + j, h: 20004 + j, l: 19996 + j, c: 20002 + j,
+    })),
+  })),
+  start: 50000, saved: 1767621600000,
+};
+const bigSize = JSON.stringify(big).length;
+check("the test record really is over a megabyte", bigSize > 1048576, true);
+const bigEnv = await L.lock(big, "a-long-enough-passcode");
+check("it locks at all", typeof bigEnv.ct === "string", true);
+check("and comes back the same size it went in",
+  JSON.stringify(await L.unlock(bigEnv, "a-long-enough-passcode")).length,
+  bigSize);
+let bigThrew = false;
+try { await L.unlock(bigEnv, "wrong"); } catch { bigThrew = true; }
+check("a wrong passcode is still refused at this size", bigThrew, true);
+
 console.log("\nthe stretching is not cheap");
 check("iteration count is at the recommended floor or above",
   env.it >= 600000, true);

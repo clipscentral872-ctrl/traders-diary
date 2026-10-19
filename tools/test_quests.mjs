@@ -167,5 +167,84 @@ console.log("\nthe streak");
         b.streak === 2, String(b.streak));
 }
 
+/* Tradeify's board, which is a mirror and not a scoreboard of ours.
+ *
+ * Two things matter here. Their gems and XP must stay out of our ladder,
+ * because two of their missions pay for a green day and the rule above says
+ * ours never does. And the two that Tradeify judges across every account
+ * you hold must be judged that way here, or the mirror lies: a day green on
+ * one account and redder on another is a day Tradeify paid for.
+ */
+{
+  console.log("\nTradeify's missions, mirrored");
+  const trade = (date, time, pnl, account, extra = {}) => ({
+    symbol: "NQ", side: "Long", qty: 1, pnl,
+    open_t: `${date} ${time}:00`, close_t: `${date} ${time}:00`,
+    account, ...extra,
+  });
+
+  // Monday the 2nd: account A finished green, account B finished redder.
+  const split = [trade("2026-03-02", "10:00", 50, "A"),
+                 trade("2026-03-02", "10:30", -80, "B")];
+  const tb = Q.tradeifyBoard(split, P, {every: split, notes: {}});
+  const green = tb.today.find(m => m.id === "tf-green");
+  check("a day green on one account counts, whatever the other did",
+        green.done === true, green.note);
+
+  const onlyRed = [split[1]];
+  const red = Q.tradeifyBoard(onlyRed, P, {every: onlyRed, notes: {}})
+    .today.find(m => m.id === "tf-green");
+  check("a day red on the only account does not count",
+        red.done === false, red.note);
+
+  // A note counts whether it was written on the day card or on a trade.
+  const noted = [trade("2026-03-03", "10:00", 10, "A",
+                       {mine: "waited for the retest"})];
+  const byTrade = Q.tradeifyBoard(noted, P, {every: noted, notes: {}})
+    .today.find(m => m.id === "tf-scribe");
+  check("a note on a trade counts as writing the session up",
+        byTrade.done === true, byTrade.note);
+  const bare = [trade("2026-03-03", "10:00", 10, "A")];
+  const byCard = Q.tradeifyBoard(bare, P,
+    {every: bare, notes: {"A|2026-03-03": "flat, did not force it"}})
+    .today.find(m => m.id === "tf-scribe");
+  check("and so does a note on the day card",
+        byCard.done === true, byCard.note);
+  const silent = Q.tradeifyBoard(bare, P, {every: bare, notes: {}})
+    .today.find(m => m.id === "tf-scribe");
+  check("with nothing written, it is not earned",
+        silent.done === false, silent.note);
+
+  // Clean Week: three days traded and not one session in the red, on any
+  // account. The red session here belongs to the account NOT being shown.
+  const week = [
+    trade("2026-03-02", "10:00", 40, "A"),
+    trade("2026-03-03", "10:00", 30, "A"),
+    trade("2026-03-04", "10:00", 20, "A"),
+    trade("2026-03-04", "11:00", -90, "B"),
+  ];
+  const shown = week.filter(t => t.account === "A");
+  const clean = Q.tradeifyBoard(shown, P, {every: week, notes: {}})
+    .thisWeek.find(m => m.id === "tf-clean-week");
+  check("a red session on the other account breaks Clean Week",
+        clean.done === false, clean.note);
+  const alone = Q.tradeifyBoard(shown, P, {every: shown, notes: {}})
+    .thisWeek.find(m => m.id === "tf-clean-week");
+  check("without it, three green days earn it",
+        alone.done === true, alone.note);
+
+  // None of this may touch our own ladder.
+  const ours = Q.board(split, P);
+  const theirs = Q.tradeifyBoard(split, P, {every: split, notes: {}});
+  check("their gems are counted on their own",
+        theirs.gems > 0 && theirs.gems !== ours.gems,
+        `${theirs.gems} theirs, ${ours.gems} ours`);
+  check("and nothing of theirs is in our mission list",
+        Q.MISSIONS.every(m => !String(m.id).startsWith("tf-")), "");
+  check("every mission of theirs is one you can clear by trading",
+        Q.TRADEIFY.every(m => /^tf-/.test(m.id) && typeof m.test === "function"),
+        "");
+}
+
 console.log(failed ? `\n${failed} check(s) failed` : "\nall checks passed");
 process.exit(failed ? 1 : 0);

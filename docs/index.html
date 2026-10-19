@@ -3195,7 +3195,7 @@ const firstSrc = document.querySelector('.src[data-src="live"]')
 pickSource(firstSrc ? firstSrc.dataset.src : "live");
 
 </script>
-<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=b7ddedd50a56","./chart.js":"./chart.js?v=b7ddedd50a56","./levels.js":"./levels.js?v=b7ddedd50a56","./revisit.js":"./revisit.js?v=b7ddedd50a56","./series.js":"./series.js?v=b7ddedd50a56","./clock.js":"./clock.js?v=b7ddedd50a56","./vault.js":"./vault.js?v=b7ddedd50a56","./draw.js":"./draw.js?v=b7ddedd50a56","./profile.js":"./profile.js?v=b7ddedd50a56","./whatif.js":"./whatif.js?v=b7ddedd50a56","./precheck.js":"./precheck.js?v=b7ddedd50a56","./shelf.js":"./shelf.js?v=b7ddedd50a56","./watchlist.js":"./watchlist.js?v=b7ddedd50a56","./lock.js":"./lock.js?v=b7ddedd50a56","./inds.js":"./inds.js?v=b7ddedd50a56","./imports.js":"./imports.js?v=b7ddedd50a56","./folder.js":"./folder.js?v=b7ddedd50a56","./funded.js":"./funded.js?v=b7ddedd50a56","./jdun.js":"./jdun.js?v=b7ddedd50a56","./quests.js":"./quests.js?v=b7ddedd50a56","./coach.js":"./coach.js?v=b7ddedd50a56","./replay.js":"./replay.js?v=b7ddedd50a56","./diary.js":"./diary.js?v=b7ddedd50a56","./videos.js":"./videos.js?v=b7ddedd50a56","./system.js":"./system.js?v=b7ddedd50a56","./dashboard.js":"./dashboard.js?v=b7ddedd50a56"}}</script>
+<script type="importmap">{"imports":{"./engine.js":"./engine.js?v=f2aefaa8d945","./chart.js":"./chart.js?v=f2aefaa8d945","./levels.js":"./levels.js?v=f2aefaa8d945","./revisit.js":"./revisit.js?v=f2aefaa8d945","./series.js":"./series.js?v=f2aefaa8d945","./clock.js":"./clock.js?v=f2aefaa8d945","./vault.js":"./vault.js?v=f2aefaa8d945","./draw.js":"./draw.js?v=f2aefaa8d945","./profile.js":"./profile.js?v=f2aefaa8d945","./whatif.js":"./whatif.js?v=f2aefaa8d945","./precheck.js":"./precheck.js?v=f2aefaa8d945","./shelf.js":"./shelf.js?v=f2aefaa8d945","./watchlist.js":"./watchlist.js?v=f2aefaa8d945","./lock.js":"./lock.js?v=f2aefaa8d945","./inds.js":"./inds.js?v=f2aefaa8d945","./imports.js":"./imports.js?v=f2aefaa8d945","./folder.js":"./folder.js?v=f2aefaa8d945","./funded.js":"./funded.js?v=f2aefaa8d945","./jdun.js":"./jdun.js?v=f2aefaa8d945","./quests.js":"./quests.js?v=f2aefaa8d945","./coach.js":"./coach.js?v=f2aefaa8d945","./replay.js":"./replay.js?v=f2aefaa8d945","./diary.js":"./diary.js?v=f2aefaa8d945","./videos.js":"./videos.js?v=f2aefaa8d945","./system.js":"./system.js?v=f2aefaa8d945","./dashboard.js":"./dashboard.js?v=f2aefaa8d945"}}</script>
 <script type="module">
 /* The app around the diary: storage, the six-file import, and the panels the
  * desktop version renders on the server.
@@ -4134,13 +4134,15 @@ $("loadpick").addEventListener("change", async () => {
     renderPanels();
     storeLine();
     if (warn) { say(warn, true); return; }
-    /* And fetch the candles for what just arrived.
+    /* And fill in anything the backup could not carry.
      *
-     * A backup carries the trades, not the bars, because bars are published
-     * and would double the file for nothing. Without this the restored
-     * trades sat with no chart, saying no candles were stored, until the app
-     * was closed and opened again: the only other place that fills them is
-     * the unlock. Restoring and then looking is the obvious thing to do. */
+     * A backup does carry each trade's candles, because the published bars
+     * only reach back about two months and a backup has to still be worth
+     * restoring after that. What it cannot carry is a window that did not
+     * exist when it was written: an older file has the tight series and no
+     * wide one, and this is what gives it the wide one. Restoring and then
+     * looking is the obvious thing to do, and before this it showed no
+     * chart until the app was closed and opened again. */
     loadBars(feedsFor(window.TRADES)).then(fillCandles);
     say(`Restored ${o.trades.length} trades from the backup.`);
     location.hash = "";
