@@ -16,6 +16,7 @@
  */
 import * as V from "./vault.js";
 import * as SH from "./shelf.js";
+import * as P from "./profile.js";
 
 const $ = id => document.getElementById(id);
 
@@ -129,7 +130,8 @@ function render() {
     + '<span class="shm"></span>'
     + `<span class="shs">${mb(f.size)}</span></button>`).join("");
 
-  box.innerHTML = filterBar()
+  box.innerHTML = staleNote()
+    + filterBar()
     + `<div class="shbar"><div class="shtrail">${trail}</div>`
     + (at.length ? '<button class="shup" data-up="1">Up one</button>' : "")
     + "</div>"
@@ -215,10 +217,36 @@ async function take(list) {
     }
   }
   files.sort((a, b) => a.name.localeCompare(b.name));
+  try { P.set(FILLED, String(Date.now())); } catch { /* nothing kept */ }
   render();
   await tally(failed
     ? `Ran out of room after ${added}. Remove some and try the rest.`
     : added ? `${added} added.` : "Those were already here.");
+}
+
+/* When the shelf was last filled from the folder.
+ *
+ * The videos are copied into this browser when the folder is picked, so the
+ * shelf is a snapshot and not a window. The library on disk rebuilds itself
+ * every Saturday at six, which means the shelf is out of date from the
+ * first Saturday after it was filled and nothing on screen would say so.
+ * The app cannot see the disk, so it says the one thing it does know. */
+const FILLED = "videos.filled";
+
+function staleNote() {
+  let when = 0;
+  try { when = Number(P.get(FILLED)) || 0; } catch { when = 0; }
+  if (!when || !files.length) return "";
+  // The most recent Saturday six in the morning.
+  const sat = new Date();
+  sat.setHours(6, 0, 0, 0);
+  sat.setDate(sat.getDate() - ((sat.getDay() + 1) % 7));
+  if (sat.getTime() > Date.now()) sat.setDate(sat.getDate() - 7);
+  if (when >= sat.getTime()) return "";
+  const days = Math.max(1, Math.round((Date.now() - when) / 86400000));
+  return '<p class="vstale">These were added ' + days + " day"
+    + (days === 1 ? "" : "s") + " ago, and the library has rebuilt itself "
+    + "since. Add the folder again to pick up the newest trades.</p>";
 }
 
 async function forget() {

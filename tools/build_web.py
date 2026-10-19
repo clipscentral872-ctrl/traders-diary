@@ -579,6 +579,13 @@ EXTRA_CSS = """
   #updbar .instx{padding:9px 6px}
 }
 
+/* Said above the shelf, quietly, because it is a nudge and not a problem. */
+.vstale{
+  margin:0 0 12px; padding:9px 12px; border-radius:var(--r-sm);
+  background:rgba(255,194,75,.08); border-left:2px solid var(--warn);
+  color:var(--muted); font-size:12px; line-height:1.55;
+}
+
 /* the video library */
 .vgroup{margin-top:24px}
 .vgroup h3{
